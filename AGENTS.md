@@ -6,10 +6,10 @@
 - Codex handles reviewed implementation; use Lovable for targeted design proposals, then review and apply their diffs against current GitHub state.
 - Preserve published history with additive commits. Do not edit generated files such as src/routeTree.gen.ts by hand.
 - Preserve the storefront and docs/design/AFNAN-UI-STANDARD.md. No redesign is authorized by initialization.
-- Checkout, order creation, payments and admin writes must remain disabled until explicitly authorized and validated.
-- Do not merge, deploy, provision databases or change domains under this task.
+- The master execution instruction authorizes functional commerce and authenticated administration against local/test backends. Keep CHECKOUT_ENABLED=false and PAYMENT_MODE=disabled in checked-in runtime defaults; live orders and live payments remain unauthorized.
+- Do not merge, publicly deploy, change production DNS, activate live payments or execute destructive production migrations. Local/non-production fixture migrations are authorized. No remote infrastructure was provisioned by this implementation.
 - Keep secrets and customer information out of Git and continuity records, regardless of repository visibility. Use hosting secret storage for future server credentials; VITE_* values are public.
-- The previous generic Lovable-managed database/secrets/synchronization instructions are superseded by this owner-authorized GitHub handoff. No backend currently exists.
+- The previous generic Lovable-managed database/secrets/synchronization instructions are superseded by this owner-authorized GitHub handoff. The commerce backend uses D1 and Better Auth; Paystack is the sole authorized payment provider, with live keys deliberately rejected.
 
 ## Durable project continuity
 
@@ -26,7 +26,21 @@
 
 ## Project rules
 
-- Catalog data flows only through `src/lib/catalog.ts` (`listProducts`/`getProduct`); swap these for API calls when a backend exists, keeping the types — keeps backend handoff a single seam.
+- Catalog reads use src/lib/catalog.ts through TanStack server functions and D1. Pass runtime bindings with the current request; never retain customer/request state in module-global variables.
 - Money is integer kobo formatted with `formatNaira` — avoids float errors and keeps NGN display consistent.
-- Cart is client-only context in `src/lib/cart.tsx`; server must recompute prices at order time.
+- Cart is a browser preview plus an owner-scoped D1 copy. Server prices and transactional stock checks are authoritative; never trust browser prices or a payment redirect.
 - UI contract documented in `docs/design/AFNAN-UI-STANDARD.md`; update it with any route/token/API change.
+
+## Business identity
+
+- src/lib/business.ts is the single source for the owner-supplied address, WhatsApp, socials, CAC and TIN. CAC/TIN are supplied, not independently verified; show them only in business/legal sections.
+- The supplied gold AC/black flourish logo is authoritative. Never redraw or substitute a generated logo. Keep logoUrl unset until the actual file is available; a visible chat preview alone is not a checked-in asset.
+- Preserve warm cream, cocoa, terracotta and pastel tokens and Fraunces/Nunito Sans. Read the updated UI standard before changing presentation.
+
+## Security-critical invariants
+
+- All administrative APIs enforce database-backed staff roles. There is no public first-admin bootstrap route. The bootstrap script is local-only and requires an already verified account.
+- Reserve stock and create order snapshots in one D1 batch; the SQL trigger/constraints must reject stock races and restore cancelled/expired holds once. Refunds never automatically restock uninspected goods.
+- Never trust a browser callback. Verify Paystack signatures over the original body and re-query provider amount/currency/reference/status. Deduplicate events and route late payments to review.
+- TEST_FIXTURES requires APP_ENV=test and localhost origin; never configure this on a remote Worker. Test mail/payment tables exist only in tests/fixtures.sql.
+- Run clean frozen install, typecheck, lint, unit tests, worker build/dry-run, Worker/D1 integration tests and responsive/browser accessibility tests for meaningful commerce changes. No real email or payment call is needed for fixture tests.

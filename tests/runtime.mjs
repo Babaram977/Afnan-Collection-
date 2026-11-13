@@ -72,7 +72,7 @@ try {
   );
   const winner = requests.find((r) => r.status === 201).body;
   await db.prepare("UPDATE orders SET expires_at=unixepoch()-1 WHERE id=?").bind(winner.id).run();
-  await guest.request("/orders");
+  await guest.request("/products");
   check(
     (await db.prepare("SELECT stock FROM variants WHERE id=?").bind(variantId).first()).stock === 1,
     "Expiry restores reservation",
@@ -343,6 +343,146 @@ try {
   // Clear the per-minute API bucket before independent SSR assertions. This is
   // direct fixture setup; the production rate-limit implementation stays active.
   await db.prepare("DELETE FROM rate_limits").run();
+
+  check(
+    (
+      await staff.request("/admin/media", "POST", "<svg><script>alert(1)</script></svg>", {
+        "Content-Type": "image/svg+xml",
+      })
+    ).status === 400,
+    "SVG/HTML upload rejected",
+  );
+  check(
+    (
+      await staff.request("/admin/media", "POST", "x".repeat(5 * 1024 * 1024 + 1), {
+        "Content-Type": "image/png",
+      })
+    ).status === 413,
+    "Oversized upload rejected",
+  );
+  const image = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZOKAAAAAASUVORK5CYII=",
+    "base64",
+  );
+  const upload = await staff.request("/admin/media", "POST", image, {
+    "Content-Type": "image/png",
+  });
+  check(upload.status === 201, "Authenticated image upload stored in local R2");
+  check(
+    (await mf.dispatchFetch(ORIGIN + upload.body.url)).status === 404,
+    "Unpublished image not exposed",
+  );
+  await db
+    .prepare("UPDATE products SET images=? WHERE id=?")
+    .bind(JSON.stringify([{ url: upload.body.url, alt: "Fixture image" }]), productId)
+    .run();
+  const visibleImage = await mf.dispatchFetch(ORIGIN + upload.body.url);
+  check(
+    visibleImage.status === 200 && visibleImage.headers.get("Content-Type") === "image/png",
+    "Published media served with fixed content type",
+  );
+  check(
+    (await guest.request("/orders", "POST", "x".repeat(65537))).status === 413,
+    "Oversized JSON body bounded",
+  );
+  const zeroVariant = await staff.request("/admin/variants", "POST", {
+    productId,
+    sku: "NO-STOCK-FIXTURE",
+    priceKobo: 100000,
+  });
+  const stockBefore = (
+    await db.prepare("SELECT stock FROM variants WHERE id=?").bind(variantId).first()
+  ).stock;
+  const multi = makeOrder();
+  multi.lines.push({ variantId: zeroVariant.body.id, qty: 1 });
+  check(
+    (await guest.request("/orders", "POST", multi)).status === 409,
+    "Multi-item order rejects unavailable second item",
+  );
+  check(
+    (await db.prepare("SELECT stock FROM variants WHERE id=?").bind(variantId).first()).stock ===
+      stockBefore,
+    "First item reservation rolled back with second item failure",
+  );
+  const brute = new Client(mf);
+  let limited = false;
+  for (let n = 0; n < 16; n++) {
+    const response = await brute.request("/auth/sign-in/email-otp", "POST", {
+      email: "unknown@example.com",
+      otp: "123456",
+    });
+    if (response.status === 429) {
+      limited = true;
+      break;
+    }
+  }
+  check(limited, "OTP abuse rate limited");
+
+  check(
+    (
+      await staff.request("/admin/variants", "POST", {
+        id: variantId,
+        productId,
+        sku: "FIXTURE-001",
+        size: "M",
+        priceKobo: 250000,
+        salePriceKobo: 200000,
+      })
+    ).status === 200,
+    "Promotional price configured",
+  );
+  const sale = (await guest.request("/products")).body
+    .find((p) => p.id === productId)
+    .variants.find((v) => v.id === variantId);
+  check(
+    sale.priceKobo === 200000 && sale.regularPriceKobo === 250000,
+    "Storefront exposes genuine configured promotional price",
+  );
+  check(
+    (
+      await staff.request("/admin/variants", "POST", {
+        id: variantId,
+        productId,
+        sku: "FIXTURE-001",
+        priceKobo: 250000,
+        salePriceKobo: 300000,
+      })
+    ).status === 400,
+    "Invalid promotional price rejected",
+  );
+  const saleOrder = await guest.request("/orders", "POST", makeOrder());
+  check(
+    saleOrder.body.total_kobo === 250000,
+    "Checkout and stock trigger use authoritative promotional amount",
+  );
+  await guest.request("/orders/" + saleOrder.body.id + "/cancel", "POST", {});
+  const contacts = {
+    address: "Fixture business address in Kano",
+    whatsapp: "+2347035963225",
+    instagram: "https://www.instagram.com/afnan_collectionkn",
+    tiktok: "https://www.tiktok.com/@afnan_collectionkn",
+  };
+  check(
+    (await staff.request("/admin/business", "POST", contacts)).status === 200,
+    "Business contacts configurable by staff",
+  );
+  check(
+    (await guest.request("/business")).body.address === contacts.address,
+    "Public business configuration resolves saved contacts",
+  );
+  check(
+    (await guest.request("/admin/business", "POST", contacts)).status === 401,
+    "Anonymous contact changes rejected",
+  );
+  check(
+    (
+      await staff.request("/admin/business", "POST", {
+        ...contacts,
+        instagram: "javascript:alert(1)",
+      })
+    ).status === 400,
+    "Unsafe social link rejected",
+  );
   const ssr = await mf.dispatchFetch(`${ORIGIN}/shop`);
   const html = await ssr.text();
   check(
@@ -351,6 +491,47 @@ try {
   );
   const missing = await mf.dispatchFetch(`${ORIGIN}/product/missing`);
   check(missing.status === 404, "Unknown product 404");
+
+  const staffDetail = await fulfil.request("/admin/orders/" + paid.body.id);
+  check(
+    staffDetail.status === 200 && staffDetail.body.items.length > 0,
+    "Fulfilment staff can read purchased items and delivery",
+  );
+  check(
+    (await staff.request("/admin/products/" + productId, "DELETE")).status === 200,
+    "Product safely deleted",
+  );
+  check(
+    !(await guest.request("/products")).body.some((p) => p.id === productId),
+    "Deleted product hidden from storefront",
+  );
+  check(
+    (await guest.request("/orders/" + paid.body.id)).body.items[0].sku === "FIXTURE-001",
+    "Historical order items survive product deletion",
+  );
+
+  const closed = await createTestApp({
+    bindings: { CHECKOUT_ENABLED: "false", PAYMENT_MODE: "disabled" },
+  });
+  try {
+    const client = new Client(closed.mf);
+    await client.request("/me");
+    const health = await client.request("/health");
+    check(
+      !health.body.checkoutEnabled && !health.body.paymentsEnabled,
+      "Default operational gates disabled",
+    );
+    check(
+      (await client.request("/orders", "POST", makeOrder())).status === 503,
+      "Disabled checkout rejects order preparation",
+    );
+    check(
+      (await client.request("/payments/webhook", "POST", "{}")).status === 503,
+      "Disabled payments reject webhooks",
+    );
+  } finally {
+    await closed.mf.dispose();
+  }
   console.log(
     `PASS: ${checks} Worker/D1/auth/commerce/security assertions (controlled fixtures only)`,
   );

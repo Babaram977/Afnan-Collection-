@@ -6,7 +6,7 @@ const { mf, db, zoneId } = await createTestApp({ port: 8787 });
 const browser = await chromium.launch();
 let checks = 0;
 try {
-  for (const width of [390, 768, 1440]) {
+  for (const width of process.env.TEST_DESKTOP_ONLY ? [1440] : [390, 768, 1440]) {
     await db.prepare("DELETE FROM rate_limits").run();
     const context = await browser.newContext({
       viewport: { width, height: 900 },
@@ -143,25 +143,103 @@ try {
   await page.reload();
   await page.getByRole("navigation", { name: "Administration", exact: true }).waitFor();
   checks++;
+
   await page.getByRole("button", { name: "Products", exact: true }).click();
+  await page.getByRole("button", { name: "Add product", exact: true }).click();
   await page.getByLabel("Product name", { exact: true }).fill("Browser draft fixture");
-  await page.getByLabel("URL slug").fill("browser-draft-fixture");
-  await page.getByLabel("Category slug").fill("clothing");
-  await page.getByRole("button", { name: "Save changes", exact: true }).click();
-  await page.getByRole("cell", { name: "Browser draft fixture", exact: true }).waitFor();
-  checks++;
-  assert.ok(
-    await db
-      .prepare("SELECT id FROM products WHERE slug='browser-draft-fixture' AND status='draft'")
-      .first(),
+  await page.getByLabel("Product link name").fill("browser-draft-fixture");
+  await page.getByLabel("Category", { exact: true }).selectOption("clothing");
+  const photo = Buffer.from(
+    await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 8;
+      canvas.height = 8;
+      canvas.getContext("2d").fillRect(0, 0, 8, 8);
+      return canvas.toDataURL("image/png").split(",")[1];
+    }),
+    "base64",
   );
+  await page.getByLabel("Upload product photographs").setInputFiles([
+    { name: "fixture-one.png", mimeType: "image/png", buffer: photo },
+    { name: "fixture-two.png", mimeType: "image/png", buffer: photo },
+  ]);
+  await page.waitForFunction(
+    () => document.querySelectorAll('img[src^="/api/admin/media/"]').length === 2,
+  );
+  checks++;
+  await page.getByRole("button", { name: "Make main image", exact: true }).click();
+  await page.getByRole("button", { name: "Save product", exact: true }).click();
+  await page.getByRole("heading", { name: "Prices, sizes, colours and stock" }).waitFor();
+  checks++;
+  await page.getByLabel("Unique SKU").fill("BROWSER-001");
+  await page.getByLabel("Regular price (₦)", { exact: true }).fill("2500");
+  await page.getByLabel("Promotional price (₦, optional)", { exact: true }).fill("2000");
+  await page.getByLabel("Opening stock quantity").fill("4");
+  await page.getByRole("button", { name: "Save option", exact: true }).click();
+  await page.getByText(/BROWSER-001.*4 available/).waitFor();
+  checks++;
+  await page.getByLabel("Visibility").selectOption("active");
+  const published = page.waitForResponse(
+    (r) => r.url().endsWith("/api/admin/products") && r.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Save product", exact: true }).click();
+  assert.equal((await published).status(), 200);
+  checks++;
+  const row = await db
+    .prepare(
+      "SELECT p.id,v.stock,v.sale_price_kobo,p.images FROM products p JOIN variants v ON v.product_id=p.id WHERE p.slug='browser-draft-fixture'",
+    )
+    .first();
+  assert.equal(row.stock, 4);
+  assert.equal(row.sale_price_kobo, 200000);
+  assert.equal(JSON.parse(row.images).length, 2);
+  checks += 3;
+
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const result = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+      .analyze();
+    assert.deepEqual(
+      result.violations.map((v) => v.id),
+      [],
+      `Authenticated product editor accessibility at ${width}`,
+    );
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+      `Product editor overflow at ${width}`,
+    );
+    checks += 2;
+  }
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page
+    .getByLabel("Product and option")
+    .selectOption({ label: "Browser draft fixture — BROWSER-001 — 4 available" });
+  await page.getByLabel("Quantity", { exact: true }).fill("2");
+  await page.getByLabel("Reason", { exact: true }).fill("Fixture count correction");
+  await page.getByRole("button", { name: "Record stock movement" }).click();
+  await page.getByText("Stock updated and movement recorded.").waitFor();
   checks++;
   await page.getByRole("button", { name: "Zones", exact: true }).click();
   await page.getByLabel("Area name").fill("Browser fixture delivery");
   await page.getByLabel("State (e.g. Kano)").fill("Kano");
-  await page.getByLabel("Delivery charge in kobo").fill("60000");
+  await page.getByLabel("Delivery charge (₦)").fill("600");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.getByRole("cell", { name: "Browser fixture delivery", exact: true }).waitFor();
+  checks++;
+
+  await page.getByRole("button", { name: "Business", exact: true }).click();
+  await page
+    .getByLabel("Business address", { exact: true })
+    .fill("Fixture updated business address in Kano");
+  await page.getByRole("button", { name: "Save business contacts" }).click();
+  await page.getByText("Business contacts updated.").waitFor();
+  await page.goto(ORIGIN + "/contact");
+  await page
+    .locator("main")
+    .getByText("Fixture updated business address in Kano", { exact: true })
+    .waitFor();
   checks++;
   await context.close();
   console.log(

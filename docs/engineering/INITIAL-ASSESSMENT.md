@@ -1,5 +1,7 @@
 # Initial engineering assessment
 
+Historical initialization assessment. Later master execution and owner-admin instructions supersede its frontend-only state and Access proposal. Read COMMERCE.md, ADMIN-GUIDE.md and current continuity records for implemented behavior.
+
 Evidence date: 2026-11-13. Inspected upstream main at `24c6c6bf9b99702c95b12bb4cd54e436987c8705` (2026-11-13, “Add Afnan Collection Online storefront source”), following initial commit `ab8aa59`. This assessment adds documentation only; it does not approve deployment or commerce activation.
 
 ## Verified architecture and upload

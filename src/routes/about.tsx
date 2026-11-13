@@ -1,3 +1,5 @@
+import { useBusiness } from "@/components/site/BusinessProvider";
+import { StoreContent } from "@/components/site/StoreContent";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/site/PageHeader";
 
@@ -20,6 +22,7 @@ export const Route = createFileRoute("/about")({
 });
 
 function Page() {
+  const business = useBusiness();
   return (
     <>
       <PageHeader
@@ -32,7 +35,10 @@ function Page() {
             We bring together clothing, shoes, nursery essentials, feeding and bath accessories,
             toys, books, school supplies and gifts for children — from newborns to school age.
           </p>
-          <p className="text-muted-foreground">Our full story will be shared here soon.</p>
+          <p>
+            {business.name} is based at {business.address}.
+          </p>
+          <StoreContent name="about" fallback="Our full story will be shared here soon." />
         </div>
       </div>
     </>

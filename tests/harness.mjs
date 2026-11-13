@@ -36,7 +36,11 @@ export async function createTestApp(options = {}) {
   );
   await mf.ready;
   const db = await mf.getD1Database("DB");
-  const sql = (await readFile("migrations/0001_commerce.sql", "utf8")).replace(/--[^\n]*/g, "");
+  const sql = (
+    (await readFile("migrations/0001_commerce.sql", "utf8")) +
+    "\n" +
+    (await readFile("migrations/0002_admin_management.sql", "utf8"))
+  ).replace(/--[^\n]*/g, "");
   const statements = [];
   let statement = "";
   let trigger = false;
@@ -97,7 +101,10 @@ export class Client {
       },
       ...(data === undefined
         ? {}
-        : { body: typeof data === "string" ? data : JSON.stringify(data) }),
+        : {
+            body:
+              typeof data === "string" || data instanceof Uint8Array ? data : JSON.stringify(data),
+          }),
     });
     for (const c of response.headers.getSetCookie()) {
       const [name, value] = c.split(";")[0].split("=");

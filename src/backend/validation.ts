@@ -32,6 +32,8 @@ export const variantInput = z.object({
   size: z.string().max(80).default(""),
   color: z.string().max(80).default(""),
   priceKobo: money.min(1),
+  openingStock: z.number().int().min(0).max(1000000).default(0),
+  salePriceKobo: money.min(1).nullable().optional(),
   lowStock: z.number().int().min(0).max(100000).default(3),
 });
 export const linesInput = z
@@ -88,4 +90,23 @@ export const bannerInput = z.object({
 export const policyInput = z.object({
   key: z.enum(["about", "contact", "privacy", "returns", "delivery"]),
   value: z.string().max(10000),
+});
+
+export const businessSettingsInput = z.object({
+  address: z.string().trim().min(10).max(500),
+  whatsapp: z.string().regex(/^\+234[0-9]{10}$/),
+  instagram: z
+    .string()
+    .url()
+    .refine(
+      (v) => /^https:\/\/www\.instagram\.com\/[a-zA-Z0-9_.]+\/?$/.test(v),
+      "Use a valid Instagram profile URL",
+    ),
+  tiktok: z
+    .string()
+    .url()
+    .refine(
+      (v) => /^https:\/\/www\.tiktok\.com\/@[a-zA-Z0-9_.]+\/?$/.test(v),
+      "Use a valid TikTok profile URL",
+    ),
 });

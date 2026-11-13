@@ -23,7 +23,9 @@ export interface ProductVariant {
   sku: string;
   size?: string;
   color?: string;
-  priceKobo: number; // integer minor units (NGN kobo)
+  priceKobo: number;
+  regularPriceKobo?: number;
+  salePriceKobo?: number | null; // integer minor units (NGN kobo)
   stock: number | null; // null = not tracked / unknown
 }
 export interface ProductImage {

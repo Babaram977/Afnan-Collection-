@@ -80,7 +80,16 @@ function ProductPage() {
           {p.categoryLabel ?? CATEGORIES.find((c) => c.slug === p.category)?.label}
         </p>
         <h1 className="mt-1 text-3xl font-semibold md:text-4xl">{p.name}</h1>
-        {v && <p className="mt-3 text-2xl font-bold">{formatNaira(v.priceKobo)}</p>}
+        {v && (
+          <div className="mt-3">
+            {v.salePriceKobo != null && v.regularPriceKobo && (
+              <p className="text-sm text-muted-foreground">
+                Regular price: <del>{formatNaira(v.regularPriceKobo)}</del>
+              </p>
+            )}
+            <p className="text-2xl font-bold">{formatNaira(v.priceKobo)}</p>
+          </div>
+        )}
         {p.variants.length > 1 && (
           <fieldset className="mt-6">
             <legend className="mb-2 text-sm font-semibold">Option</legend>

@@ -1,3 +1,4 @@
+import { business } from "../lib/business";
 import { z } from "zod";
 import type { Product, CategorySlug, AgeGroup } from "../lib/catalog";
 import { authFor } from "./auth";
@@ -11,6 +12,7 @@ import {
   bannerInput,
   policyInput,
   addressInput,
+  businessSettingsInput,
 } from "./validation";
 import {
   initialize,
@@ -136,10 +138,10 @@ async function expire(env: CommerceEnv) {
 async function catalog(env: CommerceEnv, all = false): Promise<Product[]> {
   await expire(env);
   const products = await env.DB.prepare(
-    `SELECT p.*,c.label AS category_label FROM products p JOIN categories c ON c.slug=p.category ${all ? "" : "WHERE p.status='active'"} ORDER BY updated_at DESC LIMIT 500`,
+    `SELECT p.*,c.label AS category_label FROM products p JOIN categories c ON c.slug=p.category ${all ? "WHERE p.deleted_at IS NULL" : "WHERE p.status='active' AND p.deleted_at IS NULL"} ORDER BY updated_at DESC LIMIT 500`,
   ).all<Record<string, unknown>>();
   const variants = await env.DB.prepare(
-    `SELECT v.* FROM variants v JOIN products p ON p.id=v.product_id ${all ? "" : "WHERE p.status='active'"} LIMIT 5000`,
+    `SELECT v.* FROM variants v JOIN products p ON p.id=v.product_id ${all ? "WHERE p.deleted_at IS NULL" : "WHERE p.status='active' AND p.deleted_at IS NULL"} LIMIT 5000`,
   ).all<Record<string, unknown>>();
   return products.results.map((p) => ({
     id: String(p["id"]),
@@ -162,7 +164,9 @@ async function catalog(env: CommerceEnv, all = false): Promise<Product[]> {
         sku: String(v["sku"]),
         size: String(v["size"]),
         color: String(v["color"]),
-        priceKobo: Number(v["price_kobo"]),
+        priceKobo: Number(v["sale_price_kobo"] ?? v["price_kobo"]),
+        regularPriceKobo: Number(v["price_kobo"]),
+        salePriceKobo: v["sale_price_kobo"] == null ? null : Number(v["sale_price_kobo"]),
         stock: Number(v["stock"]),
         lowStock: Number(v["low_stock"]),
       })),
@@ -234,15 +238,28 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
   ];
   for (const line of input.lines) {
     const variant = await env.DB.prepare(
-      "SELECT v.*,p.name FROM variants v JOIN products p ON p.id=v.product_id WHERE v.id=? AND p.status='active'",
+      "SELECT v.*,p.name FROM variants v JOIN products p ON p.id=v.product_id WHERE v.id=? AND p.status='active' AND p.deleted_at IS NULL",
     )
       .bind(line.variantId)
-      .first<{ id: string; name: string; sku: string; price_kobo: number }>();
+      .first<{
+        id: string;
+        name: string;
+        sku: string;
+        price_kobo: number;
+        sale_price_kobo: number | null;
+      }>();
     if (!variant) fail(409, "An item is no longer available");
     statements.push(
       env.DB.prepare(
         "INSERT INTO order_items(order_id,variant_id,name,sku,price_kobo,qty) VALUES(?,?,?,?,?,?)",
-      ).bind(id, variant.id, variant.name, variant.sku, variant.price_kobo, line.qty),
+      ).bind(
+        id,
+        variant.id,
+        variant.name,
+        variant.sku,
+        variant.sale_price_kobo ?? variant.price_kobo,
+        line.qty,
+      ),
     );
   }
   statements.push(
@@ -323,6 +340,7 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
     const p = (await catalog(env)).find((p) => p.slug === decodeURIComponent(path.slice(14)));
     return p ? json(p) : fail(404, "Product not found");
   }
+  if (path === "/api/business" && method === "GET") return json(await businessConfig(env));
   if (path === "/api/categories" && method === "GET")
     return json((await env.DB.prepare("SELECT * FROM categories ORDER BY label").all()).results);
   if (path === "/api/store" && method === "GET")
@@ -500,6 +518,15 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
         (await env.DB.prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT 200").all())
           .results,
       );
+    if (path.startsWith("/api/admin/orders/") && method === "GET") {
+      const id = path.split("/")[4] ?? "";
+      const order = await ownOrder(env, a, id, true);
+      return json({
+        ...order,
+        items: (await env.DB.prepare("SELECT * FROM order_items WHERE order_id=?").bind(id).all())
+          .results,
+      });
+    }
     if (path.startsWith("/api/admin/orders/") && method === "PATCH") {
       const id = path.split("/")[4] ?? "";
       const order = await ownOrder(env, a, id, true);
@@ -533,6 +560,29 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       ]);
       return json({ saved: true });
     }
+    if (path === "/api/admin/business") {
+      if (method === "GET") return json(await businessConfig(env));
+      if (method === "POST") {
+        const value = businessSettingsInput.parse(await body(request));
+        await env.DB.batch([
+          env.DB.prepare(
+            "INSERT INTO settings(key,value) VALUES('business',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+          ).bind(JSON.stringify(value)),
+          await audit(env, a, "business.updated", "business"),
+        ]);
+        return json({ saved: true });
+      }
+    }
+    if (path.startsWith("/api/admin/products/") && method === "DELETE") {
+      const id = path.split("/")[4] ?? "";
+      await env.DB.batch([
+        env.DB.prepare(
+          "UPDATE products SET status='archived',deleted_at=unixepoch() WHERE id=?",
+        ).bind(id),
+        await audit(env, a, "product.deleted", id),
+      ]);
+      return json({ deleted: true });
+    }
     if (method === "GET") {
       if (path === "/api/admin/products") return json(await catalog(env, true));
       const tables: Record<string, string> = {
@@ -556,6 +606,13 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
     if (path === "/api/admin/products" && method === "POST") {
       const p = productInput.parse(await body(request));
       const id = p.id ?? uuid();
+      if (
+        p.status === "active" &&
+        !(await env.DB.prepare("SELECT id FROM variants WHERE product_id=? LIMIT 1")
+          .bind(id)
+          .first())
+      )
+        fail(400, "Save as draft and add a priced option before publishing");
       await env.DB.batch([
         env.DB.prepare(
           "INSERT INTO products(id,slug,name,category,description,age_groups,images,status,featured,seasonal,age_guidance,safety_notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET slug=excluded.slug,name=excluded.name,category=excluded.category,description=excluded.description,age_groups=excluded.age_groups,images=excluded.images,status=excluded.status,featured=excluded.featured,seasonal=excluded.seasonal,age_guidance=excluded.age_guidance,safety_notes=excluded.safety_notes,updated_at=unixepoch()",
@@ -580,12 +637,37 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
     if (path === "/api/admin/variants" && method === "POST") {
       const v = variantInput.parse(await body(request));
       const id = v.id ?? uuid();
-      await env.DB.batch([
+      if (v.salePriceKobo != null && v.salePriceKobo >= v.priceKobo)
+        fail(400, "Promotional price must be below the regular price");
+      const existing = await env.DB.prepare("SELECT product_id FROM variants WHERE id=?")
+        .bind(id)
+        .first<{ product_id: string }>();
+      if (existing && existing.product_id !== v.productId)
+        fail(409, "Variant belongs to a different product");
+      if (existing && v.openingStock) fail(400, "Use inventory adjustments for existing variants");
+      const statements = [
         env.DB.prepare(
-          "INSERT INTO variants(id,product_id,sku,size,color,price_kobo,low_stock) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,size=excluded.size,color=excluded.color,price_kobo=excluded.price_kobo,low_stock=excluded.low_stock WHERE product_id=excluded.product_id",
-        ).bind(id, v.productId, v.sku, v.size, v.color, v.priceKobo, v.lowStock),
+          "INSERT INTO variants(id,product_id,sku,size,color,price_kobo,low_stock,sale_price_kobo,stock) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,size=excluded.size,color=excluded.color,price_kobo=excluded.price_kobo,low_stock=excluded.low_stock,sale_price_kobo=excluded.sale_price_kobo",
+        ).bind(
+          id,
+          v.productId,
+          v.sku,
+          v.size,
+          v.color,
+          v.priceKobo,
+          v.lowStock,
+          v.salePriceKobo ?? null,
+          existing ? 0 : v.openingStock,
+        ),
         await audit(env, a, "variant.saved", id),
-      ]);
+      ];
+      if (!existing && v.openingStock)
+        statements.push(
+          env.DB.prepare(
+            "INSERT INTO inventory_movements(variant_id,delta,reason,actor) VALUES(?,?,'opening stock',?)",
+          ).bind(id, v.openingStock, a.userId),
+        );
+      await env.DB.batch(statements);
       return json({ id });
     }
     if (path === "/api/admin/inventory" && method === "POST") {
@@ -709,6 +791,20 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
     if (path.startsWith("/api/admin/payments/") && path.endsWith("/reconcile") && method === "POST")
       return json(await reconcile(env, path.split("/")[4] ?? ""));
   }
+  if (path.startsWith("/api/admin/media/") && method === "GET") {
+    requireRole(a);
+    const key = path.slice("/api/admin/media/".length);
+    if (!/^[a-f0-9-]+\.(png|jpg|webp)$/.test(key) || !env.MEDIA) fail(404, "Image not found");
+    const image = await env.MEDIA!.get(key);
+    if (!image) fail(404, "Image not found");
+    return new Response(image.body, {
+      headers: {
+        "Content-Type": image.httpMetadata?.contentType ?? "application/octet-stream",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
   if (path === "/api/admin/media" && method === "POST") {
     requireRole(a);
     if (!env.MEDIA) fail(503, "Image storage is not configured");
@@ -775,3 +871,18 @@ export async function api(request: Request, env: CommerceEnv) {
 }
 
 export const publicCatalog = (env: CommerceEnv) => catalog(env);
+
+export async function businessConfig(env: CommerceEnv) {
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key='business'").first<{
+    value: string;
+  }>();
+  if (!row) return business;
+  const parsed = businessSettingsInput.safeParse(JSON.parse(row.value));
+  if (!parsed.success) return business;
+  return {
+    ...business,
+    ...parsed.data,
+    whatsappUrl: `https://wa.me/${parsed.data.whatsapp.slice(1)}`,
+    whatsappDisplay: parsed.data.whatsapp,
+  };
+}

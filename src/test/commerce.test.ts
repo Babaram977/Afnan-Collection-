@@ -1,3 +1,4 @@
+import { nairaToKobo } from "@/lib/images";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { orderInput, productInput, variantInput } from "@/backend/validation";
 import { paymentEnabled, initialize, verify, validSignature } from "@/backend/payments";
@@ -127,5 +128,13 @@ describe("commerce trust boundaries", () => {
     };
     expect(cartReducerAdd([], { ...line, qty: 0.5 })).toEqual([]);
     expect(cartReducerAdd([{ ...line, qty: 99 }], line)[0]?.qty).toBe(99);
+  });
+});
+
+describe("owner price input", () => {
+  it("converts decimal naira to integer kobo without rounding", () => {
+    expect(nairaToKobo("2500.05")).toBe(250005);
+    expect(() => nairaToKobo("-1")).toThrow();
+    expect(() => nairaToKobo("1.009")).toThrow();
   });
 });

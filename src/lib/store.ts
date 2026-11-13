@@ -25,6 +25,14 @@ export const loadCategories = createServerFn({ method: "GET" }).handler(async ()
       .all<{ slug: import("./catalog").CategorySlug; label: string }>()
   ).results;
 });
+export const loadBusiness = createServerFn({ method: "GET" }).handler(async () => {
+  const { getRequest } = await import("@tanstack/react-start/server");
+  const request = getRequest() as Request & {
+    runtime?: { cloudflare?: { env?: import("../backend/types").CommerceEnv } };
+  };
+  if (!request.runtime?.cloudflare?.env?.DB) return (await import("./business")).business;
+  return (await import("../backend/api")).businessConfig(request.runtime.cloudflare.env);
+});
 export async function apiCall<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
     ...options,

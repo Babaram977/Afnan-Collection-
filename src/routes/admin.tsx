@@ -1,3 +1,8 @@
+import { BannerPhoto } from "@/components/admin/BannerPhoto";
+import { nairaToKobo } from "@/lib/images";
+import { ProductManager, InventoryManager } from "@/components/admin/ProductManager";
+import { OrderManager } from "@/components/admin/OrderManager";
+import { BusinessSettings } from "@/components/admin/BusinessSettings";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/site/PageHeader";
@@ -22,34 +27,6 @@ type Field = {
   value?: string;
 };
 const forms: Record<string, Field[]> = {
-  products: [
-    { name: "id", label: "Product ID (blank for new)" },
-    { name: "name", label: "Product name" },
-    { name: "slug", label: "URL slug" },
-    { name: "category", label: "Category slug" },
-    { name: "description", label: "Description", type: "textarea" },
-    { name: "status", label: "Status", type: "select", options: ["draft", "active", "archived"] },
-    { name: "ageGroups", label: "Age groups (comma separated)" },
-    { name: "images", label: "Images: one uploaded URL | description per line", type: "textarea" },
-    { name: "ageGuidance", label: "Factual age guidance" },
-    { name: "safetyNotes", label: "Factual safety information", type: "textarea" },
-    { name: "featured", label: "Featured", type: "checkbox" },
-    { name: "seasonal", label: "Seasonal", type: "checkbox" },
-  ],
-  variants: [
-    { name: "id", label: "Variant ID (blank for new)" },
-    { name: "productId", label: "Product ID" },
-    { name: "sku", label: "Unique SKU" },
-    { name: "size", label: "Size" },
-    { name: "color", label: "Colour" },
-    { name: "priceKobo", label: "Price in kobo", type: "number" },
-    { name: "lowStock", label: "Low-stock threshold", type: "number" },
-  ],
-  inventory: [
-    { name: "variantId", label: "Variant ID" },
-    { name: "delta", label: "Quantity change (+ addition, − deduction)", type: "number" },
-    { name: "reason", label: "Reason for adjustment" },
-  ],
   categories: [
     { name: "slug", label: "Category slug" },
     { name: "label", label: "Display label" },
@@ -58,7 +35,7 @@ const forms: Record<string, Field[]> = {
     { name: "id", label: "Zone ID (blank for new)" },
     { name: "name", label: "Area name" },
     { name: "state", label: "State (e.g. Kano)" },
-    { name: "feeKobo", label: "Delivery charge in kobo", type: "number" },
+    { name: "feeKobo", label: "Delivery charge (₦)", type: "number" },
     { name: "active", label: "Available for checkout", type: "checkbox" },
   ],
   banners: [
@@ -90,6 +67,7 @@ function Editor({
   onError: (message: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
   return (
     <form
       key={`${kind}-${JSON.stringify(initial)}`}
@@ -98,30 +76,19 @@ function Editor({
         e.preventDefault();
         setBusy(true);
         const f = new FormData(e.currentTarget);
-        const data: Row = {};
-        for (const field of forms[kind] ?? []) {
-          data[field.name] =
-            field.type === "checkbox"
-              ? f.has(field.name)
-              : field.type === "number"
-                ? Number(f.get(field.name))
-                : String(f.get(field.name) ?? "");
-        }
-        if (data["id"] === "") delete data["id"];
-        if (kind === "products") {
-          data["ageGroups"] = String(data["ageGroups"])
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
-          data["images"] = String(data["images"])
-            .split("\n")
-            .filter(Boolean)
-            .map((line) => {
-              const [url, ...alt] = line.split("|");
-              return { url: url?.trim(), alt: alt.join("|").trim() };
-            });
-        }
         try {
+          const data: Row = {};
+          for (const field of forms[kind] ?? []) {
+            data[field.name] =
+              field.type === "checkbox"
+                ? f.has(field.name)
+                : field.type === "number"
+                  ? field.name === "feeKobo"
+                    ? nairaToKobo(String(f.get(field.name)))
+                    : Number(f.get(field.name))
+                  : String(f.get(field.name) ?? "");
+          }
+          if (data["id"] === "") delete data["id"];
           await apiCall(`/admin/${kind}`, { method: "POST", body: JSON.stringify(data) });
           onSaved();
         } catch (e) {
@@ -136,6 +103,11 @@ function Editor({
       </h3>
       {(forms[kind] ?? []).map((field) => {
         let value = initial[field.name] ?? field.value ?? "";
+        if (field.name === "feeKobo" && value !== "") value = String(Number(value) / 100);
+        if (field.name === "imageUrl")
+          return <BannerPhoto key="imageUrl" initial={String(value)} onBusy={setUploadBusy} />;
+        if (field.name === "id")
+          return <input key="id" type="hidden" name="id" value={String(value)} />;
         if (field.name === "ageGroups" && Array.isArray(value)) value = value.join(", ");
         if (field.name === "images" && Array.isArray(value))
           value = value.map((i) => `${i.url} | ${i.alt}`).join("\n");
@@ -177,14 +149,16 @@ function Editor({
                 id={id}
                 name={field.name}
                 type={field.type ?? "text"}
-                step={field.type === "number" ? 1 : undefined}
+                step={field.name === "feeKobo" ? 0.01 : field.type === "number" ? 1 : undefined}
                 defaultValue={String(value)}
               />
             )}
           </div>
         );
       })}
-      <Button disabled={busy}>{busy ? "Saving…" : "Save changes"}</Button>
+      <Button disabled={busy || uploadBusy}>
+        {busy || uploadBusy ? "Working…" : "Save changes"}
+      </Button>
     </form>
   );
 }
@@ -200,7 +174,6 @@ function Admin() {
   const tabs = [
     "overview",
     "products",
-    "variants",
     "inventory",
     "orders",
     "customers",
@@ -210,6 +183,7 @@ function Admin() {
     "payments",
     "content",
     "audit",
+    "business",
   ];
   const load = useCallback(async () => {
     setLoading(true);
@@ -218,7 +192,9 @@ function Admin() {
       const m = await apiCall<Me>("/me");
       setMe(m);
       if (m.role) {
-        if (tab === "overview") setOverview(await apiCall("/admin/overview"));
+        if (["products", "inventory", "orders", "business"].includes(tab)) {
+          setRows([]);
+        } else if (tab === "overview") setOverview(await apiCall("/admin/overview"));
         else if (tab === "variants") {
           const products = await apiCall<(Row & { variants: Row[] })[]>("/admin/products");
           setRows(products.flatMap((p) => p.variants.map((v) => ({ ...v, productId: p["id"] }))));
@@ -287,7 +263,15 @@ function Admin() {
                     </Button>
                   ))}
               </nav>
-              {tab === "overview" ? (
+              {tab === "products" ? (
+                <ProductManager />
+              ) : tab === "inventory" ? (
+                <InventoryManager />
+              ) : tab === "orders" ? (
+                <OrderManager />
+              ) : tab === "business" ? (
+                <BusinessSettings />
+              ) : tab === "overview" ? (
                 <section className="grid gap-4 sm:grid-cols-3">
                   <div className="rounded-2xl bg-card p-6 shadow-soft">
                     <h2 className="text-lg">Products</h2>

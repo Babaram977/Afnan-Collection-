@@ -1,6 +1,9 @@
+import { useBusiness } from "@/components/site/BusinessProvider";
+import { BusinessContact } from "./BusinessContact";
 import { Link } from "@tanstack/react-router";
 import { Wordmark } from "./Wordmark";
 export function SiteFooter() {
+  const business = useBusiness();
   return (
     <footer className="mt-16 border-t bg-secondary/60">
       <div className="container-page grid gap-8 py-10 md:grid-cols-3">
@@ -39,9 +42,12 @@ export function SiteFooter() {
             </li>
           </ul>
         </nav>
-        <p className="text-sm text-muted-foreground md:text-right">
-          © {new Date().getFullYear()} Afnan Collection Online
-        </p>
+        <div className="space-y-4">
+          <BusinessContact compact />
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} {business.name}
+          </p>
+        </div>
       </div>
     </footer>
   );
