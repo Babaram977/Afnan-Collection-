@@ -1,0 +1,30 @@
+name: Validate Afnan
+on:
+  pull_request:
+  push:
+    branches: [main, feat/commerce-platform]
+permissions:
+  contents: read
+concurrency:
+  group: validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun run test
+      - run: bun run worker:build
+      - run: bun run test:integration
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:browser

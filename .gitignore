@@ -30,3 +30,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Runtime artifacts and local credentials
+.worker-build/
+.dev.vars*
+.env*
+!.env.example
+playwright-report/
+test-results/
