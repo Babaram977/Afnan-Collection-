@@ -1,3 +1,4 @@
+import { business } from "@/lib/business";
 import { loadCategories } from "@/lib/store";
 import { StoreBanners } from "@/components/site/StoreContent";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -31,6 +32,18 @@ export const Route = createFileRoute("/")({
           "Shop clothing, shoes, nursery essentials, toys, books and gifts for newborns to older kids in Nigeria.",
       },
       { property: "og:title", content: "Afnan Collection Online" },
+      ...(business.logoUrl
+        ? [
+            { property: "og:image", content: new URL(business.logoUrl, business.website).href },
+            { property: "og:image:alt", content: "Official Afnan Collection gold AC logo" },
+            { property: "og:image:type", content: "image/png" },
+            { property: "og:image:width", content: "460" },
+            { property: "og:image:height", content: "546" },
+            { name: "twitter:card", content: "summary" },
+            { name: "twitter:image", content: new URL(business.logoUrl, business.website).href },
+            { name: "twitter:image:alt", content: "Official Afnan Collection gold AC logo" },
+          ]
+        : []),
       {
         property: "og:description",
         content: "Clothing, essentials, toys and gifts for newborns to older kids in Nigeria.",

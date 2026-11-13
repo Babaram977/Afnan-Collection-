@@ -36,3 +36,9 @@ These later owner instructions supersede the initial documentation-only scope: i
 - Cart mutations wait for restoration, persist locally before navigation, and preserve explicit local removals against a stale server copy. Failed initialization preserves the saved snapshot and shows a recoverable error. This addresses a defect found by customer acceptance testing.
 - Cloudflare inspection is read-only. A valid connection does not establish domain visibility, R2 activation or resource readiness. Owner must confirm the correct domain account/scope, review R2 enablement/billing and explicitly authorize any provisioning.
 - Keep checkout/payment defaults disabled and live keys rejected. Logo installation, remote administrator creation, paid resources, production migrations, public deployment, DNS cutover and live charging remain gated by the stated inputs/authorizations.
+
+## 2026-11-13 — original PNG integration (supersedes missing-file reports)
+
+The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` is now installed at `public/brand/IMG_8842(1).png` through a byte-preserving rename. SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused.
+
+Local validation: typecheck, lint and Worker build passed; 111 responsive/browser checks and 88 dedicated branding assertions passed at 320/390/768/1440 px (branding). The branding suite is included in CI. Continue on draft PR #2 / feat/commerce-platform; reconcile exact-head CI from GitHub. No merge, deployment, provisioning or checkout/payment activation occurred. R2 enablement, domain visibility and external acceptance remain separate launch gates.

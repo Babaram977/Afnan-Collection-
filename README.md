@@ -21,7 +21,7 @@ Checked-in defaults keep **checkout and payments disabled**. Controlled localhos
 
 The owner supplied the address, WhatsApp, social accounts and domain. They are centralized in [`src/lib/business.ts`](src/lib/business.ts), used by the footer, contact/legal sections and SEO, with validated dashboard-editable contact/social overrides stored in Afnan D1. CAC and TIN are recorded as supplied, not independently verified, and displayed only in business information.
 
-The official logo is the owner’s gold AC monogram, black ornamental flourish and AFNAN COLLECTION wordmark on white. Its inline preview is authoritative, but its downloadable bytes have not reached the workspace/repository. `logoUrl` remains unset and the existing text mark remains until that same raster file is available. No substitute or AI-generated logo was created. See [branding handoff](docs/engineering/BRANDING.md).
+The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` is now installed at `public/brand/IMG_8842(1).png` through a byte-preserving rename. SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused. See [branding handoff](docs/engineering/BRANDING.md).
 
 ## Local setup
 
@@ -73,7 +73,7 @@ TanStack Start/Router, React 19, TypeScript, Tailwind 4 and shadcn/Radix UI; Nit
 
 Runtime secrets: `AUTH_SECRET`; optional verified `RESEND_API_KEY`/`EMAIL_FROM`; optional `PAYSTACK_SECRET_KEY` **test key only**. They belong in protected runtime settings or ignored `.dev.vars`, never `VITE_*`, source, logs or chat. Use isolated environments and real binding IDs only after reviewing resource ownership. Do not run deployment or remote migrations under this task.
 
-Production blockers include actual email/Paystack sandbox acceptance, real catalog/opening inventory, approved delivery/returns/privacy/retention terms, staff bootstrap, backups/monitoring, account/plan limits, logo file access, private repository preference and owner launch approval. A full test suite does not remove these blockers.
+Production blockers include actual email/Paystack sandbox acceptance, real catalog/opening inventory, approved delivery/returns/privacy/retention terms, staff bootstrap, backups/monitoring, account/plan limits, private repository preference and owner launch approval. A full test suite does not remove these blockers.
 
 Read the [owner administration guide](docs/engineering/ADMIN-GUIDE.md), [AGENTS.md](AGENTS.md), the five [continuity records](docs/project-continuity/PROJECT-STATUS.md), [commerce/security guide](docs/engineering/COMMERCE.md) and [UI standard](docs/design/AFNAN-UI-STANDARD.md) before future work.
 
@@ -83,4 +83,4 @@ No license has been declared. Public visibility alone does not grant permission 
 
 ## Final activation handoff
 
-[RELEASE-CHECKLIST.md](docs/engineering/RELEASE-CHECKLIST.md) records the read-only Cloudflare inventory, exact proposed resource names, secure runtime inputs, isolated acceptance gates, backups/rollback and domain-cutover sequence. The connected account has no visible Afnan Worker/D1 or matching domain zone; R2 explicitly requires Dashboard enablement. No resources or production routes were changed. The original `IMG_8842(1).png` is still required and must match the owner-supplied checksum in BRANDING.md.
+[RELEASE-CHECKLIST.md](docs/engineering/RELEASE-CHECKLIST.md) records the read-only Cloudflare inventory, exact proposed resource names, secure runtime inputs, isolated acceptance gates, backups/rollback and domain-cutover sequence. The connected account has no visible Afnan Worker/D1 or matching domain zone; R2 explicitly requires Dashboard enablement. No resources or production routes were changed. The original logo is installed and checksum-verified; see BRANDING.md.

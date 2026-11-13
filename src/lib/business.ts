@@ -1,6 +1,6 @@
 /** Owner-supplied business information, received 2026-11-13.
  * Registration/tax identifiers are recorded as supplied, not independently verified.
- * The inline logo preview is authoritative; the original downloadable asset is pending.
+ * The original PNG is checksum-verified; keep its bytes and identity unchanged.
  */
 export const business = {
   name: "Afnan Collection",
@@ -17,8 +17,8 @@ export const business = {
   cacBusinessNumber: "BN 4050963",
   tin: "24511952-001",
   registrationVerification: "Owner-supplied; not independently verified",
-  // Set only when the owner's original asset is available. Never redraw the logo.
-  logoUrl: null as string | null,
+  // Exact owner-provided PNG, SHA-256 verified; never substitute the traced reference.
+  logoUrl: "/brand/IMG_8842(1).png" as string | null,
 } as const;
 
 export type BusinessConfig = {

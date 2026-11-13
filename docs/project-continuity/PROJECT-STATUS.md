@@ -30,3 +30,9 @@ Baseline reverified at 166740803128cb690ebc8d26d5d5aac96607617d; no newer upstre
 Read-only Cloudflare access succeeded: no visible Afnan Worker/D1; R2 returned HTTP 403/code 10042 requiring Dashboard enablement; the exact domain zone was not visible. This does not establish that the owner's domain is inactive. No remote changes were made. Exact proposed names and remaining inputs are in docs/engineering/RELEASE-CHECKLIST.md.
 
 The original IMG_8842(1).png remains unavailable in workspace/main/PR branch. Its supplied SHA-256 and authoritative identity are now durable project brand memory in docs/design/AFNAN-BRAND-ASSET.json, read through AGENTS.md. This records the design; it does not constitute image conversion, checksum verification or logo installation.
+
+## 2026-11-13 — original PNG integration (supersedes missing-file reports)
+
+The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` is now installed at `public/brand/IMG_8842(1).png` through a byte-preserving rename. SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused.
+
+Local validation: typecheck, lint and Worker build passed; 111 responsive/browser checks and 88 dedicated branding assertions passed at 320/390/768/1440 px (branding). The branding suite is included in CI. Continue on draft PR #2 / feat/commerce-platform; reconcile exact-head CI from GitHub. No merge, deployment, provisioning or checkout/payment activation occurred. R2 enablement, domain visibility and external acceptance remain separate launch gates.

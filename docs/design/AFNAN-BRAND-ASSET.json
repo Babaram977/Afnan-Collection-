@@ -13,16 +13,30 @@
     "mimeType": "image/png",
     "expectedSha256": "d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1",
     "repositoryPath": "public/brand/IMG_8842(1).png",
-    "fileAvailableToExecutionTools": false,
-    "checksumVerified": false
+    "fileAvailableToExecutionTools": true,
+    "checksumVerified": true,
+    "width": 460,
+    "height": 546,
+    "byteLength": 145165,
+    "receivedRepositoryPath": "public/brand/IMG_8842(2).png",
+    "receivedCommit": "3ef6de5",
+    "renamePreservedBytes": true
   },
   "integration": {
-    "status": "blocked-pending-original-file-bytes",
+    "status": "integrated-original-png",
     "sharedComponent": "src/components/site/Wordmark.tsx",
     "configuration": "src/lib/business.ts",
     "websiteCompatibleOriginalFormat": "PNG",
     "permittedFaithfulDerivativeFormats": ["PNG", "WebP", "ICO"],
-    "derivativesCreated": false
+    "derivativesCreated": false,
+    "usage": [
+      "header",
+      "footer",
+      "PNG website icon",
+      "Store structured-data logo",
+      "homepage Open Graph and Twitter metadata"
+    ],
+    "referenceOnlyTrace": "public/brand/afnan-collection-traced.svg"
   },
   "rules": [
     "Preserve the exact original bytes before producing derivatives.",

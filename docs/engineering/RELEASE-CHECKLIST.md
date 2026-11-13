@@ -49,7 +49,7 @@ workers.dev/public preview URLs remain disabled, and no production account/domai
 
 ## Acceptance gates and evidence
 
-1. **Original logo:** obtain `IMG_8842(1).png`, verify SHA-256 `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`, retain the original in public/brand/, then integrate faithful header/footer/icon/social derivatives and test actual rendering. File is not currently accessible; a chat preview is not accepted as installation evidence.
+1. **Original logo — satisfied:** original uploaded at 3ef6de5, byte-preserving rename to `public/brand/IMG_8842(1).png`, checksum verified against the owner record. Shared header/footer, native PNG icon, Store logo and homepage social metadata use the unchanged original. Automated branding checks cover served bytes and four viewport widths.
 2. **Owner identity:** owner chooses the email, verifies the code delivered by the real sender, and an account-authorized operator independently confirms business ownership before assigning the admin role in the dedicated reviewed database. No public first-admin claim or production account is created by this task. Test customer and fulfilment accounts must remain unable to use admin APIs.
 3. **Email:** verify sender ownership, real code delivery/expiry/replay limits, session cookies on the approved HTTPS origin, recovery and revocation. Any required email DNS changes need their own explicit authorization. Local OTP fixtures are not email-delivery proof.
 4. **Database/media:** authorize isolated resource creation, apply the reviewed forward migrations only to the approved test database, verify the migration ledger, upload owner-supplied photos and inspect R2 delivery/private previews. Local D1/R2 tests simulate services; they do not prove account entitlements or remote bindings.
@@ -62,7 +62,7 @@ workers.dev/public preview URLs remain disabled, and no production account/domai
 
 ## Exact owner inputs still needed
 
-- The original PNG file matching the supplied checksum, attached as a downloadable file or committed under public/brand/.
+- Original PNG delivery is satisfied; preserve the verified asset and checksum on future changes.
 - Confirmation of the Cloudflare account owning afnancollectionkn.com and sufficient zone visibility; owner-reviewed R2 enablement/billing and resource budget approval.
 - Chosen owner-admin email and verified ownership; approved staff roles/offboarding process.
 - Actual verified email sender/account and protected Resend credentials; Paystack TEST credentials and merchant eligibility confirmation. Never send keys in chat.

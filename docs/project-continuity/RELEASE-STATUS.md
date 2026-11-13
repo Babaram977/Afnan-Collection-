@@ -29,7 +29,7 @@ No deployment workflow, remote resource provisioning or domain routes were activ
 
 ## Release blockers
 
-- Original raster logo file unavailable to execution tools; text mark remains pending it. No logo-installation success is claimed.
+- Original logo blocker resolved by the verified integration milestone below.
 - Actual email sender/domain and delivery, Paystack test credentials, merchant eligibility, external webhooks/verification/refunds/settlement remain unverified. Fixtures are not external acceptance tests.
 - Real merchandise/photos/prices and opening balances; approved delivery fees/areas, returns/privacy/retention and reservation policy; chosen owner email and privileged staff bootstrap.
 - Isolated account-owned resources/secrets, backup/restore/monitoring and plan/limit review; repository privacy preference remains unresolved (public).
@@ -50,3 +50,9 @@ Source follow-up: b5bf71ad5b58c264aa95aa17ceb676de1be87ddc, based on 1667408. Lo
 These remain simulations: generated fixture photos, local D1/R2, OTP sink and Paystack fixtures do not prove actual merchandise-image quality, remote resources, real email delivery, Paystack sandbox connectivity or merchant eligibility. Exact new-head CI is reconciled through PR #2 checks and the final handoff.
 
 Cloudflare connection is valid, but R2 is not enabled in the visible account and the Afnan domain is not visible to that connection; no Afnan Worker/D1 was found. No original logo bytes were found. RELEASE-CHECKLIST.md records actual observed blockers, resource names and inputs. No deployment, production migration, DNS write, real order or charge occurred.
+
+## 2026-11-13 — original PNG integration (supersedes missing-file reports)
+
+The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` is now installed at `public/brand/IMG_8842(1).png` through a byte-preserving rename. SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused.
+
+Local validation: typecheck, lint and Worker build passed; 111 responsive/browser checks and 88 dedicated branding assertions passed at 320/390/768/1440 px (branding). The branding suite is included in CI. Continue on draft PR #2 / feat/commerce-platform; reconcile exact-head CI from GitHub. No merge, deployment, provisioning or checkout/payment activation occurred. R2 enablement, domain visibility and external acceptance remain separate launch gates.

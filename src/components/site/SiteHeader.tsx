@@ -23,7 +23,7 @@ export function SiteHeader() {
       >
         Skip to content
       </a>
-      <div className="container-page flex h-16 items-center justify-between gap-4">
+      <div className="container-page flex h-36 items-center justify-between gap-4">
         <Wordmark />
         <nav aria-label="Main" className="hidden lg:block">
           <ul className="flex items-center gap-1">

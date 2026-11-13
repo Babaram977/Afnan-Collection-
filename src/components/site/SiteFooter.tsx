@@ -8,7 +8,7 @@ export function SiteFooter() {
     <footer className="mt-16 border-t bg-secondary/60">
       <div className="container-page grid gap-8 py-10 md:grid-cols-3">
         <div>
-          <Wordmark />
+          <Wordmark placement="footer" />
           <p className="mt-3 max-w-xs text-sm text-muted-foreground">
             Clothing, essentials, toys and gifts for children in Nigeria.
           </p>

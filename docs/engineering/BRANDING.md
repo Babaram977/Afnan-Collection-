@@ -4,9 +4,7 @@ Owner instruction received 2026-11-13. `src/lib/business.ts` is the authoritativ
 
 The supplied official raster logo shows a gold AC monogram with a black ornamental flourish and the AFNAN COLLECTION wordmark on white. The owner confirmed this raster format is the only available version. That format is acceptable; a vector asset is not required.
 
-**Asset access blocker:** the image is visible in the conversation, but neither attachment was exposed as a downloadable file to the execution tools. The workspace attachment list contains text handoffs only, and neither current main nor the PR #2 branch contains a logo image. No redraw, generated substitute, traced SVG or fabricated derivative has been used. The temporary text mark remains explicitly pending receipt of the file; `business.logoUrl` is null, and the shared Wordmark component already supports the eventual original image.
-
-When the same image file is available in `public/brand/`, retain the original as authoritative, record its checksum/provenance, and create a lossless web derivative or downsize only where justified. Preserve all monogram, flourish, typography and colour details, its white background and aspect ratio. Do not stretch, recolour, crop away the wordmark or promise print-quality source resolution. Use one shared asset reference across header/footer/SEO; later packaging/social/marketing assets should reference this original. Test actual image loading and legibility on desktop and mobile before declaring logo work complete.
+The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` is now installed at `public/brand/IMG_8842(1).png` through a byte-preserving rename. SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused.
 
 Owner-supplied public contacts:
 
@@ -24,14 +22,12 @@ Owner-supplied original filename: `IMG_8842(1).png`.
 
 Expected SHA-256: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`.
 
-The expected digest is recorded from the owner's handoff, not verified against an actual file yet. The current repository/workspace check found no original PNG. Request that same original as a downloadable attachment or repository asset; do not reconstruct it from the visible preview or claim that icon/social derivatives are complete. Retain its exact original bytes and checksum before making any faithful derivatives.
+The digest was verified against both the repository PNG and the locally served Worker asset. The original-file access blocker is resolved.
 
 ## Durable design record
 
-The owner's request to “lock in your memory” is implemented as a repository record, not a promise of permanent chat memory. `docs/design/AFNAN-BRAND-ASSET.json` records the exact source identity, checksum, visual description, permitted faithful derivative formats and blocked integration status. AGENTS.md requires future sessions to consult it. PNG is already compatible with the existing Wordmark component; no redesign or invented vector conversion is needed. The original file must still become accessible before any actual conversion or installation can be verified.
+The owner's request to remember the brand is implemented through versioned AFNAN-BRAND-ASSET.json, this document and AGENTS.md, rather than permanent chat memory. Future branding must preserve the original bytes and identity. Run `bun run test:branding` after branding changes.
 
-## Codex-accessible reference asset (2026-11-13)
+## Reference trace and provenance
 
-A vector **trace derived from the owner's supplied logo image** was committed at `public/brand/afnan-collection-traced.svg` so Codex can examine the arrangement and identifiable gold AC monogram, black flourish and wordmark. **This is an approximation, not the authoritative original PNG and not approval to replace the branding.** Its traced edges/letterforms may differ, and it must not be represented as the original artwork or used to claim logo integration is complete.
-
-The owner-provided 460 × 546 PNG was verified in the ChatGPT file workspace with SHA-256 `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The original bytes have **not** been successfully committed or provided to Codex through GitHub. When the exact original becomes transferable, commit it as `public/brand/afnan-collection-original.png`, verify that checksum, and use it rather than the trace. Until then, treat this SVG only as a visual/reference asset. No deployment or PR merge has been authorized.
+The earlier `public/brand/afnan-collection-traced.svg` is an approximation retained only as a historical reference. It is not the approved original and is not rendered by the storefront. Earlier missing-file reports predate the owner's successful PNG upload at `3ef6de5` and are superseded by the verified integration above. No merge or deployment is authorized.

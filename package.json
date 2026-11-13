@@ -21,7 +21,8 @@
     "test:browser": "node tests/browser.mjs",
     "check": "bun run typecheck && bun run lint && bun run test && bun run worker:build && bun run test:integration",
     "dev:ui": "vite dev",
-    "dev:fixture": "node tests/dev.mjs"
+    "dev:fixture": "node tests/dev.mjs",
+    "test:branding": "node tests/branding.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1",

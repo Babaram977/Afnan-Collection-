@@ -9,7 +9,7 @@
 ## Owner review and outstanding inputs
 
 - Review the working local fixture flow and docs/engineering/ADMIN-GUIDE.md. Select the owner email and verify business ownership before privileged staff assignment. There is no public bootstrap endpoint.
-- Obtain the same supplied raster logo as an accessible repository/file attachment, preserve it as authoritative and install a lossless web asset through the shared business configuration. Do not redraw, trace or generate a substitute; no vector is required.
+- Preserve the installed original PNG and run branding checks for future asset/layout changes.
 - Resolve repository private-visibility preference. Supply genuine products/photos, option SKUs/prices and opening stock through the dashboard; do not seed fictional merchandise outside tests.
 - Approve operational Kano delivery zones/fees, returns/privacy/retention, reservation expiry and refund/restock procedures. The official contact/registration information is already recorded; CAC/TIN are supplied, not independently verified.
 
@@ -27,6 +27,12 @@ Do not claim the backend is live or production-ready from fixture success. Keep 
 
 - Stay on PR #2 / feat/commerce-platform; retain cart follow-up b5bf71a and consult the latest exact-head CI. Do not restart the backend or create another PR.
 - Read docs/engineering/RELEASE-CHECKLIST.md for the concrete resource/configuration/acceptance/rollback/cutover checklist. Cloudflare is connected, so do not ask for generic reconnection: resolve the missing domain visibility and R2 enablement with the account owner. Provision nothing without the stated approval.
-- Obtain IMG_8842(1).png as an accessible original file or repository asset and verify the supplied checksum in AFNAN-BRAND-ASSET.json before faithful image integration. The manifest is durable project memory, not a converted image.
+- Original PNG integration is complete; preserve the canonical path and verified checksum in AFNAN-BRAND-ASSET.json.
 - Collect the owner-admin email/ownership confirmation, verified email sender and protected credentials, Paystack TEST credentials/eligibility, genuine photographs/catalog/opening stock, Kano fees/zones/policies and retention/backup/monitoring decisions. Never ask for secret values in chat.
 - Get explicit approval for an isolated protected acceptance origin/resource setup/test deployment/test checkout before external-service acceptance. Keep production checkout/payments disabled. Merge, production migrations, public deployment, DNS cutover and live mode remain separately gated.
+
+## 2026-11-13 — original PNG integration (supersedes missing-file reports)
+
+The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` is now installed at `public/brand/IMG_8842(1).png` through a byte-preserving rename. SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused.
+
+Local validation: typecheck, lint and Worker build passed; 111 responsive/browser checks and 88 dedicated branding assertions passed at 320/390/768/1440 px (branding). The branding suite is included in CI. Continue on draft PR #2 / feat/commerce-platform; reconcile exact-head CI from GitHub. No merge, deployment, provisioning or checkout/payment activation occurred. R2 enablement, domain visibility and external acceptance remain separate launch gates.
