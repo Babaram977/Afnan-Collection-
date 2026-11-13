@@ -80,3 +80,7 @@ Read the [owner administration guide](docs/engineering/ADMIN-GUIDE.md), [AGENTS.
 ## License
 
 No license has been declared. Public visibility alone does not grant permission to reuse the code, brand or business assets.
+
+## Final activation handoff
+
+[RELEASE-CHECKLIST.md](docs/engineering/RELEASE-CHECKLIST.md) records the read-only Cloudflare inventory, exact proposed resource names, secure runtime inputs, isolated acceptance gates, backups/rollback and domain-cutover sequence. The connected account has no visible Afnan Worker/D1 or matching domain zone; R2 explicitly requires Dashboard enablement. No resources or production routes were changed. The original `IMG_8842(1).png` is still required and must match the owner-supplied checksum in BRANDING.md.

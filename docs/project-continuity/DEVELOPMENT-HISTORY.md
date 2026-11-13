@@ -31,3 +31,11 @@ Photo tests use explicitly fictional fixture pixels/products; no fabricated real
 CI subsequently exposed tablet header overflow at 768 px despite the local pass. A follow-up moves desktop navigation to the large breakpoint and explicitly tests the tablet layout with external fonts unavailable. This is a responsive correction, not a redesign; exact-head validation is rerun.
 
 Responsive fix `b97e41848bdabd95d62c61e7b97519da0593536d` passed all GitHub validation steps in run 43384685020. This documentation-only milestone records the passing code-head evidence without rewriting earlier failed-run history.
+
+## 2026-11-13 — final integration continuation
+
+Reverified PR #2 at 1667408 with both historical exact-head CI runs passing. No changes had appeared upstream after that commit and no logo PNG was present. Read-only Cloudflare inspection authenticated successfully, found no Afnan Worker/D1, returned R2 code 10042 requiring enablement, and could not see the exact domain zone. No resource changes followed.
+
+Expanded acceptance found a cart startup race that could overwrite a new selection. Follow-up b5bf71ad5b58c264aa95aa17ceb676de1be87ddc gates mutations until ready, saves edits before navigation, prevents stale remote resurrection of locally removed items, and preserves saved data on a failed restore. Browser coverage now includes delayed restore, immediate removal/reload, failure/recovery, existing product and option edits, an authenticated customer's purchase preparation, signed fixture payment, staff fulfilment through delivery and customer tracking. Local results: 14 unit tests, 85 Worker/D1/R2 assertions and 111 browser checks; typecheck/lint/build/package and migration replay pass.
+
+The following documentation milestone records exact proposed resource names, activation/backup/rollback/domain gates and owner inputs, and persists the owner-requested brand identity/checksum as project memory. The source PNG is still missing; no screenshot reconstruction, image derivative or installed-logo claim was made. PR #2 remains open and unmerged.

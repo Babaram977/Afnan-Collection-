@@ -22,3 +22,11 @@
 - Only after explicit authorization: merge reviewed work, provision/configure approved remote resources, run reviewed production migration/bootstrap, deploy and attach the domain. No production DNS, deployment, real orders or live charges are authorized by the current work.
 
 Do not claim the backend is live or production-ready from fixture success. Keep README, UI standard and continuity records aligned with verified behavior.
+
+## Final-integration next actions
+
+- Stay on PR #2 / feat/commerce-platform; retain cart follow-up b5bf71a and consult the latest exact-head CI. Do not restart the backend or create another PR.
+- Read docs/engineering/RELEASE-CHECKLIST.md for the concrete resource/configuration/acceptance/rollback/cutover checklist. Cloudflare is connected, so do not ask for generic reconnection: resolve the missing domain visibility and R2 enablement with the account owner. Provision nothing without the stated approval.
+- Obtain IMG_8842(1).png as an accessible original file or repository asset and verify the supplied checksum in AFNAN-BRAND-ASSET.json before faithful image integration. The manifest is durable project memory, not a converted image.
+- Collect the owner-admin email/ownership confirmation, verified email sender and protected credentials, Paystack TEST credentials/eligibility, genuine photographs/catalog/opening stock, Kano fees/zones/policies and retention/backup/monitoring decisions. Never ask for secret values in chat.
+- Get explicit approval for an isolated protected acceptance origin/resource setup/test deployment/test checkout before external-service acceptance. Keep production checkout/payments disabled. Merge, production migrations, public deployment, DNS cutover and live mode remain separately gated.

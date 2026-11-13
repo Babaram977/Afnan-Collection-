@@ -34,7 +34,7 @@
 ## Business identity
 
 - src/lib/business.ts is the single source for the owner-supplied address, WhatsApp, socials, CAC and TIN. CAC/TIN are supplied, not independently verified; show them only in business/legal sections.
-- The supplied gold AC/black flourish logo is authoritative. Never redraw or substitute a generated logo. Keep logoUrl unset until the actual file is available; a visible chat preview alone is not a checked-in asset.
+- Read `docs/design/AFNAN-BRAND-ASSET.json` and `docs/engineering/BRANDING.md` as durable project brand memory before logo or marketing work. The supplied gold AC/black flourish logo is authoritative. Never redraw or substitute a generated logo. Keep logoUrl unset until the actual file is available; a visible chat preview alone is not a checked-in asset.
 - Preserve warm cream, cocoa, terracotta and pastel tokens and Fraunces/Nunito Sans. Read the updated UI standard before changing presentation.
 
 ## Security-critical invariants

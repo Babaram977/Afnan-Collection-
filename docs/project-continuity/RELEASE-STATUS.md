@@ -42,3 +42,11 @@ Historical initialization at d1be458 had five tests, no CI and 201 formatting er
 The initial implementation and continuity heads passed local checks but failed GitHub Chromium layout at 768 px (runs 43383934237 and 43384149141). Desktop navigation competed with the wordmark before desktop-width space was available. The follow-up keeps compact navigation through tablet widths and adds a font-CDN-unavailable tablet regression case. Reconcile the later exact-head CI result; earlier failures are not hidden or treated as success.
 
 Verified follow-up: code head `b97e41848bdabd95d62c61e7b97519da0593536d` passed every GitHub validation step in [run 43384685020](https://github.com/Babaram977/Afnan-Collection-/actions/runs/43384685020). This includes frozen installation, typecheck, lint, unit tests, Worker build/dry-run, Worker/D1 integration and Chromium/axe checks. A documentation-only commit records this result afterward; do not confuse the code-head evidence with an unobserved later head.
+
+## Latest final-integration acceptance
+
+Source follow-up: b5bf71ad5b58c264aa95aa17ceb676de1be87ddc, based on 1667408. Local frozen install, typecheck, lint (zero errors/ten warnings), 14 unit tests, 85 Worker/D1/R2/security assertions and **111 browser/accessibility checks** pass. The browser flow now verifies existing-product/variant edits, authenticated customer checkout, signed fixture payment, full staff fulfilment and customer tracking, plus cart startup/persistence/removal/failure regressions. Production build/package dry-run passed. The migration ledger was replayed locally; CI now explicitly tests fresh application and replay. Bun audit returned no advisories.
+
+These remain simulations: generated fixture photos, local D1/R2, OTP sink and Paystack fixtures do not prove actual merchandise-image quality, remote resources, real email delivery, Paystack sandbox connectivity or merchant eligibility. Exact new-head CI is reconciled through PR #2 checks and the final handoff.
+
+Cloudflare connection is valid, but R2 is not enabled in the visible account and the Afnan domain is not visible to that connection; no Afnan Worker/D1 was found. No original logo bytes were found. RELEASE-CHECKLIST.md records actual observed blockers, resource names and inputs. No deployment, production migration, DNS write, real order or charge occurred.

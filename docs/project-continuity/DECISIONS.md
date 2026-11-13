@@ -27,3 +27,12 @@ These later owner instructions supersede the initial documentation-only scope: i
 - Official business identity/contact/socials were supplied. Central defaults plus validated D1 overrides serve public UI/SEO. CAC BN 4050963 and TIN 24511952-001 remain supplied, not independently verified.
 - The supplied gold AC/black flourish raster logo is authoritative and its format is acceptable. Its bytes are unavailable to tools; request the same file, do not redraw/trace/generate a replacement or require a vector. Branding asset installation remains explicitly incomplete.
 - Security dependency patches/targeted overrides are covered by frozen-install, lint/build/runtime/browser checks. Pin Bun 1.4.4 for override-capable lockfile format 3. No production-readiness claim follows from fixtures.
+
+## 2026-11-13 — final integration and durable brand memory
+
+- Continue PR #2 from 1667408; preserve the implemented D1/R2/Better Auth/Paystack architecture and approved storefront. No backend rebuild, provider switch or new PR is authorized/needed.
+- Preserve the exact owner PNG, filename IMG_8842(1).png, with expected SHA-256 d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1. PNG is already website-compatible. Do not reconstruct from the preview or claim a conversion/checksum/installation before actual bytes are available.
+- Implement the request to remember the brand through versioned AFNAN-BRAND-ASSET.json/BRANDING.md and AGENTS.md discovery instructions, not a claim of permanent chat memory.
+- Cart mutations wait for restoration, persist locally before navigation, and preserve explicit local removals against a stale server copy. Failed initialization preserves the saved snapshot and shows a recoverable error. This addresses a defect found by customer acceptance testing.
+- Cloudflare inspection is read-only. A valid connection does not establish domain visibility, R2 activation or resource readiness. Owner must confirm the correct domain account/scope, review R2 enablement/billing and explicitly authorize any provisioning.
+- Keep checkout/payment defaults disabled and live keys rejected. Logo installation, remote administrator creation, paid resources, production migrations, public deployment, DNS cutover and live charging remain gated by the stated inputs/authorizations.
