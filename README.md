@@ -108,7 +108,7 @@ All catalog access goes through `listProducts()` and `getProduct()` in `src/lib/
 - Add authentication, authorization, persistent inventory, order processing and payment verification before enabling checkout or administrative writes.
 - Never store secret keys in source code or expose them to browser code.
 
-The [UI Standard](docs/design/AFNAN-UI-STANDARD.md) documents the implememented tokens, components, routes, product model and **proposed, not implemented** API contracts. Read [AGENTS.md](AGENTS.md) before changing the architecture. Update the UI Standard when routes, tokens or API contracts change.
+The [UI Standard](docs/design/AFNAN-UI-STANDARD.md) documents the implemented tokens, components, routes, product model and **proposed, not implemented** API contracts. Read [AGENTS.md](AGENTS.md) before changing the architecture. Update the UI Standard when routes, tokens or API contracts change.
 
 ## Before launch
 
