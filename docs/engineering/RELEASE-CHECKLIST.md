@@ -1,5 +1,7 @@
 # Controlled activation checklist — Afnan Collection
 
+Latest readiness refresh: [Gate 3 approval package](acceptance/GATE-3-APPROVAL.md). The existing Zero Trust team and Cloudflare IdP are active; no enrollment needed. MFA and Afnan-only policies are not configured. Separate deployment, sender DNS and real-email approvals; no remote execution authorized.
+
 Current Gate 2 review: [acceptance/GATE-2-REVIEW.md](acceptance/GATE-2-REVIEW.md). Owner-only identities, MFA and sender verification requirements there supersede earlier general tester/self-registration procedures. This phase performs no remote writes; all Gate 3 actions remain unapproved.
 
 Evidence: 2026-11-13. Continue PR #2 / feat/commerce-platform from baseline 1667408; do not rebuild the backend or change providers. This checklist prepares reviewable activation steps; it grants no permission to execute them.

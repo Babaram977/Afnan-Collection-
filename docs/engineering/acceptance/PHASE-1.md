@@ -12,7 +12,7 @@ The actual local configuration binds DB to the verified acceptance D1 UUID, MEDI
 
 ## Access blocker and prepared policies
 
-GET Access organization and application endpoints returned HTTP 403/code 9999: `access.api.error.not_enabled`. Cloudflare says Access is not enabled. This is a service-enablement blocker, not a request for generic reconnection. No Access setting was changed. Owner must review the Access plan, seat/billing terms and identity provider, then explicitly authorize enablement before any protected deployment.
+The earlier GET not_enabled response is superseded: refreshed inspection confirms the active existing team falling-poetry-120a.cloudflareaccess.com and Cloudflare IdP, with no applications/policies. No enrollment is needed. Independent MFA and the owner-only application still require separate configuration approval; see GATE-3-APPROVAL.md. No Access setting was changed.
 
 [access-plan.json](access-plan.json) contains reviewed reusable policy bodies and three exact-host application bodies. Owner subsequently selected admin@afnancollectionkn.com and owner-only testing. The selected identity is not verified or provisioned. See GATE-2-REVIEW.md for current identity/MFA/email and Gate 3 requirements.
 

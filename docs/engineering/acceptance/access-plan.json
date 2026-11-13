@@ -2,7 +2,7 @@
   "status": "prepared-only-not-applied",
   "hostname": "afnan-collection-storefront.danwakili.workers.dev",
   "accountWideChanges": false,
-  "prerequisite": "Owner-authorized Access enablement, independent verification of admin@afnancollectionkn.com and supported MFA setup",
+  "prerequisite": "Existing Zero Trust team active; verified owner identity and supported independent MFA configuration still required",
   "policyCollection": "/accounts/{account_id}/access/policies",
   "reusablePolicyBodies": {
     "owner": {
@@ -41,33 +41,14 @@
           "id": "RETURNED_REUSABLE_OWNER_POLICY_ID",
           "precedence": 1
         }
-      ]
-    },
-    {
-      "name": "Afnan acceptance owner administration",
-      "type": "self_hosted",
-      "domain": "afnan-collection-storefront.danwakili.workers.dev/admin",
-      "session_duration": "1h",
-      "http_only_cookie_attribute": true,
-      "app_launcher_visible": false,
-      "policies": [
+      ],
+      "allowed_idps": [
+        "bf4de15a-2746-4034-952c-01433fbfa3aa"
+      ],
+      "destinations": [
         {
-          "id": "RETURNED_REUSABLE_OWNER_POLICY_ID",
-          "precedence": 1
-        }
-      ]
-    },
-    {
-      "name": "Afnan acceptance owner administration API",
-      "type": "self_hosted",
-      "domain": "afnan-collection-storefront.danwakili.workers.dev/api/admin",
-      "session_duration": "1h",
-      "http_only_cookie_attribute": true,
-      "app_launcher_visible": false,
-      "policies": [
-        {
-          "id": "RETURNED_REUSABLE_OWNER_POLICY_ID",
-          "precedence": 1
+          "type": "public",
+          "uri": "afnan-collection-storefront.danwakili.workers.dev"
         }
       ]
     }
@@ -76,11 +57,41 @@
   "bypassPolicies": [],
   "webhookExceptions": [],
   "notes": [
-    "Prepared only: email selection does not verify mailbox or business ownership.",
-    "Owner only on the entire hostname and administrative paths; no tester policies.",
-    "Independent MFA must be enabled with owner approval before using mfa_config; apply only to Afnan, not all apps.",
-    "Alternatively use a supported IdP MFA claim requirement after explicit review; never silently weaken MFA.",
-    "Create reusable policy first, attach returned ID, test default denial and session expiry.",
-    "Keep every Worker route disabled until Access enforcement is verified."
-  ]
+    "Prepared-only wrapper; send individual reviewed bodies only after approval.",
+    "One root application covers every path; separate admin apps with identical policies are unnecessary for owner-only access.",
+    "Restrict allowed_idps to the existing verified provider ID; exact email Allow does not prove mailbox or business ownership.",
+    "No auth_method=mfa shortcut is assumed for the Cloudflare IdP; independent MFA must be configured and tested.",
+    "Create reusable owner policy and exact-host application before uploading; keep all Worker routes disabled.",
+    "After authorized first upload, obtain and verify the actual Worker ID; attach its destination to this same application using full-body update. Never guess a Worker ID from its name.",
+    "Worker destination covers its associated domains/previews; leave previews disabled, no bypass/override and no all_workers destination.",
+    "No new organization enrollment, tester policy, shared-account enforcement or other-project changes."
+  ],
+  "existingTeam": "falling-poetry-120a.cloudflareaccess.com",
+  "organizationEnrollmentRequired": false,
+  "identityProvider": {
+    "type": "cloudflare",
+    "id": "bf4de15a-2746-4034-952c-01433fbfa3aa",
+    "ownerIdentityVerified": false
+  },
+  "postUploadDestinationToAttach": {
+    "type": "worker",
+    "worker_id": "RETURNED_VERIFIED_AFNAN_WORKER_ID"
+  },
+  "independentMfaPrerequisite": {
+    "existingOrganizationOnly": true,
+    "proposedOrganizationMfaFields": {
+      "mfa_config": {
+        "allowed_authenticators": [
+          "totp",
+          "biometrics",
+          "security_key"
+        ],
+        "session_duration": "1h"
+      },
+      "mfa_required_for_all_apps": false
+    },
+    "applicationScope": "Afnan reusable policy only",
+    "status": "not-configured-or-verified",
+    "updateMethod": "After approval GET the full existing organization, merge reviewed MFA fields and preserve every unrelated setting; never create another organization."
+  }
 }

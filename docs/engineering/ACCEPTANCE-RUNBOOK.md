@@ -1,5 +1,7 @@
 # Afnan controlled acceptance runbook
 
+Latest readiness refresh: [Gate 3 approval package](acceptance/GATE-3-APPROVAL.md). The existing Zero Trust team and Cloudflare IdP are active; no enrollment needed. MFA and Afnan-only policies are not configured. Separate deployment, sender DNS and real-email approvals; no remote execution authorized.
+
 Current Gate 2 review: [acceptance/GATE-2-REVIEW.md](acceptance/GATE-2-REVIEW.md). Owner-only identities, MFA and sender verification requirements there supersede earlier general tester/self-registration procedures. This phase performs no remote writes; all Gate 3 actions remain unapproved.
 
 Prepared 2026-11-13 (Africa/Lagos). This is a procedure for review, not authorization to run remote commands. Continue draft PR #2 on feat/commerce-platform. Source baseline is 31d26811206050dbbf399dc24d6afa113a8bf70f; no later upstream commit existed at reconciliation. Original PNG checksum remains verified. No application redesign or backend replacement is needed.

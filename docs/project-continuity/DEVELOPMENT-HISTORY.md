@@ -1,5 +1,14 @@
 # Development history
 
+## 2026-11-13 — Gate 3 readiness refresh (no execution)
+
+Read-only GET now confirms active existing team falling-poetry-120a.cloudflareaccess.com, one Cloudflare IdP, zero applications and zero reusable policies. The former organization-level not_enabled blocker is resolved; no new enrollment is needed. Returned fields do not establish independent MFA configuration. No remote settings were changed.
+
+Current plan is docs/engineering/acceptance/GATE-3-APPROVAL.md and revised access-plan.json: one Afnan-only root application, exact verified owner email/IdP, one reusable independent-MFA policy, no testers or bypass. Attach only the verified Afnan Worker destination after an approved route-disabled first upload, before enabling its protected workers.dev endpoint. No account-wide enforcement or other-project changes. The entered business mailbox and existing personal Cloudflare account identity must not be treated as interchangeable.
+
+Approval packages are separate: (1) protected acceptance infrastructure/MFA/migrations/secrets/deployment and denial checks; (2) concrete provider sender-domain/DNS changes; (3) real email/verified owner provisioning and application tests; (4) excluded future production/checkout/payment/registration/merge gates. Owner mailbox/independent ownership verification and MFA enrollment/recovery remain prerequisites; orders@afnancollectionkn.com sender/domain status is still unverified. Preserve disabled checkout/payments/acceptance registration and draft PR #2. The application source and its 308 checks are unchanged from ad81bef; new documentation-head CI is reported in PR checks/final handoff.
+
+
 ## 2026-11-13 — Gate 2 review; stop at Gate 3
 
 Owner supplied admin@afnancollectionkn.com, owner-only testing and proposed orders@afnancollectionkn.com sender; mailbox/business ownership and sender authentication remain unverified. See docs/engineering/acceptance/GATE-2-REVIEW.md and access-plan.json for the current review; they supersede earlier tester/signup assumptions.
