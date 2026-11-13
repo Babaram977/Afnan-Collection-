@@ -354,9 +354,21 @@ try {
   );
   check(
     (
-      await staff.request("/admin/media", "POST", "x".repeat(5 * 1024 * 1024 + 1), {
-        "Content-Type": "image/png",
-      })
+      await staff.request(
+        "/admin/media",
+        "POST",
+        new ReadableStream({
+          start(controller) {
+            // Exercise the streaming limit without a transport-generated Content-Length.
+            // Early header rejection of a prebuffered 5 MiB body can race Undici writes.
+            controller.enqueue(new Uint8Array(5 * 1024 * 1024 + 1));
+            controller.close();
+          },
+        }),
+        {
+          "Content-Type": "image/png",
+        },
+      )
     ).status === 413,
     "Oversized upload rejected",
   );

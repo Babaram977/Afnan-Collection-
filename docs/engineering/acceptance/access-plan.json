@@ -1,0 +1,86 @@
+{
+  "status": "prepared-only-not-applied",
+  "hostname": "afnan-collection-storefront.danwakili.workers.dev",
+  "accountWideChanges": false,
+  "prerequisite": "Owner-authorized Access enablement, independent verification of admin@afnancollectionkn.com and supported MFA setup",
+  "policyCollection": "/accounts/{account_id}/access/policies",
+  "reusablePolicyBodies": {
+    "owner": {
+      "name": "Afnan acceptance owner",
+      "decision": "allow",
+      "include": [
+        {
+          "email": {
+            "email": "admin@afnancollectionkn.com"
+          }
+        }
+      ],
+      "session_duration": "1h",
+      "mfa_config": {
+        "mfa_disabled": false,
+        "allowed_authenticators": [
+          "totp",
+          "biometrics",
+          "security_key"
+        ],
+        "session_duration": "1h"
+      }
+    }
+  },
+  "applicationCollection": "/accounts/{account_id}/access/apps",
+  "applicationBodies": [
+    {
+      "name": "Afnan acceptance storefront",
+      "type": "self_hosted",
+      "domain": "afnan-collection-storefront.danwakili.workers.dev",
+      "session_duration": "1h",
+      "http_only_cookie_attribute": true,
+      "app_launcher_visible": false,
+      "policies": [
+        {
+          "id": "RETURNED_REUSABLE_OWNER_POLICY_ID",
+          "precedence": 1
+        }
+      ]
+    },
+    {
+      "name": "Afnan acceptance owner administration",
+      "type": "self_hosted",
+      "domain": "afnan-collection-storefront.danwakili.workers.dev/admin",
+      "session_duration": "1h",
+      "http_only_cookie_attribute": true,
+      "app_launcher_visible": false,
+      "policies": [
+        {
+          "id": "RETURNED_REUSABLE_OWNER_POLICY_ID",
+          "precedence": 1
+        }
+      ]
+    },
+    {
+      "name": "Afnan acceptance owner administration API",
+      "type": "self_hosted",
+      "domain": "afnan-collection-storefront.danwakili.workers.dev/api/admin",
+      "session_duration": "1h",
+      "http_only_cookie_attribute": true,
+      "app_launcher_visible": false,
+      "policies": [
+        {
+          "id": "RETURNED_REUSABLE_OWNER_POLICY_ID",
+          "precedence": 1
+        }
+      ]
+    }
+  ],
+  "defaultDeny": true,
+  "bypassPolicies": [],
+  "webhookExceptions": [],
+  "notes": [
+    "Prepared only: email selection does not verify mailbox or business ownership.",
+    "Owner only on the entire hostname and administrative paths; no tester policies.",
+    "Independent MFA must be enabled with owner approval before using mfa_config; apply only to Afnan, not all apps.",
+    "Alternatively use a supported IdP MFA claim requirement after explicit review; never silently weaken MFA.",
+    "Create reusable policy first, attach returned ID, test default denial and session expiry.",
+    "Keep every Worker route disabled until Access enforcement is verified."
+  ]
+}

@@ -1,5 +1,16 @@
 # Resume development
 
+## 2026-11-13 — Gate 2 review; stop at Gate 3
+
+Owner supplied admin@afnancollectionkn.com, owner-only testing and proposed orders@afnancollectionkn.com sender; mailbox/business ownership and sender authentication remain unverified. See docs/engineering/acceptance/GATE-2-REVIEW.md and access-plan.json for the current review; they supersede earlier tester/signup assumptions.
+
+Read-only GET reconfirmed the dedicated acceptance D1 is empty and R2 private. Actual DB UUID/private bucket are in the complete ignored acceptance Worker config; dry-run validates bindings. Proposed origin uses the existing danwakili workers.dev subdomain; all Worker routes/previews remain disabled. Access GET reports not_enabled (403/9999). DNS-record listing returned no visible records; no provider-specific DNS values or verified Resend status are available. No generic reconnection is indicated.
+
+Acceptance auth now disables automatic email-OTP signup and core email registration. Ten new assertions cover signup denial, fixture isolation, unauthorized administration and disabled checkout; existing fixture customer flows are retained. The oversized-upload test now streams its payload to avoid a local Undici early-header/EPIPE race while still asserting HTTP 413. Both migrations apply/replay locally with a complete ledger and clean foreign-key check. The full application validation includes 14 unit tests, 85 integration assertions, 111 browser checks and 88 branding assertions; exact new-head CI is reported through PR #2.
+
+Gate 3 still requires explicit approval for remote migrations/data/backup operations, Access enablement/MFA/Afnan-only policies, secrets, protected Worker deployment, owner identity/admin provisioning, sender-domain/DNS verification and real emails. No remote writes or messages were performed in this review. Checkout/live payments/public registration remain disabled; PR #2 stays draft. Lovable/DNS and all other businesses remain untouched. Verify identity through real protected mailbox challenge plus independent business confirmation before granting any role; never treat the entered email as proof.
+
+
 ## 2026-11-13 — owner-approved acceptance storage creation
 
 Owner explicitly approved creation of the named acceptance D1 and R2 only, following the clarification that Worker upload/deployment remains separate. Created afnan-collection-acceptance (DB) and afnan-product-media-acceptance (MEDIA, Standard) in the verified account. GET confirms D1 has zero tables; no migrations or customer data were added. R2 public r2.dev access is disabled and no custom domains exist. Creation succeeded without subscription or billing-setting changes, proving D1/R2 creation permission for these resources. Default placements returned WEUR for D1 and EEUR for R2; no jurisdiction restriction was requested.

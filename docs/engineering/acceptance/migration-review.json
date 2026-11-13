@@ -1,0 +1,9 @@
+{
+  "reviewedOn": "2026-11-13",
+  "orderedMigrations": {
+    "0001_commerce.sql": "2d70de4c5724533dc9996e970b29be12efc79811e35a1e6e70b3cdc396d984bd",
+    "0002_admin_management.sql": "46f14700c325e271e5acbf68b70785ddc023a270f1ed75caf5769ee4210064e0"
+  },
+  "repeatability": "Wrangler ledger, not direct SQL replay",
+  "remoteApplied": false
+}

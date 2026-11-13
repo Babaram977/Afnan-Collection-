@@ -13,6 +13,8 @@ export function authFor(env: CommerceEnv) {
     baseURL: env.APP_ORIGIN,
     secret: env.AUTH_SECRET,
     trustedOrigins: [env.APP_ORIGIN],
+    // Acceptance identities are provisioned by an approved operator, never public signup.
+    disabledPaths: env.APP_ENV === "acceptance" ? ["/sign-up/email"] : [],
     database: drizzleAdapter(drizzle(env.DB, { schema }), { provider: "sqlite", schema }),
     session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
     advanced: {
@@ -22,6 +24,7 @@ export function authFor(env: CommerceEnv) {
     rateLimit: { enabled: true, storage: "memory", window: 60, max: 10 },
     plugins: [
       emailOTP({
+        disableSignUp: env.APP_ENV === "acceptance",
         otpLength: 6,
         expiresIn: 300,
         allowedAttempts: 5,

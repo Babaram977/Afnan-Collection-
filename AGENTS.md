@@ -44,3 +44,8 @@
 - Never trust a browser callback. Verify Paystack signatures over the original body and re-query provider amount/currency/reference/status. Deduplicate events and route late payments to review.
 - TEST_FIXTURES requires APP_ENV=test and localhost origin; never configure this on a remote Worker. Test mail/payment tables exist only in tests/fixtures.sql.
 - Run clean frozen install, typecheck, lint, unit tests, worker build/dry-run, Worker/D1 integration tests and responsive/browser accessibility tests for meaningful commerce changes. No real email or payment call is needed for fixture tests.
+
+## Protected acceptance review
+
+- Read docs/engineering/acceptance/GATE-2-REVIEW.md before any remote operation. Current scope is owner only; admin@afnancollectionkn.com and orders@afnancollectionkn.com are supplied settings, not verified identities. Gate 3 writes/deployment/email/DNS remain unapproved.
+- Preserve acceptance-mode signup denial. Pre-provisioning a named identity and assigning staff are separate approved, audited actions after verification. Never enable fixtures remotely. Run test:acceptance alongside integration/browser/branding checks.

@@ -103,7 +103,12 @@ export class Client {
         ? {}
         : {
             body:
-              typeof data === "string" || data instanceof Uint8Array ? data : JSON.stringify(data),
+              typeof data === "string" ||
+              data instanceof Uint8Array ||
+              data instanceof ReadableStream
+                ? data
+                : JSON.stringify(data),
+            ...(data instanceof ReadableStream ? { duplex: "half" } : {}),
           }),
     });
     for (const c of response.headers.getSetCookie()) {
