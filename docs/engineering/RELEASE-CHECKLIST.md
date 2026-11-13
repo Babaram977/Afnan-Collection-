@@ -4,16 +4,19 @@ Evidence: 2026-11-13. Continue PR #2 / feat/commerce-platform from baseline 1667
 
 ## Read-only Cloudflare inventory
 
-The existing Cloudflare connection authenticated successfully. One account was visible. Read-only inventory returned:
+The owner-supplied account/zone IDs now resolve to the intended account. This supersedes the earlier inventory against a different account. Read-only verification on 2026-11-13 found:
 
-| Item                  | Observed result                                                                       | Consequence                                                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Afnan Worker          | No matching Afnan script visible                                                      | Dedicated Worker still needs an authorized creation/deployment                                                                    |
-| D1                    | No databases visible in this account                                                  | No existing Afnan database ID can be bound                                                                                        |
-| R2                    | HTTP 403, Cloudflare code 10042: “Please enable R2 through the Cloudflare Dashboard.” | Owner must review/enable R2 and any billing requirements; no bucket was created                                                   |
-| afnancollectionkn.com | Exact zone lookup returned no visible match                                           | Confirm the correct account and token/zone visibility before any domain work; this does not establish that the domain is inactive |
+| Item | Verified result | Remaining gate |
+| --- | --- | --- |
+| Workers | Six existing scripts, no Afnan Worker | Approved Afnan-only upload/deployment |
+| D1 | GET succeeds, zero databases | Approved dedicated acceptance database creation |
+| R2 | GET succeeds, two DrippleX buckets; no Afnan bucket | Subscription/budget review and approved create; do not reuse existing buckets |
+| afnancollectionkn.com | Active, full zone in intended account | No domain visibility blocker; production routing remains unchanged |
+| Permissions | Reported worker, D1 and R2 edit permissions | Creation remains untested; Billing Read is unavailable through OAuth |
 
-This is not an expired-connection finding. No reconnection loop, resource creation, DNS write, secret mutation or deployment was performed. Account email and operational identifiers are deliberately not copied into the public repository. Confirm the intended account through protected configuration before binding resources.
+Account subscriptions GET returned 403/code 10000; connector reports no OAuth scope for this billing endpoint. Owner Dashboard review or a protected Billing Read token can establish subscription details. No generic reconnection or automatic billing enablement is needed. Account email/IDs remain in the protected owner handoff. Nothing was provisioned or deployed.
+
+See [ACCEPTANCE-RUNBOOK.md](ACCEPTANCE-RUNBOOK.md) for exact commands, protected-origin sequence, current pricing, privilege checks and rollback. It supersedes old account/domain/R2 blockers while preserving all approval boundaries below.
 
 ## Dedicated resource names and bindings
 
@@ -63,7 +66,7 @@ workers.dev/public preview URLs remain disabled, and no production account/domai
 ## Exact owner inputs still needed
 
 - Original PNG delivery is satisfied; preserve the verified asset and checksum on future changes.
-- Confirmation of the Cloudflare account owning afnancollectionkn.com and sufficient zone visibility; owner-reviewed R2 enablement/billing and resource budget approval.
+- Account and active-zone visibility are confirmed. Owner subscription/budget review and resource-creation approval remain required; no R2 enablement change is currently indicated.
 - Chosen owner-admin email and verified ownership; approved staff roles/offboarding process.
 - Actual verified email sender/account and protected Resend credentials; Paystack TEST credentials and merchant eligibility confirmation. Never send keys in chat.
 - Initial genuine product photographs/descriptions/options/prices/opening stock; Kano delivery zones/charges and approved returns/delivery/privacy/retention/reservation rules.

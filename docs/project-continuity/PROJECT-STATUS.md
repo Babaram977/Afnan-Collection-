@@ -1,5 +1,16 @@
 # Project status
 
+## 2026-11-13 — corrected account and controlled acceptance preparation
+
+Owner-supplied account/zone IDs were explicitly verified. The intended account has six Workers (four DrippleX, Heroine and Landonova); no Afnan Worker or D1 database. afnancollectionkn.com is active/full and visible. R2 lists dripplex-public and dripplex-uploads, not an empty list; no Afnan bucket. Earlier disabled-R2/missing-domain findings concerned a different connected account and are superseded. Existing services/settings/DNS were not changed.
+
+D1/R2 reads work and returned permission metadata includes edits. New-resource write entitlement/quota remains untested. Subscription GET is blocked by OAuth's lack of support for the Billing Read endpoint (403/code 10000); owner Dashboard billing review is required, not generic reconnection or automatic R2 enablement.
+
+ACCEPTANCE-RUNBOOK.md defines exact isolated names (afnan-collection-storefront, afnan-collection-acceptance/DB, afnan-product-media-acceptance/MEDIA), guarded creation/migration commands, protected-origin procedure, budget/limits, identity/email inputs, rollback and separate production gates. No resources/billing/secret writes, merge, deployment, production migration, DNS or payment activation were performed. Owner must approve provisioning/migrations, budget, protected origin/deployment and administrator assignment; test checkout and production remain separately gated.
+
+Branch/PR reconciliation found no commits after original-logo integration 31d2681, whose two exact-head CI runs 43432962992 and 43432957402 passed. The official original PNG still matches its recorded SHA-256. Full local checks passed again: frozen install, typecheck, lint (zero errors/ten warnings), 14 unit tests, build/dry-run, local migration application/replay, 85 integration assertions, 111 browser and 88 branding checks. Initial integration attempt hit local transport EPIPE; rerun passed unchanged. These are fixture results, not remote email/payment acceptance. Reconcile new documentation-head CI through PR #2 before handoff.
+
+
 Last reconciled: 2026-11-13. Repository: Babaram977/Afnan-Collection- (public).
 
 ## GitHub baseline and active work

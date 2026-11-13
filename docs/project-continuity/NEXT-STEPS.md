@@ -1,5 +1,16 @@
 # Resume development
 
+## 2026-11-13 — corrected account and controlled acceptance preparation
+
+Owner-supplied account/zone IDs were explicitly verified. The intended account has six Workers (four DrippleX, Heroine and Landonova); no Afnan Worker or D1 database. afnancollectionkn.com is active/full and visible. R2 lists dripplex-public and dripplex-uploads, not an empty list; no Afnan bucket. Earlier disabled-R2/missing-domain findings concerned a different connected account and are superseded. Existing services/settings/DNS were not changed.
+
+D1/R2 reads work and returned permission metadata includes edits. New-resource write entitlement/quota remains untested. Subscription GET is blocked by OAuth's lack of support for the Billing Read endpoint (403/code 10000); owner Dashboard billing review is required, not generic reconnection or automatic R2 enablement.
+
+ACCEPTANCE-RUNBOOK.md defines exact isolated names (afnan-collection-storefront, afnan-collection-acceptance/DB, afnan-product-media-acceptance/MEDIA), guarded creation/migration commands, protected-origin procedure, budget/limits, identity/email inputs, rollback and separate production gates. No resources/billing/secret writes, merge, deployment, production migration, DNS or payment activation were performed. Owner must approve provisioning/migrations, budget, protected origin/deployment and administrator assignment; test checkout and production remain separately gated.
+
+Branch/PR reconciliation found no commits after original-logo integration 31d2681, whose two exact-head CI runs 43432962992 and 43432957402 passed. The official original PNG still matches its recorded SHA-256. Full local checks passed again: frozen install, typecheck, lint (zero errors/ten warnings), 14 unit tests, build/dry-run, local migration application/replay, 85 integration assertions, 111 browser and 88 branding checks. Initial integration attempt hit local transport EPIPE; rerun passed unchanged. These are fixture results, not remote email/payment acceptance. Reconcile new documentation-head CI through PR #2 before handoff.
+
+
 ## Mandatory continuity workflow
 
 1. Read AGENTS.md and all five continuity records. Fetch latest main, feature branch, PR diffs/reviews and exact-head CI; current GitHub evidence takes precedence over this snapshot.
@@ -26,7 +37,7 @@ Do not claim the backend is live or production-ready from fixture success. Keep 
 ## Final-integration next actions
 
 - Stay on PR #2 / feat/commerce-platform; retain cart follow-up b5bf71a and consult the latest exact-head CI. Do not restart the backend or create another PR.
-- Read docs/engineering/RELEASE-CHECKLIST.md for the concrete resource/configuration/acceptance/rollback/cutover checklist. Cloudflare is connected, so do not ask for generic reconnection: resolve the missing domain visibility and R2 enablement with the account owner. Provision nothing without the stated approval.
+- Read docs/engineering/RELEASE-CHECKLIST.md for the concrete resource/configuration/acceptance/rollback/cutover checklist. Cloudflare is connected, so do not ask for generic reconnection: the correct account/active zone and R2 access are now verified; obtain owner subscription/budget review and explicit acceptance approvals. Provision nothing without the stated approval.
 - Original PNG integration is complete; preserve the canonical path and verified checksum in AFNAN-BRAND-ASSET.json.
 - Collect the owner-admin email/ownership confirmation, verified email sender and protected credentials, Paystack TEST credentials/eligibility, genuine photographs/catalog/opening stock, Kano fees/zones/policies and retention/backup/monitoring decisions. Never ask for secret values in chat.
 - Get explicit approval for an isolated protected acceptance origin/resource setup/test deployment/test checkout before external-service acceptance. Keep production checkout/payments disabled. Merge, production migrations, public deployment, DNS cutover and live mode remain separately gated.
