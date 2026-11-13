@@ -25,6 +25,10 @@ jobs:
       - run: bun run lint
       - run: bun run test
       - run: bun run worker:build
+      - name: Apply and replay local migrations
+        run: |
+          bun run db:migrate:local
+          bun run db:migrate:local
       - run: bun run test:integration
       - run: bunx playwright install --with-deps chromium
       - run: bun run test:browser

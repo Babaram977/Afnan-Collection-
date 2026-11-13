@@ -1,4 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+  type ReactNode,
+} from "react";
 import { z } from "zod";
 import { apiCall } from "./store";
 import type { Product } from "./catalog";
@@ -12,6 +21,8 @@ export interface CartLine {
   imageUrl?: string | undefined;
 }
 interface CartCtx {
+  ready: boolean;
+  error: string | null;
   lines: CartLine[];
   count: number;
   subtotalKobo: number;
@@ -63,36 +74,75 @@ export function restoreCart(raw: unknown, products: Product[]): CartLine[] {
   }
   return result;
 }
+function saveLocal(lines: CartLine[]) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(lines));
+  } catch {
+    /* Storage can be disabled; the server copy still syncs when connected. */
+  }
+}
 export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const current = useRef<CartLine[]>([]);
+  const readyRef = useRef(false);
+  const commit = useCallback((change: (previous: CartLine[]) => CartLine[]) => {
+    if (!readyRef.current) return;
+    const next = change(current.current);
+    current.current = next;
+    saveLocal(next);
+    setLines(next);
+  }, []);
   useEffect(() => {
     let active = true;
-    async function restore() {
+    let generation = 0;
+    async function restore(event?: Event) {
+      const attempt = ++generation;
+      readyRef.current = false;
+      setReady(false);
+      setError(null);
       try {
         await apiCall("/me");
         const [products, remote] = await Promise.all([
           apiCall<Product[]>("/products"),
           apiCall<unknown[]>("/cart"),
         ]);
-        let local: unknown = [];
+        let local: unknown = null;
+        let present = false;
         try {
-          local = JSON.parse(localStorage.getItem(KEY) ?? "[]");
+          const raw = localStorage.getItem(KEY);
+          if (raw !== null) {
+            local = JSON.parse(raw);
+            present = persisted.safeParse(local).success;
+          }
         } catch {
-          /* corrupt or unavailable storage */
+          /* Invalid/unavailable snapshots fall back to the owner-scoped server copy. */
         }
         const restored = restoreCart(local, products);
         const saved = restoreCart(remote, products);
-        const combined = [
-          ...restored,
-          ...saved.filter((l) => !restored.some((x) => x.variantId === l.variantId)),
-        ];
-        if (active) {
+        // A valid device snapshot, including an empty one, represents explicit local
+        // removals. Do not resurrect stale remote lines while a debounced PUT is pending.
+        const combined = !present
+          ? saved
+          : event
+            ? [
+                ...restored,
+                ...saved.filter((l) => !restored.some((x) => x.variantId === l.variantId)),
+              ]
+            : restored;
+        if (active && attempt === generation) {
+          current.current = combined;
+          saveLocal(combined);
           setLines(combined);
+          readyRef.current = true;
           setReady(true);
         }
       } catch {
-        if (active) setReady(true);
+        if (active && attempt === generation)
+          setError(
+            "Cart unavailable. Refresh to try again. Your saved items have not been changed.",
+          );
       }
     }
     void restore();
@@ -104,17 +154,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     if (!ready) return;
-    try {
-      localStorage.setItem(KEY, JSON.stringify(lines));
-    } catch {
-      /* Cart remains usable when browser storage is unavailable. */
-    }
     const timer = setTimeout(() => {
       void apiCall("/cart", {
         method: "PUT",
         body: JSON.stringify(lines.map(({ variantId, qty }) => ({ variantId, qty }))),
       }).catch(() => {
-        /* Local state remains available; checkout always revalidates. */
+        /* Local edits remain saved; checkout always revalidates authoritative data. */
       });
     }, 300);
     return () => clearTimeout(timer);
@@ -122,21 +167,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const value = useMemo<CartCtx>(
     () => ({
       lines,
+      ready,
+      error,
       count: lines.reduce((n, l) => n + l.qty, 0),
       subtotalKobo: lines.reduce((n, l) => n + l.qty * l.priceKobo, 0),
-      add: (l) => setLines((s) => cartReducerAdd(s, l)),
+      add: (l) => commit((previous) => cartReducerAdd(previous, l)),
       setQty: (id, qty) => {
         if (!Number.isInteger(qty)) return;
-        setLines((s) =>
+        commit((previous) =>
           qty <= 0
-            ? s.filter((l) => l.variantId !== id)
-            : s.map((l) => (l.variantId === id ? { ...l, qty: Math.min(qty, 99) } : l)),
+            ? previous.filter((l) => l.variantId !== id)
+            : previous.map((l) => (l.variantId === id ? { ...l, qty: Math.min(qty, 99) } : l)),
         );
       },
-      remove: (id) => setLines((s) => s.filter((l) => l.variantId !== id)),
-      clear: () => setLines([]),
+      remove: (id) => commit((previous) => previous.filter((l) => l.variantId !== id)),
+      clear: () => commit(() => []),
     }),
-    [lines],
+    [lines, ready, error, commit],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

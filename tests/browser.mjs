@@ -1,7 +1,8 @@
+import { createHmac } from "node:crypto";
 import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { createTestApp, ORIGIN } from "./harness.mjs";
+import { createTestApp, ORIGIN, AUTH_SECRET } from "./harness.mjs";
 const { mf, db, zoneId } = await createTestApp({ port: 8787 });
 const browser = await chromium.launch();
 let checks = 0;
@@ -116,6 +117,45 @@ try {
       );
       checks++;
     }
+
+    if (width === 390) {
+      await page.goto(ORIGIN + "/product/fixture-romper");
+      await page.getByRole("button", { name: "Add to cart", exact: true }).click();
+      await page.goto(ORIGIN + "/cart");
+      await page.getByText("Test fixture romper", { exact: true }).waitFor();
+      assert.equal(
+        await page.evaluate(async () => {
+          const lines = JSON.parse(localStorage.getItem("afnan-cart-v1"));
+          return (
+            await fetch("/api/cart", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(lines.map(({ variantId, qty }) => ({ variantId, qty }))),
+            })
+          ).status;
+        }),
+        200,
+      );
+      await page.getByRole("button", { name: "Remove Test fixture romper", exact: true }).click();
+      await page.reload();
+      await page.getByRole("heading", { name: "Your cart is empty", exact: true }).waitFor();
+      checks++;
+      await page.goto(ORIGIN + "/product/fixture-romper");
+      await page.getByRole("button", { name: "Add to cart", exact: true }).click();
+      const stored = await page.evaluate(() => localStorage.getItem("afnan-cart-v1"));
+      const unavailable = async (route) =>
+        route.request().method() === "GET" ? route.abort() : route.continue();
+      await page.route("**/api/cart", unavailable);
+      await page.goto(ORIGIN + "/cart");
+      await page.getByRole("alert").filter({ hasText: "Cart unavailable" }).waitFor();
+      assert.equal(await page.evaluate(() => localStorage.getItem("afnan-cart-v1")), stored);
+      checks++;
+      await page.unroute("**/api/cart", unavailable);
+      await page.reload();
+      await page.getByText("Test fixture romper", { exact: true }).waitFor();
+      await page.getByRole("button", { name: "Remove Test fixture romper", exact: true }).click();
+      checks++;
+    }
     assert.deepEqual(errors, [], `Browser errors at ${width}`);
     checks++;
     await context.close();
@@ -215,10 +255,50 @@ try {
     );
     checks += 2;
   }
+
+  await page.getByRole("button", { name: "Back to products", exact: true }).click();
+  const productCard = page
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("heading", { name: "Browser draft fixture", exact: true }) });
+  await productCard.getByRole("button", { name: "Edit product", exact: true }).click();
+  await page.getByLabel("Product name", { exact: true }).fill("Browser updated fixture");
+  await page
+    .getByLabel("Description", { exact: true })
+    .fill("Updated product description for controlled acceptance.");
+  const edited = page.waitForResponse(
+    (r) => r.url().endsWith("/api/admin/products") && r.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Save product", exact: true }).click();
+  assert.equal((await edited).status(), 200);
+  checks++;
+  await page.getByRole("button", { name: "Edit option", exact: true }).click();
+  await page.getByLabel("Regular price (₦)", { exact: true }).fill("2600.50");
+  await page.getByLabel("Promotional price (₦, optional)", { exact: true }).fill("2100.25");
+  const optionUpdated = page.waitForResponse(
+    (r) => r.url().endsWith("/api/admin/variants") && r.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Save option", exact: true }).click();
+  assert.equal((await optionUpdated).status(), 200);
+  checks++;
+  const adjusted = await db
+    .prepare("SELECT stock,price_kobo,sale_price_kobo FROM variants WHERE sku='BROWSER-001'")
+    .first();
+  assert.equal(adjusted.stock, 4);
+  assert.equal(adjusted.price_kobo, 260050);
+  assert.equal(adjusted.sale_price_kobo, 210025);
+  checks += 3;
+  const catalogPage = await context.newPage();
+  await catalogPage.goto(ORIGIN + "/product/browser-draft-fixture");
+  await catalogPage
+    .getByRole("heading", { name: "Browser updated fixture", exact: true })
+    .waitFor();
+  await catalogPage.getByText(/2,100\.25/).waitFor();
+  checks++;
+  await catalogPage.close();
   await page.getByRole("button", { name: "Inventory", exact: true }).click();
   await page
     .getByLabel("Product and option")
-    .selectOption({ label: "Browser draft fixture — BROWSER-001 — 4 available" });
+    .selectOption({ label: "Browser updated fixture — BROWSER-001 — 4 available" });
   await page.getByLabel("Quantity", { exact: true }).fill("2");
   await page.getByLabel("Reason", { exact: true }).fill("Fixture count correction");
   await page.getByRole("button", { name: "Record stock movement" }).click();
@@ -232,6 +312,103 @@ try {
   await page.getByRole("cell", { name: "Browser fixture delivery", exact: true }).waitFor();
   checks++;
 
+  const customerContext = await browser.newContext({
+    viewport: { width: 390, height: 900 },
+    extraHTTPHeaders: { "CF-Connecting-IP": "192.0.2.31" },
+  });
+  try {
+    const customerPage = await customerContext.newPage();
+    await customerPage.goto(ORIGIN + "/account");
+    await customerPage.getByLabel("Email", { exact: true }).fill("acceptance-customer@example.com");
+    await customerPage.getByLabel("Name", { exact: true }).fill("Acceptance customer");
+    await customerPage.getByRole("button", { name: "Send sign-in code" }).click();
+    await customerPage.getByLabel("Email code").waitFor();
+    const { code } = await db
+      .prepare("SELECT code FROM test_outbox WHERE email=?")
+      .bind("acceptance-customer@example.com")
+      .first();
+    await customerPage.getByLabel("Email code").fill(code);
+    await customerPage.getByRole("button", { name: "Verify and sign in" }).click();
+    await customerPage
+      .getByRole("heading", { name: "Signed in as acceptance-customer@example.com" })
+      .waitFor();
+    checks++;
+
+    let releaseCart;
+    const cartGate = new Promise((resolve) => {
+      releaseCart = resolve;
+    });
+    const holdCart = async (route) => {
+      if (route.request().method() === "GET") await cartGate;
+      await route.continue();
+    };
+    await customerPage.route("**/api/cart", holdCart);
+    const cartRequested = customerPage.waitForRequest(
+      (r) => r.url().endsWith("/api/cart") && r.method() === "GET",
+    );
+    await customerPage.goto(ORIGIN + "/product/browser-draft-fixture");
+    await cartRequested;
+    assert.equal(
+      await customerPage.getByRole("button", { name: "Add to cart", exact: true }).isDisabled(),
+      true,
+    );
+    checks++;
+    releaseCart();
+    await customerPage.getByRole("button", { name: "Add to cart", exact: true }).click();
+    await customerPage.unroute("**/api/cart", holdCart);
+    await customerPage.goto(ORIGIN + "/checkout");
+    await customerPage.getByLabel("Delivery area").selectOption(zoneId);
+    await customerPage.getByLabel("Full name", { exact: true }).fill("Acceptance customer");
+    await customerPage.getByLabel("Phone", { exact: true }).fill("08012345678");
+    await customerPage
+      .getByLabel("Street address", { exact: true })
+      .fill("Acceptance fixture street 10");
+    await customerPage.getByLabel("City", { exact: true }).fill("Kano");
+    await customerPage.getByRole("button", { name: "Prepare order", exact: true }).click();
+    await customerPage.getByRole("heading", { name: "Order prepared" }).waitFor();
+    const order = await db
+      .prepare(
+        "SELECT id,total_kobo,user_id FROM orders WHERE email='acceptance-customer@example.com' AND status='pending'",
+      )
+      .first();
+    assert.ok(order.user_id);
+    assert.equal(order.total_kobo, 260025);
+    checks += 2;
+    await customerPage.getByRole("button", { name: "Continue to payment", exact: true }).click();
+    await customerPage.waitForURL(/\/account/);
+    checks++;
+    const event = JSON.stringify({ event: "charge.success", data: { reference: order.id } });
+    const signature = createHmac("sha512", AUTH_SECRET).update(event).digest("hex");
+    const paid = await mf.dispatchFetch(ORIGIN + "/api/payments/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-paystack-signature": signature },
+      body: event,
+    });
+    assert.equal(paid.status, 200);
+    checks++;
+    await page.getByRole("button", { name: "Orders", exact: true }).click();
+    await page.getByLabel("Show orders").selectOption("paid");
+    const orderCard = page.getByRole("listitem").filter({ hasText: order.id });
+    await orderCard
+      .getByRole("button", { name: "View purchased items and delivery", exact: true })
+      .click();
+    await page.getByText("Acceptance fixture street 10, Kano, Kano", { exact: true }).waitFor();
+    await page.getByText(/1 × Browser updated fixture \(BROWSER-001\)/).waitFor();
+    checks++;
+    await page.getByRole("button", { name: "Start fulfilment", exact: true }).click();
+    await page.getByRole("button", { name: "Mark dispatched", exact: true }).click();
+    await page.getByRole("button", { name: "Mark delivered", exact: true }).click();
+    await page.getByText("Status: delivered", { exact: true }).waitFor();
+    checks++;
+    await customerPage.getByRole("button", { name: "Refresh order status", exact: true }).click();
+    await customerPage.getByText("delivered", { exact: true }).waitFor();
+    checks++;
+    const balance = await db.prepare("SELECT stock FROM variants WHERE sku='BROWSER-001'").first();
+    assert.equal(balance.stock, 5);
+    checks++;
+  } finally {
+    await customerContext.close();
+  }
   await page.getByRole("button", { name: "Business", exact: true }).click();
   await page
     .getByLabel("Business address", { exact: true })

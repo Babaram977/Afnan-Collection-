@@ -21,10 +21,19 @@ export const Route = createFileRoute("/cart")({
 });
 
 function Cart() {
-  const { lines, setQty, remove, subtotalKobo } = useCart();
+  const { lines, setQty, remove, subtotalKobo, ready, error } = useCart();
+  if (!ready)
+    return (
+      <>
+        <PageHeader title="Your cart" />
+        <div className="container-page py-8">
+          <p role={error ? "alert" : "status"}>{error ?? "Loading your saved cart…"}</p>
+        </div>
+      </>
+    );
   return (
     <>
-      <PageHeader title="Your cart" intro="Saved on this device only." />
+      <PageHeader title="Your cart" intro="Prices and availability are checked at checkout." />
       <div className="container-page py-8">
         {!lines.length ? (
           <EmptyState

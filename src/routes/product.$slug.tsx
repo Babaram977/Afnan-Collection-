@@ -47,7 +47,7 @@ export const Route = createFileRoute("/product/$slug")({
 
 function ProductPage() {
   const p = Route.useLoaderData();
-  const { add } = useCart();
+  const { add, ready, error: cartError } = useCart();
   const [img, setImg] = useState(0);
   const [vid, setVid] = useState(p.variants[0]?.id);
   const v = p.variants.find((x) => x.id === vid);
@@ -116,9 +116,9 @@ function ProductPage() {
         <Button
           size="lg"
           className="mt-6 w-full rounded-full md:w-auto"
-          disabled={!v || out}
+          disabled={!ready || !v || out}
           onClick={() => {
-            if (!v) return;
+            if (!ready || !v) return;
             add({
               productId: p.id,
               variantId: v.id,
@@ -133,6 +133,11 @@ function ProductPage() {
         >
           Add to cart
         </Button>
+        {!ready && (
+          <p role={cartError ? "alert" : "status"} className="mt-3 text-sm text-muted-foreground">
+            {cartError ?? "Loading your saved cart…"}
+          </p>
+        )}
         {p.description && (
           <section className="mt-8">
             <h2 className="text-lg font-semibold">Description</h2>
