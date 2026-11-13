@@ -1,3 +1,4 @@
+import { loadCatalog } from "./store";
 /**
  * Catalog model + local data source.
  * PRODUCTS is intentionally empty: no real product records have been supplied.
@@ -35,6 +36,7 @@ export interface Product {
   name: string;
   description?: string;
   category: CategorySlug;
+  categoryLabel?: string;
   ageGroups: AgeGroup[];
   images: ProductImage[];
   variants: ProductVariant[];
@@ -107,10 +109,10 @@ export function filterProducts(products: Product[], f: ProductFilters): Product[
 }
 
 export async function listProducts(): Promise<Product[]> {
-  return PRODUCTS;
+  return loadCatalog();
 }
 export async function getProduct(slug: string): Promise<Product | null> {
-  return PRODUCTS.find((p) => p.slug === slug) ?? null;
+  return (await loadCatalog()).find((p) => p.slug === slug) ?? null;
 }
 export function allSizes(products: Product[]): string[] {
   return [

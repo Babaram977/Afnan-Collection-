@@ -51,7 +51,7 @@ function ProductPage() {
   const [img, setImg] = useState(0);
   const [vid, setVid] = useState(p.variants[0]?.id);
   const v = p.variants.find((x) => x.id === vid);
-  const out = v?.stock === 0;
+  const out = v?.stock == null || v.stock <= 0;
   return (
     <div className="container-page grid gap-8 py-8 md:grid-cols-2 md:py-12">
       <div>
@@ -77,7 +77,7 @@ function ProductPage() {
       </div>
       <div>
         <p className="text-sm font-semibold text-primary">
-          {CATEGORIES.find((c) => c.slug === p.category)?.label}
+          {p.categoryLabel ?? CATEGORIES.find((c) => c.slug === p.category)?.label}
         </p>
         <h1 className="mt-1 text-3xl font-semibold md:text-4xl">{p.name}</h1>
         {v && <p className="mt-3 text-2xl font-bold">{formatNaira(v.priceKobo)}</p>}
@@ -98,6 +98,7 @@ function ProductPage() {
             </div>
           </fieldset>
         )}
+        {v && <p className="mt-2 text-xs text-muted-foreground">SKU: {v.sku}</p>}
         {v?.stock != null && (
           <p className="mt-3 text-sm text-muted-foreground">
             {out ? "Out of stock" : `${v.stock} in stock`}

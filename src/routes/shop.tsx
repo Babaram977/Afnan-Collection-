@@ -1,3 +1,5 @@
+import { loadCategories } from "@/lib/store";
+import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -6,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import {
   AGE_GROUPS,
   CATEGORIES,
-  PRODUCTS,
+  listProducts,
   allSizes,
+  priceRange,
   filterProducts,
   type AgeGroup,
   type CategorySlug,
@@ -33,7 +36,10 @@ export const Route = createFileRoute("/shop")({
   }): ProductFilters => ({
     q: typeof s.q === "string" && s.q ? s.q : undefined,
     age: ages.includes(s.age as string) ? (s.age as AgeGroup) : undefined,
-    category: cats.includes(s.category as string) ? (s.category as CategorySlug) : undefined,
+    category:
+      typeof s.category === "string" && /^[a-z0-9-]+$/.test(s.category)
+        ? (s.category as CategorySlug)
+        : undefined,
     size: typeof s.size === "string" && s.size ? s.size : undefined,
     minNaira: num(s.minNaira),
     maxNaira: num(s.maxNaira),
@@ -53,6 +59,7 @@ export const Route = createFileRoute("/shop")({
       },
     ],
   }),
+  loader: async () => ({ products: await listProducts(), categories: await loadCategories() }),
   component: Shop,
 });
 
@@ -60,11 +67,21 @@ const selectCls =
   "h-11 w-full rounded-lg border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function Shop() {
+  const { products: PRODUCTS, categories: CATEGORIES } = Route.useLoaderData();
+  const [sort, setSort] = useState("newest");
   const f = Route.useSearch();
   const navigate = useNavigate({ from: "/shop" });
   const set = (patch: Partial<ProductFilters>) =>
     navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
-  const results = filterProducts(PRODUCTS, f);
+  const results = filterProducts(PRODUCTS, f).sort((a, b) =>
+    sort === "name"
+      ? a.name.localeCompare(b.name)
+      : sort === "low"
+        ? (priceRange(a)?.min ?? 0) - (priceRange(b)?.min ?? 0)
+        : sort === "high"
+          ? (priceRange(b)?.min ?? 0) - (priceRange(a)?.min ?? 0)
+          : 0,
+  );
   const sizes = allSizes(PRODUCTS);
   const active = Object.values(f).some((v) => v !== undefined);
 
@@ -177,6 +194,18 @@ function Shop() {
           )}
         </aside>
         <section aria-live="polite" aria-label="Results">
+          <Label htmlFor="sort">Sort by</Label>
+          <select
+            id="sort"
+            className={selectCls}
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+          >
+            <option value="newest">Recently updated</option>
+            <option value="name">Name</option>
+            <option value="low">Price: low to high</option>
+            <option value="high">Price: high to low</option>
+          </select>
           <p className="mb-4 text-sm text-muted-foreground">
             {results.length} product{results.length === 1 ? "" : "s"}
           </p>

@@ -1,3 +1,5 @@
+import { loadCategories } from "@/lib/store";
+import { StoreBanners } from "@/components/site/StoreContent";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -15,7 +17,7 @@ import {
   Watch,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AGE_GROUPS, CATEGORIES, PRODUCTS, type CategorySlug } from "@/lib/catalog";
+import { AGE_GROUPS, CATEGORIES, listProducts, type CategorySlug } from "@/lib/catalog";
 import { ProductGrid } from "@/components/site/ProductCard";
 import { EmptyState } from "@/components/site/EmptyState";
 
@@ -35,6 +37,7 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
+  loader: async () => ({ products: await listProducts(), categories: await loadCategories() }),
   component: Home,
 });
 
@@ -53,6 +56,7 @@ const ICONS: Record<CategorySlug, typeof Shirt> = {
 };
 
 function Home() {
+  const { products: PRODUCTS, categories: CATEGORIES } = Route.useLoaderData();
   const featured = PRODUCTS.filter((p) => p.featured);
   const seasonal = PRODUCTS.filter((p) => p.seasonal);
   return (
@@ -91,6 +95,7 @@ function Home() {
         </div>
       </section>
 
+      <StoreBanners />
       <section className="container-page py-12" aria-labelledby="age-h">
         <h2 id="age-h" className="text-2xl font-semibold md:text-3xl">
           Shop by age
@@ -117,7 +122,7 @@ function Home() {
         </h2>
         <ul className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           {CATEGORIES.map((c) => {
-            const I = ICONS[c.slug];
+            const I = ICONS[c.slug] ?? Puzzle;
             return (
               <li key={c.slug}>
                 <Link

@@ -6,6 +6,7 @@ import { useCart } from "@/lib/cart";
 import { Wordmark } from "./Wordmark";
 
 const NAV = [
+  { to: "/account", label: "Account" },
   { to: "/shop", label: "Shop" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
