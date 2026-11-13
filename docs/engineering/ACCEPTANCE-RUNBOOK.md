@@ -2,6 +2,14 @@
 
 Prepared 2026-11-13 (Africa/Lagos). This is a procedure for review, not authorization to run remote commands. Continue draft PR #2 on feat/commerce-platform. Source baseline is 31d26811206050dbbf399dc24d6afa113a8bf70f; no later upstream commit existed at reconciliation. Original PNG checksum remains verified. No application redesign or backend replacement is needed.
 
+## 2026-11-13 — owner-approved acceptance storage creation
+
+Owner explicitly approved creation of the named acceptance D1 and R2 only, following the clarification that Worker upload/deployment remains separate. Created afnan-collection-acceptance (DB) and afnan-product-media-acceptance (MEDIA, Standard) in the verified account. GET confirms D1 has zero tables; no migrations or customer data were added. R2 public r2.dev access is disabled and no custom domains exist. Creation succeeded without subscription or billing-setting changes, proving D1/R2 creation permission for these resources. Default placements returned WEUR for D1 and EEUR for R2; no jurisdiction restriction was requested.
+
+Worker afnan-collection-storefront remains planned, not created or reserved. The same six existing Workers retain their pre-action modification timestamps. No deployment, secrets, role assignments, email setup, DNS, production infrastructure or checkout/payment changes occurred. Resource IDs are retained in ignored protected local operator records, not public documentation. Next gates are separately authorized migrations, protected origin/testers, secure email/auth configuration, owner role assignment and controlled Worker upload/deployment; sandbox checkout remains separate.
+
+Application source remains unchanged from the validated 8439b70 baseline (both CI runs 43445561177 and 43445552543 passed). This milestone changes documentation only; verification used actual create responses plus GET resource/public-access/Worker inventory readback. Historical “not provisioned” statements below describe earlier stages and are superseded for these two acceptance resources only.
+
 ## Verified account reconciliation
 
 The owner-supplied account and zone IDs were explicitly used for GET requests. Account name and IDs remain in the protected handoff rather than this public repository. The connection now reaches the intended Yahoo account, unlike the earlier Gmail-account inventory. Earlier claims of missing zone access and disabled R2 are superseded for this account.

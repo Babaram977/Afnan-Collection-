@@ -1,5 +1,14 @@
 # Project status
 
+## 2026-11-13 — owner-approved acceptance storage creation
+
+Owner explicitly approved creation of the named acceptance D1 and R2 only, following the clarification that Worker upload/deployment remains separate. Created afnan-collection-acceptance (DB) and afnan-product-media-acceptance (MEDIA, Standard) in the verified account. GET confirms D1 has zero tables; no migrations or customer data were added. R2 public r2.dev access is disabled and no custom domains exist. Creation succeeded without subscription or billing-setting changes, proving D1/R2 creation permission for these resources. Default placements returned WEUR for D1 and EEUR for R2; no jurisdiction restriction was requested.
+
+Worker afnan-collection-storefront remains planned, not created or reserved. The same six existing Workers retain their pre-action modification timestamps. No deployment, secrets, role assignments, email setup, DNS, production infrastructure or checkout/payment changes occurred. Resource IDs are retained in ignored protected local operator records, not public documentation. Next gates are separately authorized migrations, protected origin/testers, secure email/auth configuration, owner role assignment and controlled Worker upload/deployment; sandbox checkout remains separate.
+
+Application source remains unchanged from the validated 8439b70 baseline (both CI runs 43445561177 and 43445552543 passed). This milestone changes documentation only; verification used actual create responses plus GET resource/public-access/Worker inventory readback. Historical “not provisioned” statements below describe earlier stages and are superseded for these two acceptance resources only.
+
+
 ## 2026-11-13 — corrected account and controlled acceptance preparation
 
 Owner-supplied account/zone IDs were explicitly verified. The intended account has six Workers (four DrippleX, Heroine and Landonova); no Afnan Worker or D1 database. afnancollectionkn.com is active/full and visible. R2 lists dripplex-public and dripplex-uploads, not an empty list; no Afnan bucket. Earlier disabled-R2/missing-domain findings concerned a different connected account and are superseded. Existing services/settings/DNS were not changed.

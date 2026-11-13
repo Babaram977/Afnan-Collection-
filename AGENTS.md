@@ -7,7 +7,7 @@
 - Preserve published history with additive commits. Do not edit generated files such as src/routeTree.gen.ts by hand.
 - Preserve the storefront and docs/design/AFNAN-UI-STANDARD.md. No redesign is authorized by initialization.
 - The master execution instruction authorizes functional commerce and authenticated administration against local/test backends. Keep CHECKOUT_ENABLED=false and PAYMENT_MODE=disabled in checked-in runtime defaults; live orders and live payments remain unauthorized.
-- Do not merge, publicly deploy, change production DNS, activate live payments or execute destructive production migrations. Local/non-production fixture migrations are authorized. No remote infrastructure was provisioned by this implementation.
+- Do not merge, publicly deploy, change production DNS, activate live payments or execute destructive production migrations. Local/non-production fixture migrations are authorized. The owner subsequently approved acceptance storage creation: afnan-collection-acceptance D1 and afnan-product-media-acceptance R2 now exist. Worker creation/deployment, remote migrations, secrets and administrator assignment remain separate gates.
 - Keep secrets and customer information out of Git and continuity records, regardless of repository visibility. Use hosting secret storage for future server credentials; VITE_* values are public.
 - The previous generic Lovable-managed database/secrets/synchronization instructions are superseded by this owner-authorized GitHub handoff. The commerce backend uses D1 and Better Auth; Paystack is the sole authorized payment provider, with live keys deliberately rejected.
 
