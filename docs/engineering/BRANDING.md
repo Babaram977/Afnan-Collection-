@@ -29,3 +29,9 @@ The expected digest is recorded from the owner's handoff, not verified against a
 ## Durable design record
 
 The owner's request to “lock in your memory” is implemented as a repository record, not a promise of permanent chat memory. `docs/design/AFNAN-BRAND-ASSET.json` records the exact source identity, checksum, visual description, permitted faithful derivative formats and blocked integration status. AGENTS.md requires future sessions to consult it. PNG is already compatible with the existing Wordmark component; no redesign or invented vector conversion is needed. The original file must still become accessible before any actual conversion or installation can be verified.
+
+## Codex-accessible reference asset (2026-11-13)
+
+A vector **trace derived from the owner's supplied logo image** was committed at `public/brand/afnan-collection-traced.svg` so Codex can examine the arrangement and identifiable gold AC monogram, black flourish and wordmark. **This is an approximation, not the authoritative original PNG and not approval to replace the branding.** Its traced edges/letterforms may differ, and it must not be represented as the original artwork or used to claim logo integration is complete.
+
+The owner-provided 460 × 546 PNG was verified in the ChatGPT file workspace with SHA-256 `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The original bytes have **not** been successfully committed or provided to Codex through GitHub. When the exact original becomes transferable, commit it as `public/brand/afnan-collection-original.png`, verify that checksum, and use it rather than the trace. Until then, treat this SVG only as a visual/reference asset. No deployment or PR merge has been authorized.
