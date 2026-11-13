@@ -1,35 +1,31 @@
-<!-- LOVABLE:BEGIN -->
-> [!IMPORTANT]
-> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
-> published git history — force pushing, or rebasing/amending/squashing commits
-> that are already pushed — as it rewrites history on Lovable's side and the
-> user will likely lose their project history.
->
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
+# Afnan Collection Online — maintenance instructions
 
-## What Lovable manages
+## Ownership and scope
 
-Rules outside this block are the project's own. Change the pieces below in
-Lovable, not by hand. With the [Lovable MCP](https://mcp.lovable.dev)
-connected, `send_message` asks Lovable to do it; otherwise ask the user to
-use the editor.
+- GitHub is the authoritative source. The Lovable source was uploaded once; automatic synchronization is not configured. Do not assume commits flow to or from Lovable.
+- Codex handles reviewed implementation; use Lovable for targeted design proposals, then review and apply their diffs against current GitHub state.
+- Preserve published history with additive commits. Do not edit generated files such as src/routeTree.gen.ts by hand.
+- Preserve the storefront and docs/design/AFNAN-UI-STANDARD.md. No redesign is authorized by initialization.
+- Checkout, order creation, payments and admin writes must remain disabled until explicitly authorized and validated.
+- Do not merge, deploy, provision databases or change domains under this task.
+- Keep secrets and customer information out of Git and continuity records, regardless of repository visibility. Use hosting secret storage for future server credentials; VITE_* values are public.
+- The previous generic Lovable-managed database/secrets/synchronization instructions are superseded by this owner-authorized GitHub handoff. No backend currently exists.
 
-- **Database.** Do not add or edit `supabase/migrations/` or `drizzle/`.
-  Ask Lovable to change the schema.
-- **Generated files.** Do not edit a file whose header says it is automatically
-  generated.
-- **AI gateway.** Keep model calls on Lovable's gateway, and keep
-  `LOVABLE_API_KEY` out of browser code.
-- **Connectors.** Lovable provides native connectors. `list_connectors` shows
-  which are enabled; `add_connector` only returns the dashboard link. When a
-  connector is enabled, calls go through the connector gateway and need
-  `LOVABLE_API_KEY`. When Lovable does not provide one, users can bring their
-  own key and store it in Secrets.
-- **Secrets.** Lovable manages them. Do not put secret values in the repo.
-<!-- LOVABLE:END -->
+## Durable project continuity
+
+- Before development, read all five files in docs/project-continuity/ and reconcile them with current branches, PRs, reviews and exact-head CI.
+- Update relevant records alongside meaningful implementation milestones. Preserve earlier decisions and record changes with reasons; distinguish verified facts, proposals and unresolved questions.
+- Recover lost conversation context from these records and GitHub history. Keep each project's records separate.
+- Do not create unnecessary commits, merge or deploy solely to maintain records.
+
+## Validation
+
+- Use the committed Bun lockfile for reproducible installs: bun install --frozen-lockfile. Do not introduce a competing lockfile casually.
+- Run tests, TypeScript checking, lint and production build as appropriate; record failures honestly. Do not bulk-format the existing storefront to clean up unrelated baseline lint findings.
+- vite.config.ts wraps framework plugins already supplied by @lovable.dev/vite-tanstack-config; do not duplicate them or externalize Worker runtime dependencies.
 
 ## Project rules
+
 - Catalog data flows only through `src/lib/catalog.ts` (`listProducts`/`getProduct`); swap these for API calls when a backend exists, keeping the types — keeps backend handoff a single seam.
 - Money is integer kobo formatted with `formatNaira` — avoids float errors and keeps NGN display consistent.
 - Cart is client-only context in `src/lib/cart.tsx`; server must recompute prices at order time.
