@@ -86,9 +86,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Afnan Collection Online" },
-      { name: "description", content: "Children's clothing, essentials, toys and gifts in Nigeria." },
+      {
+        name: "description",
+        content: "Children's clothing, essentials, toys and gifts in Nigeria.",
+      },
       { property: "og:title", content: "Afnan Collection Online" },
-      { property: "og:description", content: "Children's clothing, essentials, toys and gifts in Nigeria." },
+      {
+        property: "og:description",
+        content: "Children's clothing, essentials, toys and gifts in Nigeria.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -100,7 +106,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -132,7 +141,9 @@ function RootComponent() {
       <CartProvider>
         <div className="flex min-h-screen flex-col">
           <SiteHeader />
-          <main id="main" className="flex-1"><Outlet /></main>
+          <main id="main" className="flex-1">
+            <Outlet />
+          </main>
           <SiteFooter />
         </div>
         <Toaster />
