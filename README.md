@@ -1,29 +1,42 @@
-# Welcome to your Lovable project
+# Afnan Collection Online
 
-This project was built with [Lovable](https://lovable.dev).
+Children’s lifestyle storefront for clothing, essentials, toys and gifts. The Lovable UI is preserved: warm cream, cocoa and terracotta, Fraunces headings and Nunito Sans body text. [Design contract](docs/design/AFNAN-UI-STANDARD.md).
 
-## Build with Lovable
+## Current state
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+This is a frontend storefront with TanStack Start SSR, React 19, TypeScript, TanStack Router/Query, Tailwind 4 and shadcn/Radix components. The catalog is intentionally empty: no real product records were supplied.
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- Home, URL-filtered shop, product details and a localStorage cart are implemented.
+- Checkout is a non-submitting preview; order placement and payments are disabled. No orders, stock reservations or payment results are created.
+- Admin is a public, read-only local-data preview, without authentication or writes. It must never expose future private data before server authorization exists.
+- About, contact and policies contain placeholders. No business contact, delivery terms or payment provider is confirmed.
+- No database, backend commerce APIs, production hosting configuration or deployment automation is connected in this repository.
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Use Node 24 and Bun (the repository includes bun.lock; no npm lockfile). Pin a tested Bun version in the future CI foundation.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+git clone https://github.com/Babaram977/Afnan-Collection-.git
+cd Afnan-Collection-
+bun install --frozen-lockfile
+bun run dev
+bun run test
+bunx tsc --noEmit
+bun run lint
+bun run build
 ```
 
-## Built with
+`build:dev` and `preview` are also available. A successful build alone does not establish Cloudflare runtime compatibility. See the [engineering assessment](docs/engineering/INITIAL-ASSESSMENT.md) for actual validation and remaining release gates.
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+## Structure and ownership
+
+- `src/routes/`: file-based pages; `src/router.tsx`: router and QueryClient.
+- `src/lib/catalog.ts`: Product/Variant contracts, integer NGN kobo, local catalog seam (`listProducts` / `getProduct`). Admin and some page metadata also reference local constants and need review during backend integration.
+- `src/lib/cart.tsx`: browser state, never authoritative for prices or stock.
+- `src/server.ts`, `src/start.ts`: SSR error wrapper and request middleware (including server-function CSRF protection).
+- `src/test/`: catalog/cart unit coverage and route matching; no browser, auth, order or payment coverage.
+
+GitHub is authoritative for future development. Lovable performed a **one-time upload**, not automatic GitHub synchronization. Targeted Lovable design work must be reconciled manually with current GitHub code. Read [AGENTS.md](AGENTS.md) and the five [continuity records](docs/project-continuity/PROJECT-STATUS.md) before making changes.
+
+The repository was public at initialization. Owner preference is to make it private before adding operational configuration; no visibility change is included here. Never commit secrets, including in a private repository.
