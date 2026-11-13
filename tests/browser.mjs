@@ -13,6 +13,9 @@ try {
       extraHTTPHeaders: { "CF-Connecting-IP": `192.0.2.${[390, 768, 1440].indexOf(width) + 20}` },
     });
     const page = await context.newPage();
+    // Exercise robust layout when external font CDNs are unavailable, as in CI.
+    if (width === 768)
+      await page.route("https://fonts.googleapis.com/**", (route) => route.abort());
     const errors = [];
     page.on("response", async (r) => {
       if (r.url().includes("/api/") && r.status() >= 400)

@@ -25,7 +25,7 @@ export function SiteHeader() {
       </a>
       <div className="container-page flex h-16 items-center justify-between gap-4">
         <Wordmark />
-        <nav aria-label="Main" className="hidden md:block">
+        <nav aria-label="Main" className="hidden lg:block">
           <ul className="flex items-center gap-1">
             {NAV.map((n) => (
               <li key={n.to}>
@@ -62,7 +62,7 @@ export function SiteHeader() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="min-h-11 min-w-11 md:hidden"
+                className="min-h-11 min-w-11 lg:hidden"
                 aria-label="Open menu"
               >
                 <Menu className="size-5" />

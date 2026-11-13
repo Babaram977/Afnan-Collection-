@@ -27,3 +27,5 @@ PR: https://github.com/Babaram977/Afnan-Collection-/pull/2
 Local validation: 14 unit tests, 85 Worker/D1/R2/security assertions and 92 Chromium/axe responsive checks pass; both migrations applied locally; clean frozen install, typecheck, lint, production build and package dry-run pass; Bun audit returns no advisories. Initial lint failure is historical and now fixed; ten fast-refresh warnings remain.
 
 Photo tests use explicitly fictional fixture pixels/products; no fabricated real merchandise was published. Email/payment verification is controlled, not external sandbox evidence. Mobile/desktop official-contact screenshots were inspected. Logo preview could be seen in chat, but no downloadable file was available; no replacement or redraw was created. No infrastructure provisioning, deployment, DNS change, production migration, real order/charge or merge occurred.
+
+CI subsequently exposed tablet header overflow at 768 px despite the local pass. A follow-up moves desktop navigation to the large breakpoint and explicitly tests the tablet layout with external fonts unavailable. This is a responsive correction, not a redesign; exact-head validation is rerun.

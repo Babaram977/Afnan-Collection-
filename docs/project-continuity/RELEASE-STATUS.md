@@ -36,3 +36,7 @@ No deployment workflow, remote resource provisioning or domain routes were activ
 - Focused production security/business acceptance and explicit owner approval before public release, real orders or live payments. Partial refunds are not implemented; unknown refund outcomes require provider-side reconciliation.
 
 Historical initialization at d1be458 had five tests, no CI and 201 formatting errors. Those findings remain in history; they are superseded by the verified implementation above.
+
+## CI tablet regression and fix
+
+The initial implementation and continuity heads passed local checks but failed GitHub Chromium layout at 768 px (runs 43383934237 and 43384149141). Desktop navigation competed with the wordmark before desktop-width space was available. The follow-up keeps compact navigation through tablet widths and adds a font-CDN-unavailable tablet regression case. Reconcile the later exact-head CI result; earlier failures are not hidden or treated as success.
