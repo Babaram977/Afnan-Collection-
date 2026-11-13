@@ -1,5 +1,7 @@
 # Gate 2 pre-deployment review
 
+Latest identity/MFA and recovery record: [OWNER-IDENTITY-MFA.md](OWNER-IDENTITY-MFA.md). Exact owner account membership is absent under the current member-only Cloudflare IdP; enrollment/challenges and all remote writes remain unapproved.
+
 2026-11-13, Africa/Lagos. This review incorporates Phase 1 preparation and the owner's subsequent settings. Stop at Gate 3. No remote D1 write, Access enablement/policy write, secret write, upload/deploy, admin provisioning, DNS/email record change, real email, checkout, registration or merge occurred.
 
 ## Confirmed settings and bindings

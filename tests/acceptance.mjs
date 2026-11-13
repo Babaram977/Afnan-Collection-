@@ -44,6 +44,18 @@ try {
   );
   assert.equal(await db.prepare("SELECT COUNT(*) AS n FROM user").first("n"), 0);
   assert.equal((await guest.request("/admin/products")).status, 401);
+  assert.equal(
+    (
+      await guest.request("/admin/products", "GET", undefined, {
+        "Cf-Access-Authenticated-User-Email": "admin@afnancollectionkn.com",
+        "Cf-Access-Jwt-Assertion": "forged-not-a-valid-token",
+        Cookie: "CF_Authorization=forged-not-a-valid-token",
+      })
+    ).status,
+    401,
+    "Access identity headers/cookie cannot create an application admin session",
+  );
+  assert.equal(await db.prepare("SELECT COUNT(*) AS n FROM staff").first("n"), 0);
   const order = await guest.request("/orders", "POST", {
     lines: [{ variantId, qty: 1 }],
     zoneId,
@@ -54,7 +66,7 @@ try {
   assert.equal(order.status, 503);
   assert.equal(await db.prepare("SELECT COUNT(*) AS n FROM orders").first("n"), 0);
   assert.equal(await db.prepare("SELECT COUNT(*) AS n FROM payments").first("n"), 0);
-  console.log("PASS: 10 acceptance registration, fixture-isolation, admin and checkout assertions");
+  console.log("PASS: 12 acceptance registration, fixture-isolation, admin and checkout assertions");
 } finally {
   await mf.dispose();
 }

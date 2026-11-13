@@ -1,0 +1,32 @@
+{
+  "status": "template-only-unverified",
+  "team": "falling-poetry-120a.cloudflareaccess.com",
+  "proposedOwner": "admin@afnancollectionkn.com",
+  "testers": "owner-only",
+  "verifiedReadOnly": {
+    "idpType": "cloudflare",
+    "restrictToAccountMembers": true,
+    "ownerMembershipFound": false,
+    "accessApplicationCount": 0,
+    "reusablePolicyCount": 0,
+    "organizationMfaFields": "not-returned"
+  },
+  "pendingEvidence": {
+    "approvalReference": null,
+    "verifiedIdentityReference": null,
+    "acceptedMembershipEvidenceReference": null,
+    "businessVerifierReference": null,
+    "verificationMethodReference": null,
+    "primaryAndSpareMfaEvidenceReference": null,
+    "challengeAndDenialEvidenceReference": null,
+    "oneHourExpiryEvidenceReference": null,
+    "sessionRevocationEvidenceReference": null,
+    "recoveryDrillEvidenceReference": null,
+    "recoveryOperatorReference": null,
+    "restrictedAuditStoreAndRetention": null,
+    "verifiedAtUtc": null
+  },
+  "excludedEvidence": ["passwords", "OTP values", "MFA QR seeds", "private keys", "JWTs", "session cookies", "raw identity documents"],
+  "applicationAdministratorGranted": false,
+  "remoteChangesPerformed": false
+}

@@ -1,5 +1,14 @@
 # Development history
 
+## 2026-11-13 — owner authentication/MFA preparation (no execution)
+
+Read-only organization/IdP/apps/policy inspection reconfirmed the active existing team and zero applications/policies. Detailed IdP GET reveals restrict_to_account_members=true. Complete account membership listing has no admin@afnancollectionkn.com match, so the proposed exact-email login is currently blocked. No invitation, account provisioning or shared restriction change is authorized. MFA fields remain unreported; enrollment/enforcement are unverified.
+
+OWNER-IDENTITY-MFA.md and the blank identity-mfa-record.json separate verified facts from pending owner enrollment, one-hour challenge/expiry tests, independent business-owner verification, restricted audit evidence, lost-device recovery, session revocation and Afnan-only emergency containment. The existing policy/Worker-destination plan is retained, with the membership blocker explicit. Account-member/control-plane rights are separate from application staff roles; no automatic admin grant is implemented. Two new local acceptance assertions verify forged Access identity/JWT/cookie cannot authorize admin or create staff (12 acceptance checks total).
+
+Still needed: least-privilege exact-email membership/identity decision, primary/spare MFA device choice, independent verifier/recovery operator and evidence store/retention. This Package 1 turn is preparation only; identity/MFA changes, messages/invitations, migrations, secrets, Worker upload/deployment, admin provisioning, email/DNS and merge remain explicitly unapproved. Existing disabled checkout/payments/registration and draft PR #2 are preserved. No remote writes occurred.
+
+
 ## 2026-11-13 — Gate 3 readiness refresh (no execution)
 
 Read-only GET now confirms active existing team falling-poetry-120a.cloudflareaccess.com, one Cloudflare IdP, zero applications and zero reusable policies. The former organization-level not_enabled blocker is resolved; no new enrollment is needed. Returned fields do not establish independent MFA configuration. No remote settings were changed.

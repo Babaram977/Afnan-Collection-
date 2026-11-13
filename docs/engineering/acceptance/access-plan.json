@@ -64,14 +64,18 @@
     "Create reusable owner policy and exact-host application before uploading; keep all Worker routes disabled.",
     "After authorized first upload, obtain and verify the actual Worker ID; attach its destination to this same application using full-body update. Never guess a Worker ID from its name.",
     "Worker destination covers its associated domains/previews; leave previews disabled, no bypass/override and no all_workers destination.",
-    "No new organization enrollment, tester policy, shared-account enforcement or other-project changes."
+    "No new organization enrollment, tester policy, shared-account enforcement or other-project changes.",
+    "Member-only IdP currently has no matching business-email owner member. Resolve explicitly without changing shared restrictions or granting broad account access. See OWNER-IDENTITY-MFA.md."
   ],
   "existingTeam": "falling-poetry-120a.cloudflareaccess.com",
   "organizationEnrollmentRequired": false,
   "identityProvider": {
     "type": "cloudflare",
     "id": "bf4de15a-2746-4034-952c-01433fbfa3aa",
-    "ownerIdentityVerified": false
+    "ownerIdentityVerified": false,
+    "restrictToAccountMembers": true,
+    "ownerMembershipFound": false,
+    "enrollmentBlockedPendingDecision": true
   },
   "postUploadDestinationToAttach": {
     "type": "worker",
