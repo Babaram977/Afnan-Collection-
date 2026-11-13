@@ -40,3 +40,5 @@ Historical initialization at d1be458 had five tests, no CI and 201 formatting er
 ## CI tablet regression and fix
 
 The initial implementation and continuity heads passed local checks but failed GitHub Chromium layout at 768 px (runs 43383934237 and 43384149141). Desktop navigation competed with the wordmark before desktop-width space was available. The follow-up keeps compact navigation through tablet widths and adds a font-CDN-unavailable tablet regression case. Reconcile the later exact-head CI result; earlier failures are not hidden or treated as success.
+
+Verified follow-up: code head `b97e41848bdabd95d62c61e7b97519da0593536d` passed every GitHub validation step in [run 43384685020](https://github.com/Babaram977/Afnan-Collection-/actions/runs/43384685020). This includes frozen installation, typecheck, lint, unit tests, Worker build/dry-run, Worker/D1 integration and Chromium/axe checks. A documentation-only commit records this result afterward; do not confuse the code-head evidence with an unobserved later head.

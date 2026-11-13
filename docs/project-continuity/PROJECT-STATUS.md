@@ -6,7 +6,7 @@ Last reconciled: 2026-11-13. Repository: Babaram977/Afnan-Collection- (public).
 
 Verified main: `aedef6a93916b78ee3a2da83847983e35931c8c9`, including the owner's README updates after the original `24c6c6b` Lovable upload. GitHub is authoritative; the source transfer was one-time and does not establish automatic Lovable synchronization.
 
-Active development branch: `feat/commerce-platform`. [Draft PR #2](https://github.com/Babaram977/Afnan-Collection-/pull/2) contains the independent commerce/admin implementation. Latest application implementation commit at this snapshot: `def230244dddf10209aa18dbef47dc2b8a66eebe`; continuity handoff follows it. Documentation-only PR #1 remains open; its records were carried forward additively and superseded where later owner instructions authorize implementation. No PR was merged or closed.
+Active development branch: `feat/commerce-platform`. [Draft PR #2](https://github.com/Babaram977/Afnan-Collection-/pull/2) contains the independent commerce/admin implementation. Core implementation: `def230244dddf10209aa18dbef47dc2b8a66eebe`. Responsive follow-up: `b97e41848bdabd95d62c61e7b97519da0593536d`, verified by GitHub run 43384685020; continuity handoff follows it. Documentation-only PR #1 remains open; its records were carried forward additively and superseded where later owner instructions authorize implementation. No PR was merged or closed.
 
 ## Implemented for local/test review
 
