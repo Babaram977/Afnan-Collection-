@@ -4,12 +4,14 @@ This describes the implemented local/test system. It is not live. Afnan uses its
 
 ## First owner access
 
-1. The owner chooses an email address and verifies it using the emailed single-use code. Email transport and sender-domain ownership must be configured and tested first.
-2. An authorized administrator of Afnan's Cloudflare account verifies the person's business ownership outside the public website, confirms the dedicated Afnan database/environment and checks the matching `user` record has `email_verified=1`.
-3. Assign `staff.role='admin'` to that verified user in the reviewed database, recording the operator, date and reason in `audit`. This is an account-owned privileged action, not a website signup capability. Do not grant admin by email domain, first signup, user-supplied role, public token or a first-admin claim endpoint.
-4. Verify the owner can open `/admin`, that another customer cannot, and that session revocation works. Production provisioning/role assignment has not been executed here. The local-only bootstrap command and fixture terminal procedure are documented in README.
+The selected owner is admin@afnancollectionkn.com. Selection is not mailbox/business verification. Follow [controlled enrollment and recovery](ADMIN-RECOVERY-RUNBOOK.md); there is no live enrollment link yet.
 
-An administrator can manage catalog, settings, payments and customer sessions. A fulfilment role can inspect orders/delivery details and advance fulfilment, with no catalog, inventory, payment or customer-directory access. Staff offboarding should revoke sessions and remove the role. MFA/stronger staff identity policy remains an owner/security acceptance decision before launch.
+1. Confirm business ownership independently with the nominated human verifier through an established trusted channel, and record the specific approval privately. Do not treat nomination or an email address as evidence.
+2. After explicit remote provisioning approval, the authorized operator creates only pending enrollment in the exact Afnan database using the reviewed bootstrap. It does not mark the email verified, activate MFA or issue a privileged session. A staff role alone is insufficient.
+3. When the protected origin and authorized email transport are ready, the owner personally signs in with an emailed one-use code and enrolls a verified passkey/security key within five minutes of that primary sign-in. Save the once-shown recovery codes offline; enroll a separate backup authenticator after fresh MFA.
+4. Personally complete an independent WebAuthn challenge. Verify email-only/customer access is denied, then test logout, revocation, one-hour absolute expiry, 15-minute idle expiry and recovery. Do not infer owner verification from local virtual-device tests.
+
+An administrator can manage catalog, settings, test payments and customer sessions. Fulfilment staff have restricted order access. MFA is mandatory, not optional. Role changes/removal revoke existing primary and privileged sessions. No staff provisioning, real email or live owner enrollment has occurred. Public registration, checkout and payments remain disabled.
 
 ## Add a genuine product
 
@@ -43,7 +45,7 @@ The public product page shows effective prices, regular prices for configured pr
 
 ## Before activation
 
-Choose the actual owner email, verify Cloudflare account/resource ownership, provision isolated resources only under separate authorization, configure strong runtime secrets and verified email delivery, and validate actual Paystack test credentials/webhooks/refunds. Confirm catalog/opening stock, delivery terms/fees, privacy/returns/retention, backups and operational monitoring. Resolve original logo-file access and repository privacy preference. Obtain explicit approval before public deployment, real orders or live payments; this implementation has not performed them.
+The owner email and original-logo asset are selected/resolved. Dedicated Afnan Cloudflare resources exist; source security PR #3 is merged. Real owner/mailbox/WebAuthn/recovery verification, secure sending credentials and authorized delivery, remote backup/restore, production provisioning and protected-origin/public-domain approvals remain outstanding. Confirm genuine catalog/opening stock, delivery terms/fees, privacy/returns/retention and monitoring before commercial launch. Live payment activation is separately approved. Follow [operational handover](OPERATIONAL-HANDOVER.md) and [launch execution evidence](LAUNCH-EXECUTION-RECORD.md).
 
 ## Mandatory MFA update
 
