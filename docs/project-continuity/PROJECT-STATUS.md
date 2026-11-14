@@ -1,5 +1,11 @@
 # Project status
 
+## 2026-11-14 — independent verifier nomination (owner-provided)
+
+Aisha Idris Muhammad (owner’s wife) is now the owner-nominated independent verifier. Willingness, independently trusted contact and per-action identity confirmation remain pending. No verification, enrollment or permissions are claimed. Owner reports Afnan and Heroine are separate pre-launch businesses and official domains are not yet connected to their storefronts; no other-project status was independently checked in this local-only task.
+
+Earlier requests to nominate a verifier are superseded; willingness, trusted contact, actual verification and restricted storage/retention remain pending.
+
 ## 2026-11-14 — selected recovery/MFA arrangement and membership isolation review
 
 Owner selected existing Cloudflare account administrator as recovery operator (no storefront admin role implied), proposed primary TOTP and a separate hardware-key backup; owner-only Afnan scope remains. Read-only paginated roles/permission-groups and resource-group review found Minimal Account Access, documented account-only visibility, but the role detail also returns coarse zone/organization read flags. Strict zero-other-project visibility has not been certified; no invitation should be sent as an unapproved test.

@@ -1,5 +1,7 @@
 # Controlled activation checklist — Afnan Collection
 
+Owner nominated Aisha Idris Muhammad (owner’s wife) as independent verifier; nomination is not verification or a role grant. Willingness/trusted contact/per-action confirmation and restricted audit storage/retention remain pending. See acceptance/OWNER-IDENTITY-MFA.md. No shared-account invitation; preferred Afnan email-PIN alternative remains under review only.
+
 Identity/MFA gate: [owner verification record](acceptance/OWNER-IDENTITY-MFA.md). Member-only Cloudflare IdP currently has no selected-owner member; resolve through a separately approved least-privilege decision before enrollment. Prepared recovery/lockout steps confer no emergency write approval.
 
 Latest readiness refresh: [Gate 3 approval package](acceptance/GATE-3-APPROVAL.md). The existing Zero Trust team and Cloudflare IdP are active; no enrollment needed. MFA and Afnan-only policies are not configured. Separate deployment, sender DNS and real-email approvals; no remote execution authorized.

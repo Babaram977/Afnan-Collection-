@@ -3,7 +3,7 @@
 ## Ownership and scope
 
 - GitHub is the authoritative source. The Lovable source was uploaded once; automatic synchronization is not configured. Do not assume commits flow to or from Lovable.
-- Codex handles reviewed implementation; use Lovable for targeted design proposals, then review and apply their diffs against current GitHub state.
+- Owner workflow: Lovable for design and development; GitHub/Codex for code improvements and testing; Cloudflare Workers, D1 and R2 for hosting/infrastructure. Reconcile Lovable changes manually against current GitHub state.
 - Preserve published history with additive commits. Do not edit generated files such as src/routeTree.gen.ts by hand.
 - Preserve the storefront and docs/design/AFNAN-UI-STANDARD.md. No redesign is authorized by initialization.
 - The master execution instruction authorizes functional commerce and authenticated administration against local/test backends. Keep CHECKOUT_ENABLED=false and PAYMENT_MODE=disabled in checked-in runtime defaults; live orders and live payments remain unauthorized.
@@ -49,3 +49,9 @@
 
 - Read docs/engineering/acceptance/GATE-2-REVIEW.md before any remote operation. Current scope is owner only; admin@afnancollectionkn.com and orders@afnancollectionkn.com are supplied settings, not verified identities. Gate 3 writes/deployment/email/DNS remain unapproved.
 - Preserve acceptance-mode signup denial. Pre-provisioning a named identity and assigning staff are separate approved, audited actions after verification. Never enable fixtures remotely. Run test:acceptance alongside integration/browser/branding checks.
+
+## Owner-provided verifier nomination and launch boundary
+
+- Aisha Idris Muhammad (owner’s wife) is nominated for independent owner-identity confirmation during sensitive enrollment/recovery. Nomination is not completed verification, willingness or consent. She receives no infrastructure/application/admin permissions. The existing authorized Cloudflare account administrator remains the separate recovery operator. Consult OWNER-IDENTITY-MFA.md and identity-mfa-record.json.
+- Do not invite the owner into the shared Cloudflare account. The dedicated Afnan email-PIN IdP is preferred for further review, not approved implementation; preserve the shared IdP.
+- Owner reports Afnan and Heroine are separate pre-launch businesses with official domains not yet connected to their storefronts. Connect official domains only after launch readiness and explicit approval; existing zone activation does not imply application-domain connection. Do not modify other businesses.

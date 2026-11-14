@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-11-14 — independent verifier nomination (owner-provided)
+
+Owner nominates Aisha Idris Muhammad (owner’s wife) as independent verifier for sensitive owner enrollment/recovery. Her nomination is not completed verification or permission; the existing authorized Cloudflare administrator remains the separate recovery operator. Primary TOTP and separate hardware-key backup remain proposed. Do not invite the storefront owner into the shared account; the dedicated Afnan email-PIN IdP with independent MFA is preferred for further review only. No implementation approval.
+
+Earlier requests to nominate a verifier are superseded; willingness, trusted contact, actual verification and restricted storage/retention remain pending.
+
 ## 2026-11-14 — selected recovery/MFA arrangement and membership isolation review
 
 Owner selected existing Cloudflare account administrator as recovery operator (no storefront admin role implied), proposed primary TOTP and a separate hardware-key backup; owner-only Afnan scope remains. Read-only paginated roles/permission-groups and resource-group review found Minimal Account Access, documented account-only visibility, but the role detail also returns coarse zone/organization read flags. Strict zero-other-project visibility has not been certified; no invitation should be sent as an unapproved test.

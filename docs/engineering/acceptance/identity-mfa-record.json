@@ -24,7 +24,11 @@
     "recoveryDrillEvidenceReference": null,
     "recoveryOperatorReference": null,
     "restrictedAuditStoreAndRetention": null,
-    "verifiedAtUtc": null
+    "verifiedAtUtc": null,
+    "verifierWillingnessReference": null,
+    "trustedContactEstablishmentReference": null,
+    "perActionVerificationOutcome": null,
+    "verificationOperatorReference": null
   },
   "excludedEvidence": [
     "passwords",
@@ -33,16 +37,32 @@
     "private keys",
     "JWTs",
     "session cookies",
-    "raw identity documents"
+    "raw identity documents",
+    "verifier phone number",
+    "verifier contact details",
+    "personal credentials"
   ],
   "applicationAdministratorGranted": false,
   "remoteChangesPerformed": false,
   "selectedArrangement": {
-    "recoveryOperator": "Existing Cloudflare account administrator",
+    "recoveryOperator": "Existing authorized Cloudflare account administrator",
     "recoveryOperatorIsStorefrontAdmin": false,
     "primaryMfa": "TOTP (proposed, not enrolled)",
     "backupMfa": "Separate hardware security key (proposed, not enrolled)",
     "scope": "Afnan Collection only",
-    "independentHumanVerifier": "not yet nominated"
+    "independentHumanVerifier": "Aisha Idris Muhammad",
+    "authenticationAlternative": "Dedicated Afnan email-PIN identity provider with independent MFA; preferred for further review, not approved"
+  },
+  "verifierNomination": {
+    "fullName": "Aisha Idris Muhammad",
+    "relationship": "Owner’s wife",
+    "responsibility": "Independent business-owner identity verification during sensitive enrollment and recovery",
+    "source": "Owner-provided decision",
+    "recordedOn": "2026-11-14",
+    "status": "nominated-only",
+    "willingnessConfirmed": false,
+    "trustedContactEstablished": false,
+    "identityVerificationOccurred": false,
+    "permissionsGranted": false
   }
 }

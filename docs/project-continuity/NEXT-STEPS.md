@@ -1,5 +1,11 @@
 # Resume development
 
+## 2026-11-14 — independent verifier nomination (owner-provided)
+
+Confirm nominated verifier Aisha Idris Muhammad’s willingness through a trusted channel and establish an independently trusted contact route, without collecting/publishing her phone, documents or credentials. Before sensitive enrollment/recovery obtain identity plus specific-action confirmation; record outcome/date/operator/approval reference in restricted storage. Contact/verification execution is not authorized by this documentation task. Restricted evidence storage and retention remain pending.
+
+Earlier requests to nominate a verifier are superseded; willingness, trusted contact, actual verification and restricted storage/retention remain pending.
+
 ## 2026-11-14 — selected recovery/MFA arrangement and membership isolation review
 
 Owner selected existing Cloudflare account administrator as recovery operator (no storefront admin role implied), proposed primary TOTP and a separate hardware-key backup; owner-only Afnan scope remains. Read-only paginated roles/permission-groups and resource-group review found Minimal Account Access, documented account-only visibility, but the role detail also returns coarse zone/organization read flags. Strict zero-other-project visibility has not been certified; no invitation should be sent as an unapproved test.

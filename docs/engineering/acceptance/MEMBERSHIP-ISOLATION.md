@@ -1,6 +1,6 @@
 # Owner membership isolation review — no invitation authorized
 
-Evidence 2026-11-14, Africa/Lagos; baseline 00bdac5. Owner selected admin@afnancollectionkn.com, existing Cloudflare account administrator as recovery operator, primary TOTP and a separate hardware security key as backup (both proposed, not enrolled). Scope remains Afnan only. The recovery operator gets no storefront staff role from that selection. A human independent business verifier and restricted evidence retention/location still need to be named; Codex can document evidence but cannot attest as an independent human verifier.
+Evidence 2026-11-14, Africa/Lagos; baseline 00bdac5. Owner selected admin@afnancollectionkn.com, existing Cloudflare account administrator as recovery operator, primary TOTP and a separate hardware security key as backup (both proposed, not enrolled). Scope remains Afnan only. The recovery operator gets no storefront staff role from that selection. The owner has nominated **Aisha Idris Muhammad (owner’s wife)** as independent human verifier for sensitive enrollment and recovery. This owner-provided nomination is not completed identity verification or evidence of her willingness/contact validation. Restricted evidence storage and retention remain pending. She receives no Cloudflare, database, application or administrator permissions.
 
 ## Read-only findings
 
@@ -12,9 +12,9 @@ Cloudflare also exposes individual-Worker permission groups, but the Afnan Worke
 
 Source: [Cloudflare account roles](https://developers.cloudflare.com/fundamentals/manage-members/roles/), [role scopes](https://developers.cloudflare.com/fundamentals/manage-members/scope/), [Worker role limitations](https://developers.cloudflare.com/workers/authorization/workers/). Per-resource roles exist in the platform; that does not prove a suitable login-only Afnan scope exists before the Worker/application is created.
 
-## Conditional membership option — not yet certified or recommended for automatic execution
+## Historical minimal-role candidate — do not invite the owner
 
-An independently verified owner could, with specific invitation/mail approval, be invited using **only Minimal Account Access**, no extra roles/group inheritance. Re-read the chosen role and requested payload before acting. Invitation defaults pending; do not force accepted status or pretend mailbox control is verified. A pending/accepted member remains unrelated to application staff privileges.
+The earlier review identified **Minimal Account Access** as a conditional candidate, not proof of strict isolation. Current owner direction is **do not invite admin@afnancollectionkn.com into the shared account**. The candidate is retained as historical analysis only; no invitation or account provisioning is prepared or authorized. A member role would still be unrelated to application staff privileges.
 
 This is a candidate for account-metadata-only access according to documented intent, not a proven Afnan-only isolation result. Before approving it, owner must explicitly accept any residual account/domain metadata visibility and resolve the API projection ambiguity with Cloudflare support or a separately authorized scoped verification. No test invite is authorized just to discover permissions.
 
@@ -32,6 +32,6 @@ An example creation body, **not sent**, is {"name":"Afnan owner email PIN","type
 
 ## Decision and boundary
 
-Strict isolation is not yet certified for the membership option. Prefer the no-membership alternative if the owner requires no infrastructure/account visibility at all. This is a proposal, not an approved identity-provider change; existing plan/provider remains unchanged. Owner must choose the option and any permitted account-metadata visibility, nominate the human verifier, and choose protected audit storage/retention.
+Strict isolation remains unproven for Minimal Account Access. Do not invite the owner into the shared account. The dedicated Afnan email-PIN IdP plus independent MFA is the **preferred alternative for further review**, not an approved implementation; the existing shared provider/settings remain unchanged. Aisha Idris Muhammad is nominated, not verified or provisioned. Her willingness and trusted contact method, actual owner verification, restricted evidence storage/retention and future identity/MFA implementation approval remain pending.
 
 No invitation, account provisioning, MFA enrollment, policy/IdP change, email, secret, migration, Worker upload, DNS, merge or deployment was performed. PR #2 remains draft. Checkout/payments/acceptance registration remain disabled. Recovery selection and proposed MFA devices are recorded without granting privileges or promising successful enrollment/recovery.

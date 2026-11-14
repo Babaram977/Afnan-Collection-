@@ -1,5 +1,11 @@
 # Development history
 
+## 2026-11-14 — independent verifier nomination (owner-provided)
+
+Locally updated the existing membership review, owner/MFA procedure, blank evidence template, approval/checklist references and maintenance instructions to record Aisha Idris Muhammad’s nomination. Kept evidence/approval fields pending and added the five-step willingness/contact/per-action confirmation/audit procedure. Recorded owner workflow: Lovable design/development, GitHub/Codex improvements/testing, Cloudflare hosting; official-domain connection requires launch readiness and explicit approval. This uncommitted milestone follows reference 1153b40; no remote action was performed.
+
+Earlier requests to nominate a verifier are superseded; willingness, trusted contact, actual verification and restricted storage/retention remain pending.
+
 ## 2026-11-14 — selected recovery/MFA arrangement and membership isolation review
 
 Owner selected existing Cloudflare account administrator as recovery operator (no storefront admin role implied), proposed primary TOTP and a separate hardware-key backup; owner-only Afnan scope remains. Read-only paginated roles/permission-groups and resource-group review found Minimal Account Access, documented account-only visibility, but the role detail also returns coarse zone/organization read flags. Strict zero-other-project visibility has not been certified; no invitation should be sent as an unapproved test.

@@ -1,5 +1,11 @@
 # Release status
 
+## 2026-11-14 — independent verifier nomination (owner-provided)
+
+Verifier nomination is documented: Aisha Idris Muhammad, owner’s wife. Verification, willingness/contact validation and MFA enrollment remain unperformed. Recovery operator remains the existing authorized Cloudflare administrator without a storefront role implied. No permissions, invitation, DNS, deployment, infrastructure, payment or other-project change is authorized. PR #2 remains draft; this task permits local documentation/validation only, no commit/push/merge.
+
+Earlier requests to nominate a verifier are superseded; willingness, trusted contact, actual verification and restricted storage/retention remain pending.
+
 ## 2026-11-14 — selected recovery/MFA arrangement and membership isolation review
 
 Owner selected existing Cloudflare account administrator as recovery operator (no storefront admin role implied), proposed primary TOTP and a separate hardware-key backup; owner-only Afnan scope remains. Read-only paginated roles/permission-groups and resource-group review found Minimal Account Access, documented account-only visibility, but the role detail also returns coarse zone/organization read flags. Strict zero-other-project visibility has not been certified; no invitation should be sent as an unapproved test.

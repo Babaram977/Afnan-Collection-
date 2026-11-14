@@ -1,5 +1,7 @@
 # Gate 3 numbered approval package — preparation only
 
+Owner nomination update (2026-11-14): Aisha Idris Muhammad is the nominated independent verifier; no verification has occurred. Do not invite the storefront owner into the shared account. The dedicated Afnan email-PIN IdP remains preferred for further review only; see OWNER-IDENTITY-MFA.md.
+
 Membership-isolation decision review: [MEMBERSHIP-ISOLATION.md](MEMBERSHIP-ISOLATION.md). Recovery/MFA selections are recorded; minimal-role membership is conditional and the no-membership IdP alternative remains unapproved. No execution scope has been granted.
 
 Current identity/MFA prerequisite review: [OWNER-IDENTITY-MFA.md](OWNER-IDENTITY-MFA.md). The existing Cloudflare IdP has restrict_to_account_members=true and the complete member inventory has no match for the selected owner email. Owner login/enrollment is blocked pending a separately approved least-privilege decision. This is not permission to invite a member or change shared IdP settings. This narrower Package 1 preparation grants no part of the broader deployment/sender/email approval scopes below.
@@ -44,7 +46,7 @@ See [Workers Access coverage](https://developers.cloudflare.com/workers/configur
 
 Two separate checks are required, and neither is replaced by entering an email:
 
-- Independent business verification by the account-authorized operator using the established owner handoff; record verifier and approval reference privately. No identity documents or account passwords in Git/chat.
+- Independent business-owner confirmation by nominated verifier Aisha Idris Muhammad (owner’s wife), after willingness and a trusted contact route are established. The existing authorized Cloudflare account administrator separately operates recovery and records outcome/date/operator/approval reference in restricted storage. Nomination alone proves no identity or consent and grants her no permissions. No identity documents, contact details or account credentials in Git/chat.
 - Control of admin@afnancollectionkn.com demonstrated by the exact-email authenticated Access identity/MFA and, under the separately approved email-testing package, the application's real single-use email challenge. Any IdP sign-in notification or challenge mail is part of the separately scoped owner authentication operation, not permission for arbitrary outbound mail.
 
 Because acceptance signup is disabled, package 3 must explicitly authorize creating this one initially unverified, nonstaff identity. Only after real code verification and independent business verification may the operator assign admin to that exact verified user ID, record the role grant/audit approval in the same reviewed batch and re-read the result. No public bootstrap and no first-signup role. Existing local-only bootstrap script is not a remote provisioner.
@@ -61,4 +63,4 @@ Revocation removes staff membership/application sessions and revokes the owner A
 
 **4. Excluded future actions.** Checkout/payment/public-registration enablement, production resources/migrations/deployment, DNS/Lovable cutover and PR merge remain separately authorized future gates. None is included in packages 1–3.
 
-Before requesting execution, settle: owner's exact-email Cloudflare IdP authentication path, independent verifier and MFA enrollment/recovery choice; approved acceptance origin; protected secret availability; recovery/budget limits. Resend sender/domain records and real mailbox delivery remain separate prerequisites for packages 2/3. No new organization enrollment request should be made.
+Before requesting execution, settle: owner's exact-email Cloudflare IdP authentication path, nominated verifier willingness/trusted contact and per-action confirmation plus MFA enrollment/recovery readiness; approved acceptance origin; protected secret availability; recovery/budget limits. Resend sender/domain records and real mailbox delivery remain separate prerequisites for packages 2/3. No new organization enrollment request should be made.
