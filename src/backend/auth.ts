@@ -4,6 +4,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./auth-schema";
 import { testMode, type CommerceEnv } from "./types";
+import { sendSignInCode } from "./email";
 
 export function authFor(env: CommerceEnv) {
   if (!env.AUTH_SECRET || env.AUTH_SECRET.length < 32)
@@ -14,46 +15,44 @@ export function authFor(env: CommerceEnv) {
     secret: env.AUTH_SECRET,
     trustedOrigins: [env.APP_ORIGIN],
     // Acceptance identities are provisioned by an approved operator, never public signup.
-    disabledPaths: env.APP_ENV === "acceptance" ? ["/sign-up/email"] : [],
+    disabledPaths: [
+      "/sign-up/email",
+      "/update-user",
+      "/delete-user",
+      "/change-email",
+      "/email-otp/request-email-change",
+      "/email-otp/change-email",
+      "/email-otp/request-password-reset",
+      "/forget-password/email-otp",
+      "/email-otp/reset-password",
+    ],
     database: drizzleAdapter(drizzle(env.DB, { schema }), { provider: "sqlite", schema }),
-    session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7,
+      updateAge: 60 * 60 * 24,
+      cookieCache: { enabled: false },
+    },
     advanced: {
+      defaultCookieAttributes: { httpOnly: true, sameSite: "lax" },
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
       useSecureCookies: new URL(env.APP_ORIGIN).protocol === "https:",
     },
     rateLimit: { enabled: true, storage: "memory", window: 60, max: 10 },
+    logger: { disabled: true },
     plugins: [
       emailOTP({
-        disableSignUp: env.APP_ENV === "acceptance",
+        disableSignUp: !testMode(env),
         otpLength: 6,
         expiresIn: 300,
         allowedAttempts: 5,
         storeOTP: "hashed",
         async sendVerificationOTP({ email, otp }) {
-          if (testMode(env)) {
-            await env.DB.prepare(
-              "INSERT INTO test_outbox(email,code) VALUES(?,?) ON CONFLICT(email) DO UPDATE SET code=excluded.code,created_at=unixepoch()",
-            )
-              .bind(email, otp)
-              .run();
-            return;
+          try {
+            await sendSignInCode(env, email, otp);
+          } catch {
+            console.error(JSON.stringify({ event: "auth.email.unavailable" }));
+            throw new Error("Email delivery unavailable");
           }
-          if (!env.RESEND_API_KEY || !env.EMAIL_FROM)
-            throw new Error("Email delivery is not configured");
-          const response = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${env.RESEND_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              from: env.EMAIL_FROM,
-              to: email,
-              subject: "Your Afnan sign-in code",
-              text: `Your sign-in code is ${otp}. It expires in 5 minutes. If you did not request it, ignore this email.`,
-            }),
-          });
-          if (!response.ok) throw new Error("Email delivery failed");
         },
       }),
     ],

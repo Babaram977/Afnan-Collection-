@@ -1,3 +1,4 @@
+import { enrollStaff } from "./authenticator.mjs";
 import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
 import { createTestApp, Client, AUTH_SECRET, ORIGIN } from "./harness.mjs";
@@ -88,7 +89,7 @@ try {
   check(wrong.status !== 200, "Invalid or reused code rejected");
   const staff = new Client(mf);
   const admin = await staff.signIn(db, "admin@example.com");
-  await db.prepare("INSERT INTO staff(user_id,role) VALUES(?,'admin')").bind(admin.userId).run();
+  await enrollStaff(staff, db, admin.userId);
   check((await staff.request("/admin/products")).status === 200, "Verified staff authorized");
   const adjustment = await staff.request("/admin/inventory", "POST", {
     variantId,
@@ -144,7 +145,7 @@ try {
   );
   const fulfil = new Client(mf);
   const f = await fulfil.signIn(db, "fulfilment@example.com");
-  await db.prepare("INSERT INTO staff(user_id,role) VALUES(?,'fulfilment')").bind(f.userId).run();
+  await enrollStaff(fulfil, db, f.userId, "fulfilment");
   check(
     (await fulfil.request("/admin/customers")).status === 403,
     "Fulfilment role cannot read customer directory",

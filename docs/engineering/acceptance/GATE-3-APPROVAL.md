@@ -64,3 +64,7 @@ Revocation removes staff membership/application sessions and revokes the owner A
 **4. Excluded future actions.** Checkout/payment/public-registration enablement, production resources/migrations/deployment, DNS/Lovable cutover and PR merge remain separately authorized future gates. None is included in packages 1–3.
 
 Before requesting execution, settle: owner's exact-email Cloudflare IdP authentication path, nominated verifier willingness/trusted contact and per-action confirmation plus MFA enrollment/recovery readiness; approved acceptance origin; protected secret availability; recovery/budget limits. Resend sender/domain records and real mailbox delivery remain separate prerequisites for packages 2/3. No new organization enrollment request should be made.
+
+## Application MFA implementation directive — 2026-11-14
+
+The later owner directive authorizes an application-managed extension to existing Better Auth: verified email plus mandatory WebAuthn, independent of the shared Cloudflare IdP. See ../ADMIN-AUTH-ADR.md and ../ADMIN-RECOVERY-RUNBOOK.md. The dedicated email-PIN IdP remains an unimplemented historical alternative, not the chosen implementation. No shared IdP, membership or Access changes were performed. TOTP is not silently substituted for WebAuthn. Real identity/device/recovery verification, restricted evidence storage/retention and owner-controlled production actions remain pending. Aisha's nomination and separate recovery operator roles are unchanged; neither is newly verified or granted privileges.
