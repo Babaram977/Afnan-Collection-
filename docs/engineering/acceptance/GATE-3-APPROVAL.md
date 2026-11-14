@@ -1,5 +1,7 @@
 # Gate 3 numbered approval package — preparation only
 
+Membership-isolation decision review: [MEMBERSHIP-ISOLATION.md](MEMBERSHIP-ISOLATION.md). Recovery/MFA selections are recorded; minimal-role membership is conditional and the no-membership IdP alternative remains unapproved. No execution scope has been granted.
+
 Current identity/MFA prerequisite review: [OWNER-IDENTITY-MFA.md](OWNER-IDENTITY-MFA.md). The existing Cloudflare IdP has restrict_to_account_members=true and the complete member inventory has no match for the selected owner email. Owner login/enrollment is blocked pending a separately approved least-privilege decision. This is not permission to invite a member or change shared IdP settings. This narrower Package 1 preparation grants no part of the broader deployment/sender/email approval scopes below.
 
 Evidence refreshed 2026-11-13, Africa/Lagos. Continue draft PR #2 from ad81bef. This document authorizes no remote action.

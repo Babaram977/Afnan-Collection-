@@ -1,5 +1,7 @@
 # Package 1 owner identity, independent MFA and recovery record
 
+Latest selected arrangement and isolation findings: [MEMBERSHIP-ISOLATION.md](MEMBERSHIP-ISOLATION.md). Recovery operator is the existing Cloudflare account administrator; primary TOTP and separate hardware-key backup are selected proposals, not enrollment proof. Strict membership isolation is not yet certified; no invitation is authorized.
+
 Prepared 2026-11-13 (Africa/Lagos), starting from 47b4797 / draft PR #2. This is a verification procedure and evidence template, **not execution approval**. No account enrollment, invitation, authentication challenge, email, policy write, MFA change, remote D1 write, secret, upload, deployment or DNS change was performed.
 
 ## Verified facts versus requirements
@@ -73,7 +75,7 @@ Any future administrator grant requires separate approval, real application mail
 Owner decisions still needed:
 
 1. Resolve the exact-email Cloudflare account/member prerequisite using an approved least-privilege scope. Do not change the shared restriction or invite accounts under this instruction.
-2. Choose primary/spare MFA devices (proposed approved methods above), independent business verifier and authorized recovery operator; confirm the operator's separate control-plane recovery path.
+2. Primary TOTP, separate hardware-key backup and the existing account administrator as recovery operator have been selected. Confirm device availability and the operator's separate control-plane recovery path; nominate the independent human verifier.
 3. Choose restricted evidence location/retention and approve the one-hour challenge/expiry/recovery test procedure and any explicitly scoped existing-identity negative test.
 
 **This Package 1 instruction approves preparation/read-only/local validation only.** Later identity/MFA execution must name the specific membership/invitation or identity-provider change (if chosen), existing-organization MFA prerequisite, Afnan-only policy/application writes, owner enrollment/challenges and scoped recovery/revocation drill. These actions remain unapproved. Creating a member may send an invitation and grant infrastructure access; it needs its own reviewed scope and notification approval.

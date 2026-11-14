@@ -1,5 +1,12 @@
 # Resume development
 
+## 2026-11-14 — selected recovery/MFA arrangement and membership isolation review
+
+Owner selected existing Cloudflare account administrator as recovery operator (no storefront admin role implied), proposed primary TOTP and a separate hardware-key backup; owner-only Afnan scope remains. Read-only paginated roles/permission-groups and resource-group review found Minimal Account Access, documented account-only visibility, but the role detail also returns coarse zone/organization read flags. Strict zero-other-project visibility has not been certified; no invitation should be sent as an unapproved test.
+
+MEMBERSHIP-ISOLATION.md records a conditional minimal-role option and a separately approved alternative: Afnan-only email-PIN IdP plus independent MFA without Cloudflare account membership. Existing shared IdP settings remain unchanged; alternate provider is proposed only, not selected/applied. Provider creation and Access PIN mail would need explicit approval and other-app impact review. Selected devices/operator are recorded in the blank identity evidence template; human verifier and protected evidence retention/location remain pending. No remote writes, invitations, mail, enrollment, provisioning, deployment, DNS or merge occurred.
+
+
 ## 2026-11-13 — owner authentication/MFA preparation (no execution)
 
 Read-only organization/IdP/apps/policy inspection reconfirmed the active existing team and zero applications/policies. Detailed IdP GET reveals restrict_to_account_members=true. Complete account membership listing has no admin@afnancollectionkn.com match, so the proposed exact-email login is currently blocked. No invitation, account provisioning or shared restriction change is authorized. MFA fields remain unreported; enrollment/enforcement are unverified.
