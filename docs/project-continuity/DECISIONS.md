@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-11-14 — practical storefront/mobile review (local fixtures)
+
+Proceed with practical local storefront testing while real email remains deferred. Reuse the existing commerce/backend/design; fix only reproduced defects. Keep fixture merchandise/images local, checked-in checkout/payment gates disabled and original logo bytes unchanged. Add focused storefront regressions to the validation workflow without enabling deployment.
+
 ## 2026-11-14 — independent verifier nomination (owner-provided)
 
 Owner nominates Aisha Idris Muhammad (owner’s wife) as independent verifier for sensitive owner enrollment/recovery. Her nomination is not completed verification or permission; the existing authorized Cloudflare administrator remains the separate recovery operator. Primary TOTP and separate hardware-key backup remain proposed. Do not invite the storefront owner into the shared account; the dedicated Afnan email-PIN IdP with independent MFA is preferred for further review only. No implementation approval.

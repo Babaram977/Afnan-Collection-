@@ -1,5 +1,9 @@
 # Resume development
 
+## 2026-11-14 — practical storefront/mobile review (local fixtures)
+
+Review the storefront fixes and docs/engineering/STOREFRONT-REVIEW.md; owner authorized saving this milestone on the existing branch/PR #2. Do not rebuild working features. After the local changes are reviewed, use the existing dedicated Cloudflare acceptance plan under its explicit approval boundaries; keep sender DNS/email, owner/Access/MFA enrollment, production routing and launch separately gated. Supply genuine catalog/images/size/pricing/opening stock for business acceptance later; no email setup is needed to rerun local test:storefront.
+
 ## 2026-11-14 — independent verifier nomination (owner-provided)
 
 Confirm nominated verifier Aisha Idris Muhammad’s willingness through a trusted channel and establish an independently trusted contact route, without collecting/publishing her phone, documents or credentials. Before sensitive enrollment/recovery obtain identity plus specific-action confirmation; record outcome/date/operator/approval reference in restricted storage. Contact/verification execution is not authorized by this documentation task. Restricted evidence storage and retention remain pending.

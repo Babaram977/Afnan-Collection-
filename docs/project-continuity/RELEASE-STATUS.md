@@ -1,5 +1,9 @@
 # Release status
 
+## 2026-11-14 — practical storefront/mobile review (local fixtures)
+
+Local validation passes: 181 new storefront assertions, existing 14 unit tests, 85 integration, 12 acceptance, 111 browser and 88 branding checks; frozen install/typecheck/lint (0 errors/10 existing warnings)/build/dry-run pass. Owner authorized committing/pushing the reviewed milestone; verify its exact-head CI through PR #2 checks/final handoff. Fixture-only success is not launch approval; real catalog/media and protected/email/owner acceptance remain pending.
+
 ## 2026-11-14 — independent verifier nomination (owner-provided)
 
 Verifier nomination is documented: Aisha Idris Muhammad, owner’s wife. Verification, willingness/contact validation and MFA enrollment remain unperformed. Recovery operator remains the existing authorized Cloudflare administrator without a storefront role implied. No permissions, invitation, DNS, deployment, infrastructure, payment or other-project change is authorized. PR #2 remains draft; this task permits local documentation/validation only, no commit/push/merge.

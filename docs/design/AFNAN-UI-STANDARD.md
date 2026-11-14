@@ -13,6 +13,10 @@ The owner-authorized commerce/admin work preserves all colour, type and layout f
 
 Current APIs: `GET /api/products`, `GET /api/products/:slug`, `GET /api/categories`, `GET /api/store`, `GET /api/business`, `GET /api/zones`; Better Auth under `/api/auth/*`; owner-scoped `/api/me`, `/api/profile`, `/api/addresses`, `/api/cart`, `/api/orders` and order detail/cancel/pay actions. Staff APIs under `/api/admin/*` enforce roles on the server; product upsert and soft delete, variant upsert, stock adjustments, media upload/private preview, settings and guarded fulfilment/payment actions are implemented. See source/engineering docs for exact verbs and schemas; v0.1 endpoints below remain historical proposals.
 
+## Local storefront review — 2026-11-14
+
+Preserve all approved tokens, fonts and original PNG. Focused fixes close mobile navigation after link selection, wrap galleries and long product text/quantity controls at narrow widths, show the option label for a single variant, and keep cleared search/price inputs consistent with URL filters. No routes, API contracts, merchandise or new design system were introduced. The local review adds 181 storefront assertions across 320/390/768/1440 px; see docs/engineering/STOREFRONT-REVIEW.md for evidence and limits.
+
 ## Preserved v0.1 design and initial handoff snapshot
 
 Frontend-only storefront. No backend, auth, payments or real orders are connected.

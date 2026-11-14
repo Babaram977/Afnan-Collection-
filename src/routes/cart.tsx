@@ -49,19 +49,19 @@ function Cart() {
           />
         ) : (
           <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-            <ul className="divide-y rounded-2xl bg-card shadow-soft">
+            <ul className="min-w-0 divide-y rounded-2xl bg-card shadow-soft">
               {lines.map((l) => (
                 <li key={l.variantId} className="flex gap-4 p-4">
                   <div className="size-20 shrink-0 overflow-hidden rounded-xl">
                     <ProductImageOrPlaceholder src={l.imageUrl} alt={l.name} />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold">{l.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words font-semibold">{l.name}</p>
                     {l.variantLabel && (
-                      <p className="text-sm text-muted-foreground">{l.variantLabel}</p>
+                      <p className="break-words text-sm text-muted-foreground">{l.variantLabel}</p>
                     )}
                     <p className="mt-1 text-sm font-bold">{formatNaira(l.priceKobo)}</p>
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Button
                         size="icon"
                         variant="outline"

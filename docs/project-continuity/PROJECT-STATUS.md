@@ -1,5 +1,9 @@
 # Project status
 
+## 2026-11-14 — practical storefront/mobile review (local fixtures)
+
+Local Step 1 storefront review completed from 7839598. Verified and fixed mobile-sheet persistence, gallery overflow, missing single-variant size/colour label, long-name/narrow-cart overflow and stale filter input values. Approved design/logo preserved; no remote changes. See docs/engineering/STOREFRONT-REVIEW.md. Owner authorized committing/pushing the reviewed fixes and regression tests; PR #2 remains draft. Exact-head CI is verified in the final handoff.
+
 ## 2026-11-14 — independent verifier nomination (owner-provided)
 
 Aisha Idris Muhammad (owner’s wife) is now the owner-nominated independent verifier. Willingness, independently trusted contact and per-action identity confirmation remain pending. No verification, enrollment or permissions are claimed. Owner reports Afnan and Heroine are separate pre-launch businesses and official domains are not yet connected to their storefronts; no other-project status was independently checked in this local-only task.

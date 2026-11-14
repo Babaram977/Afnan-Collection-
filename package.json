@@ -23,7 +23,8 @@
     "dev:ui": "vite dev",
     "dev:fixture": "node tests/dev.mjs",
     "test:branding": "node tests/branding.mjs",
-    "test:acceptance": "node tests/acceptance.mjs"
+    "test:acceptance": "node tests/acceptance.mjs",
+    "test:storefront": "node tests/storefront.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1",

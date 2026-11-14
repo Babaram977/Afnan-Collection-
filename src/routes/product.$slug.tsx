@@ -54,12 +54,12 @@ function ProductPage() {
   const out = v?.stock == null || v.stock <= 0;
   return (
     <div className="container-page grid gap-8 py-8 md:grid-cols-2 md:py-12">
-      <div>
+      <div className="min-w-0">
         <div className="aspect-square overflow-hidden rounded-3xl">
           <ProductImageOrPlaceholder src={p.images[img]?.url} alt={p.images[img]?.alt ?? p.name} />
         </div>
         {p.images.length > 1 && (
-          <ul className="mt-3 flex gap-2" aria-label="Gallery">
+          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Gallery">
             {p.images.map((im, i) => (
               <li key={im.url}>
                 <button
@@ -75,11 +75,11 @@ function ProductPage() {
           </ul>
         )}
       </div>
-      <div>
+      <div className="min-w-0">
         <p className="text-sm font-semibold text-primary">
           {p.categoryLabel ?? CATEGORIES.find((c) => c.slug === p.category)?.label}
         </p>
-        <h1 className="mt-1 text-3xl font-semibold md:text-4xl">{p.name}</h1>
+        <h1 className="mt-1 break-words text-3xl font-semibold md:text-4xl">{p.name}</h1>
         {v && (
           <div className="mt-3">
             {v.salePriceKobo != null && v.regularPriceKobo && (
@@ -89,6 +89,11 @@ function ProductPage() {
             )}
             <p className="text-2xl font-bold">{formatNaira(v.priceKobo)}</p>
           </div>
+        )}
+        {p.variants.length === 1 && (v?.size || v?.color) && (
+          <p className="mt-6 text-sm font-semibold">
+            Option: {[v.size, v.color].filter(Boolean).join(" · ")}
+          </p>
         )}
         {p.variants.length > 1 && (
           <fieldset className="mt-6">

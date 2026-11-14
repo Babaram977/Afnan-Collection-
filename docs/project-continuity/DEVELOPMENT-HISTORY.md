@@ -1,5 +1,9 @@
 # Development history
 
+## 2026-11-14 — practical storefront/mobile review (local fixtures)
+
+Reproduced defects against the built local Worker before fixing them; the hydrated filter-clear sequence exposed stale values that an earlier pre-hydration probe did not. Added focused storefront fixtures and 181 browser assertions at 320/390/768/1440 px, plus validation-only CI step. Existing 14 unit, 85 integration, 12 acceptance, 111 browser and 88 branding checks pass, as do frozen install/typecheck/lint/build/dry-run. Mobile/desktop screenshots inspected; logo checksum unchanged. Owner subsequently authorized committing/pushing this milestone; no remote infrastructure or application action occurred.
+
 ## 2026-11-14 — independent verifier nomination (owner-provided)
 
 Locally updated the existing membership review, owner/MFA procedure, blank evidence template, approval/checklist references and maintenance instructions to record Aisha Idris Muhammad’s nomination. Kept evidence/approval fields pending and added the five-step willingness/contact/per-action confirmation/audit procedure. Recorded owner workflow: Lovable design/development, GitHub/Codex improvements/testing, Cloudflare hosting; official-domain connection requires launch readiness and explicit approval. This uncommitted milestone follows reference 1153b40; no remote action was performed.

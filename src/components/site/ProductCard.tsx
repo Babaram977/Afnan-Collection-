@@ -42,7 +42,7 @@ export function ProductCard({ product }: { product: Product }) {
         />
       </div>
       <div className="p-4">
-        <h3 className="font-sans text-sm font-semibold leading-snug">{product.name}</h3>
+        <h3 className="break-words font-sans text-sm font-semibold leading-snug">{product.name}</h3>
         {r && (
           <p className="mt-1 text-sm font-bold text-primary">
             {r.min === r.max ? formatNaira(r.min) : `${formatNaira(r.min)} – ${formatNaira(r.max)}`}

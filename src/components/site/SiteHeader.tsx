@@ -1,7 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { Menu, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { useCart } from "@/lib/cart";
 import { Wordmark } from "./Wordmark";
 
@@ -76,12 +83,14 @@ export function SiteHeader() {
                 <ul className="flex flex-col gap-1">
                   {[...NAV, { to: "/cart", label: "Cart" } as const].map((n) => (
                     <li key={n.to}>
-                      <Link
-                        to={n.to}
-                        className="block rounded-xl px-4 py-3 text-base font-semibold hover:bg-secondary"
-                      >
-                        {n.label}
-                      </Link>
+                      <SheetClose asChild>
+                        <Link
+                          to={n.to}
+                          className="block rounded-xl px-4 py-3 text-base font-semibold hover:bg-secondary"
+                        >
+                          {n.label}
+                        </Link>
+                      </SheetClose>
                     </li>
                   ))}
                 </ul>

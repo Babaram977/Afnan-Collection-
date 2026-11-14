@@ -102,7 +102,7 @@ function Shop() {
                 type="search"
                 className="h-11 bg-card pl-9"
                 placeholder="e.g. romper, blanket"
-                defaultValue={f.q ?? ""}
+                value={f.q ?? ""}
                 onChange={(e) => set({ q: e.target.value || undefined })}
               />
             </div>
@@ -169,7 +169,7 @@ function Shop() {
                   min={0}
                   placeholder="Min"
                   className="h-11 bg-card"
-                  defaultValue={f.minNaira ?? ""}
+                  value={f.minNaira ?? ""}
                   onChange={(e) => set({ minNaira: num(e.target.value) })}
                 />
                 <Input
@@ -179,7 +179,7 @@ function Shop() {
                   min={0}
                   placeholder="Max"
                   className="h-11 bg-card"
-                  defaultValue={f.maxNaira ?? ""}
+                  value={f.maxNaira ?? ""}
                   onChange={(e) => set({ maxNaira: num(e.target.value) })}
                 />
               </div>
