@@ -1,5 +1,14 @@
 # Resume development
 
+## 2026-11-14 — requested main deployment: Worker created, application blocked
+
+PR #2 is now externally merged; source origin/main cef6e6e has passing CI. This task built that exact main commit and verified actual acceptance bindings through local dry-run. Owner's later task authorized dedicated Worker provisioning/deployment but prohibited other-Worker, DNS, IdP and payment changes. See docs/engineering/WORKER-PROVISIONING-STATUS.md for exact evidence and limits.
+
+Created afnan-collection-storefront as a metadata-only Worker with workers.dev/previews disabled, logs/traces on, no version and deployed_on=null (creation 2026-11-14T13:38:56.153882Z). Root hostname returned 404; no functional application URL or live acceptance is claimed. Dedicated D1 remains empty and R2 private; remote bindings/secrets/schema were not installed because no application version exists.
+
+Deployment remains blocked by member-only IdP with no exact owner member, prohibited invitations/IdP changes, absent Afnan Access/MFA enrollment/protection and unavailable secure Resend/verified-sender evidence for actual owner email-code login. No alternative/personal identity or weaker protection was substituted. Other projects/DNS/payments unchanged. No application upload/exposure, migrations, admin assignment, email or new merge occurred. Local status/continuity changes are uncommitted on ops/afnan-worker-provisioning.
+
+
 ## 2026-11-14 — practical storefront/mobile review (local fixtures)
 
 Review the storefront fixes and docs/engineering/STOREFRONT-REVIEW.md; owner authorized saving this milestone on the existing branch/PR #2. Do not rebuild working features. After the local changes are reviewed, use the existing dedicated Cloudflare acceptance plan under its explicit approval boundaries; keep sender DNS/email, owner/Access/MFA enrollment, production routing and launch separately gated. Supply genuine catalog/images/size/pricing/opening stock for business acceptance later; no email setup is needed to rerun local test:storefront.
@@ -102,3 +111,13 @@ Do not claim the backend is live or production-ready from fixture success. Keep 
 The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` is now installed at `public/brand/IMG_8842(1).png` through a byte-preserving rename. SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused.
 
 Local validation: typecheck, lint and Worker build passed; 111 responsive/browser checks and 88 dedicated branding assertions passed at 320/390/768/1440 px (branding). The branding suite is included in CI. Continue on draft PR #2 / feat/commerce-platform; reconcile exact-head CI from GitHub. No merge, deployment, provisioning or checkout/payment activation occurred. R2 enablement, domain visibility and external acceptance remain separate launch gates.
+
+### Conditional production launch readiness refresh — 2026-11-14
+
+Owner authorizes deployment only after all gates pass. Read-only refresh still finds zero Worker versions, disabled hostnames and no Access applications. Selected owner cannot authenticate through the membership-restricted current IdP; independent MFA and Resend remain unverified. Recovery administrator member record reports account 2FA disabled, requiring owner attention separately from Access MFA. No remote writes performed. Exact approved main CI cef6e6e passed; original PNG checksum preserved. See docs/engineering/WORKER-PROVISIONING-STATUS.md for the seven-gate assessment and exact owner actions. Preserve existing documentation changes; do not claim live or activate checkout/payments/registration.
+
+### Isolated administrator MFA implementation — 2026-11-14
+
+Dedicated feature branch feat/isolated-admin-mfa extends Better Auth email sessions with SimpleWebAuthn verified passkey/security-key enrollment and privileged D1 sessions. Additive migration 0003 denies existing staff until controlled enrollment. Recovery hashes one-time codes, revokes old sessions/keys and requires fresh email plus new MFA. Shared Cloudflare IdP/membership and all other businesses remain untouched. Existing local readiness records were preserved. See docs/engineering/ADMIN-AUTH-ADR.md, ADMIN-RECOVERY-RUNBOOK.md, SECURITY-TEST-REPORT.md and PRODUCTION-AUTH-READINESS.md for evidence and owner actions. Live enrollment/email/backup/domain gates remain BLOCKED; no remote migrations/secrets/Worker uploads/DNS/payment changes are authorized or performed by this implementation. PR creation/push are authorized; merge remains unapproved.
+
+Local implementation validation passed: 18 unit tests; 85 integration, 12 acceptance, 77 security, 111 browser, 88 branding and 181 storefront checks. Typecheck/lint/build, actual-resource dry-run, migration replay and isolated local export/restore passed; dependency audit reports no known vulnerabilities (670 packages). Existing ten Fast Refresh warnings remain. Exact feature-head GitHub CI is checked after push; see the new PR and SECURITY-TEST-REPORT.md. These results do not pass real owner/MFA/email/remote recovery/hostname gates.

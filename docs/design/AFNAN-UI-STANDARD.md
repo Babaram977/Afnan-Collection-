@@ -72,3 +72,7 @@ Replace `listProducts()` / `getProduct()` with these; keep the shapes above.
 ## Rules
 
 No fabricated products, prices, stock, photos, reviews, discounts, contact details, delivery promises or payment results. Unfinished features are disabled and labelled "not connected".
+
+### Administrator security flow
+
+The /admin route reuses existing cards, buttons, labels and responsive spacing for email sign-in followed by mandatory verified passkey/security-key enrollment or challenge. Approved storefront layout, branding, colours and original-logo proportions are unchanged. Recovery codes appear once in wrapping text and are never placed in localStorage. Login does not show staff tools until the server confirms the privileged session. Security controls use labels/status/error messages and keyboard-operable native controls.

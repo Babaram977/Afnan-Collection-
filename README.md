@@ -8,14 +8,15 @@ A Nigerian children’s lifestyle store, initially serving Kano. This repository
 
 - D1-backed active catalog, dynamic categories, age navigation, search, filters, price/name sorting, variants/SKUs, images and stock availability.
 - Persistent browser cart plus owner-scoped server copy, with catalog-based rehydration and authoritative checkout validation.
-- Email-code customer registration/sign-in/recovery, profiles, saved delivery addresses, account order history and browser-scoped guest order tracking.
+- Email-code customer sign-in (new registration restricted to localhost fixtures), profiles, saved delivery addresses, account order history and browser-scoped guest order tracking.
 - Server-calculated NGN totals, configured delivery zones/fees, idempotent order preparation, transactional reservations, expiry/cancellation and guarded fulfilment.
 - Guided owner dashboard (no UUID entry for product/stock tasks): multi-photo upload/previews, main-image ordering, regular/promotional pricing, generated/assigned SKUs, opening stock, safe product deletion and publishing without a code deployment.
+- Mandatory administrator WebAuthn (verified passkey/security key), controlled pending enrollment, expiring privileged sessions and hashed one-use recovery codes. No Cloudflare account membership is required. Owner enrollment and hosted verification remain pending.
 - Protected staff dashboard: product/category/variant editing, R2 image uploads, audited stock changes and low-stock view, orders, customers/session revocation, banners, delivery settings, approved policy copy, payment verification/refunds and basic sales totals. Fulfilment staff have restricted access.
 - Paystack test adapter with signed webhooks, provider verification, duplicate-event handling, late-payment review and full-refund status reconciliation. Live keys are deliberately rejected. Real Paystack sandbox requests have **not** been verified.
 - Worker health endpoint, security headers, origin checks, validated/bounded requests, D1-backed rate limits, structured request IDs, local migrations and automated validation CI. No deployment workflow is included.
 
-Checked-in defaults keep **checkout and payments disabled**. Controlled localhost fixtures explicitly enable simulated ordering. No public deployment, real orders, live payments, production DNS change or remote database/bucket provisioning has occurred.
+Checked-in defaults keep **checkout and payments disabled**. Controlled localhost fixtures explicitly enable simulated ordering. The dedicated Afnan Worker, D1 and private R2 resources exist; no application version, remote migrations, public deployment, real orders, live payments or production DNS cutover has occurred.
 
 ## Official business details
 
@@ -46,9 +47,9 @@ bun run worker:build
 bun run dev:fixture
 ```
 
-This seeds explicitly labelled fictional test merchandise and one fictional delivery fee in an isolated Miniflare database. Use an `@example.com` test address. The terminal accepts `code email@example.com` to read its fixture OTP and `admin email@example.com` after verification to grant a local fixture role. These commands do not contact a real email or payment service and are not public API endpoints. The data disappears when the process ends.
+This seeds explicitly labelled fictional test merchandise and one fictional delivery fee in an isolated Miniflare database. Use an `@example.com` test address. The terminal accepts `code email@example.com` to read its fixture OTP and `admin email@example.com` after verification to approve local fixture MFA enrollment. Reload /admin and enroll a verified passkey/security key before staff tools are available. These commands do not contact a real email or payment service and are not public API endpoints. The data disappears when the process ends.
 
-For the persistent local development database, `bun run admin:bootstrap -- verified-email@example.com` grants a role only to an already verified account and prints the matching row. It always uses `--local`. There is no public administrator bootstrap route. Production staff bootstrap requires a separately reviewed account-owned procedure.
+For persistent local development, use the controlled pending-enrollment procedure in [administrator recovery](docs/engineering/ADMIN-RECOVERY-RUNBOOK.md). `admin:bootstrap` accepts only the designated owner email plus evidence/operator references and `--apply-local`; it does not grant active administrator access. Human verification and remote provisioning remain separately approved actions.
 
 ## Validation
 
@@ -88,3 +89,7 @@ No license has been declared. Public visibility alone does not grant permission 
 Protected acceptance preparation is documented in [Gate 2 review](docs/engineering/acceptance/GATE-2-REVIEW.md). Acceptance mode disables public registration; the owner-only Access/MFA plan remains unapplied. The existing Zero Trust team is now verified active, while MFA/application configuration remains pending. Mailbox ownership and sender authentication are pending. All routes, checkout and payments remain disabled; no acceptance Worker is deployed. Run `bun run test:acceptance` alongside the existing suites.
 
 Local storefront review: [findings and reproduction](docs/engineering/STOREFRONT-REVIEW.md). After `bun run worker:build`, run `bun run test:storefront` for filter, gallery, option, naira-cart and mobile checks using local fixtures with checkout/payments disabled. Email setup is not needed for this review.
+
+## Isolated administrator security
+
+Read the [architecture decision](docs/engineering/ADMIN-AUTH-ADR.md), [enrollment/recovery runbook](docs/engineering/ADMIN-RECOVERY-RUNBOOK.md), [security test report](docs/engineering/SECURITY-TEST-REPORT.md) and [production readiness/deployment plan](docs/engineering/PRODUCTION-AUTH-READINESS.md). Run `bun run test:security` after `bun run worker:build`. Production registration, checkout and payments remain disabled. Resend requires a privately supplied server key, approved sender and actual domain verification; EMAIL_SENDER_VERIFIED is an operator assertion, not proof. Real email/MFA/owner, backup/restore and hostname acceptance remain blocked. The production config example is not deployable authorization.

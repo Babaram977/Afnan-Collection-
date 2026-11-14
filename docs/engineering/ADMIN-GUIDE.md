@@ -44,3 +44,7 @@ The public product page shows effective prices, regular prices for configured pr
 ## Before activation
 
 Choose the actual owner email, verify Cloudflare account/resource ownership, provision isolated resources only under separate authorization, configure strong runtime secrets and verified email delivery, and validate actual Paystack test credentials/webhooks/refunds. Confirm catalog/opening stock, delivery terms/fees, privacy/returns/retention, backups and operational monitoring. Resolve original logo-file access and repository privacy preference. Obtain explicit approval before public deployment, real orders or live payments; this implementation has not performed them.
+
+## Mandatory MFA update
+
+Follow [enrollment and recovery](ADMIN-RECOVERY-RUNBOOK.md). The owner identity is selected as admin@afnancollectionkn.com but mailbox/business ownership is not verified. Email login alone is insufficient: the operator must approve pending enrollment, and the owner must personally enroll and challenge a verified passkey/security key. Staff sessions expire after one hour or 15 minutes idle. Public registration, checkout and payments stay disabled. Original-logo integration is complete; its earlier blocker above is historical. Dedicated Cloudflare resources exist but no application is deployed.

@@ -1,5 +1,5 @@
 {
-  "status": "prepared-only-not-applied",
+  "status": "historical-proposal-not-applied",
   "hostname": "afnan-collection-storefront.danwakili.workers.dev",
   "accountWideChanges": false,
   "prerequisite": "Existing Zero Trust team active; verified owner identity and supported independent MFA configuration still required",
@@ -18,11 +18,7 @@
       "session_duration": "1h",
       "mfa_config": {
         "mfa_disabled": false,
-        "allowed_authenticators": [
-          "totp",
-          "biometrics",
-          "security_key"
-        ],
+        "allowed_authenticators": ["totp", "biometrics", "security_key"],
         "session_duration": "1h"
       }
     }
@@ -42,9 +38,7 @@
           "precedence": 1
         }
       ],
-      "allowed_idps": [
-        "bf4de15a-2746-4034-952c-01433fbfa3aa"
-      ],
+      "allowed_idps": ["bf4de15a-2746-4034-952c-01433fbfa3aa"],
       "destinations": [
         {
           "type": "public",
@@ -86,11 +80,7 @@
     "existingOrganizationOnly": true,
     "proposedOrganizationMfaFields": {
       "mfa_config": {
-        "allowed_authenticators": [
-          "totp",
-          "biometrics",
-          "security_key"
-        ],
+        "allowed_authenticators": ["totp", "biometrics", "security_key"],
         "session_duration": "1h"
       },
       "mfa_required_for_all_apps": false
@@ -98,5 +88,6 @@
     "applicationScope": "Afnan reusable policy only",
     "status": "not-configured-or-verified",
     "updateMethod": "After approval GET the full existing organization, merge reviewed MFA fields and preserve every unrelated setting; never create another organization."
-  }
+  },
+  "currentApplicationAuthentication": "../ADMIN-AUTH-ADR.md; application WebAuthn selected, no Access/IdP changes authorized"
 }

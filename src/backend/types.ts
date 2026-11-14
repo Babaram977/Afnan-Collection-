@@ -8,6 +8,7 @@ export interface CommerceEnv
   PAYSTACK_SECRET_KEY?: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  EMAIL_SENDER_VERIFIED?: string;
   TEST_FIXTURES?: string;
 }
 export const testMode = (env: CommerceEnv) =>

@@ -14,7 +14,7 @@
   "pendingEvidence": {
     "approvalReference": null,
     "verifiedIdentityReference": null,
-    "acceptedMembershipEvidenceReference": null,
+    "acceptedMembershipEvidenceReference": "not-applicable-to-selected-application-architecture; no invitation authorized",
     "businessVerifierReference": null,
     "verificationMethodReference": null,
     "primaryAndSpareMfaEvidenceReference": null,
@@ -47,11 +47,13 @@
   "selectedArrangement": {
     "recoveryOperator": "Existing authorized Cloudflare account administrator",
     "recoveryOperatorIsStorefrontAdmin": false,
-    "primaryMfa": "TOTP (proposed, not enrolled)",
+    "primaryMfa": "Application WebAuthn with required user verification; implemented locally, not owner-enrolled",
     "backupMfa": "Separate hardware security key (proposed, not enrolled)",
     "scope": "Afnan Collection only",
     "independentHumanVerifier": "Aisha Idris Muhammad",
-    "authenticationAlternative": "Dedicated Afnan email-PIN identity provider with independent MFA; preferred for further review, not approved"
+    "authenticationAlternative": "Better Auth verified email plus application WebAuthn; shared Cloudflare IdP unchanged",
+    "previouslyProposedPrimaryMfa": "TOTP (proposed, not enrolled)",
+    "historicalIdpAlternative": "Dedicated Afnan email-PIN IdP was reviewed, never implemented"
   },
   "verifierNomination": {
     "fullName": "Aisha Idris Muhammad",
@@ -64,5 +66,6 @@
     "trustedContactEstablished": false,
     "identityVerificationOccurred": false,
     "permissionsGranted": false
-  }
+  },
+  "applicationArchitectureReference": "../ADMIN-AUTH-ADR.md"
 }

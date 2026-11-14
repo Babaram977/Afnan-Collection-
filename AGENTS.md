@@ -55,3 +55,14 @@
 - Aisha Idris Muhammad (owner’s wife) is nominated for independent owner-identity confirmation during sensitive enrollment/recovery. Nomination is not completed verification, willingness or consent. She receives no infrastructure/application/admin permissions. The existing authorized Cloudflare account administrator remains the separate recovery operator. Consult OWNER-IDENTITY-MFA.md and identity-mfa-record.json.
 - Do not invite the owner into the shared Cloudflare account. The dedicated Afnan email-PIN IdP is preferred for further review, not approved implementation; preserve the shared IdP.
 - Owner reports Afnan and Heroine are separate pre-launch businesses with official domains not yet connected to their storefronts. Connect official domains only after launch readiness and explicit approval; existing zone activation does not imply application-domain connection. Do not modify other businesses.
+
+## Latest Worker provisioning result
+
+- Owner later authorized dedicated Worker deployment from merged main, within explicit restrictions. PR #2 was merged externally; main cef6e6e is the verified source. afnan-collection-storefront now exists as an undeployed metadata-only Worker with workers.dev/previews disabled. Do not create a duplicate or infer a functioning application. Read docs/engineering/WORKER-PROVISIONING-STATUS.md before proceeding.
+- Existing IdP cannot authenticate the selected owner under member-only restriction; current task forbids IdP changes and prior direction forbids shared-account invitations. Access/MFA and secure Resend sender setup remain unresolved. Preserve the unexposed Worker until these blockers can be resolved within authorization.
+
+## Isolated application administrator MFA
+
+- The later implementation directive selects an extension of Better Auth email sessions with mandatory WebAuthn, independent of shared account membership. Read docs/engineering/ADMIN-AUTH-ADR.md and ADMIN-RECOVERY-RUNBOOK.md; old email-PIN IdP plans are historical alternatives, not approved remote changes. Preserve pending/active/recovery/disabled state, exact-owner bootstrap and independent human verification.
+- Every privileged operation requires current D1 staff role, verified primary email session and a current WebAuthn proof bound to user/session/epoch/role. Never add a test-mode MFA bypass. Run test:security plus all existing suites for authentication/authorization changes. Fixtures must perform real local signature verification.
+- Production registration, checkout and payments remain disabled. Sender-verification flags and tests do not establish actual Resend/owner/device verification. No remote security/migration/secret/deployment/email/DNS operations until the owner's action-specific gates pass.

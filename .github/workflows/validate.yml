@@ -31,6 +31,8 @@ jobs:
           bun run db:migrate:local
       - run: bun run test:integration
       - run: bun run test:acceptance
+      - run: bun run test:security
+      - run: bun audit
       - run: bunx playwright install --with-deps chromium
       - run: bun run test:browser
       - run: bun run test:branding

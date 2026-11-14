@@ -1,0 +1,47 @@
+// REVIEW TEMPLATE ONLY: no deployment/hostname authorization. Secrets are deliberately absent.
+// Confirm public hostname and all readiness gates before copying/using. routes stays empty.
+{
+  "name": "afnan-collection-storefront",
+  "account_id": "b4e142fe9da84ef204eecda2efe4a730",
+  "main": "../worker.ts",
+  "compatibility_date": "2026-11-13",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "assets": {
+    "directory": "../.output/public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true
+    }
+  },
+  "vars": {
+    "APP_ENV": "production",
+    "APP_ORIGIN": "https://afnancollectionkn.com",
+    "CHECKOUT_ENABLED": "false",
+    "PAYMENT_MODE": "disabled",
+    "EMAIL_FROM": "orders@afnancollectionkn.com",
+    "EMAIL_SENDER_VERIFIED": "false"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "afnan-collection-acceptance",
+      "database_id": "11950c2f-14bb-4a31-9add-356f155dea4e",
+      "migrations_dir": "../migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "afnan-product-media-acceptance"
+    }
+  ]
+}

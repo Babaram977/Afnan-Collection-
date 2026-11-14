@@ -183,7 +183,26 @@ try {
       "INSERT INTO staff(user_id,role) SELECT id,'admin' FROM user WHERE email='browser-admin@example.com'",
     )
     .run();
+  await db
+    .prepare(
+      "INSERT INTO admin_security(user_id,state,approval_ref,verified_by) SELECT id,'pending','fixture-evidence','fixture-operator' FROM user WHERE email='browser-admin@example.com'",
+    )
+    .run();
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      protocol: "ctap2",
+      transport: "usb",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
   await page.reload();
+  await page.getByRole("button", { name: "Enroll passkey or security key" }).click();
+  await page.getByRole("button", { name: "I saved my recovery codes" }).click();
   await page.getByRole("navigation", { name: "Administration", exact: true }).waitFor();
   checks++;
 

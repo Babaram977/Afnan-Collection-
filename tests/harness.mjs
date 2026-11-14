@@ -39,7 +39,9 @@ export async function createTestApp(options = {}) {
   const sql = (
     (await readFile("migrations/0001_commerce.sql", "utf8")) +
     "\n" +
-    (await readFile("migrations/0002_admin_management.sql", "utf8"))
+    (await readFile("migrations/0002_admin_management.sql", "utf8")) +
+    "\n" +
+    (await readFile("migrations/0003_administrator_mfa.sql", "utf8"))
   ).replace(/--[^\n]*/g, "");
   const statements = [];
   let statement = "";
@@ -84,16 +86,17 @@ export async function createTestApp(options = {}) {
 }
 let clientCounter = 0;
 export class Client {
-  constructor(mf) {
+  constructor(mf, origin = ORIGIN) {
     this.mf = mf;
+    this.origin = origin;
     this.ip = `192.0.2.${++clientCounter}`;
     this.cookies = new Map();
   }
   async request(path, method = "GET", data, headers = {}) {
-    const response = await this.mf.dispatchFetch(`${ORIGIN}/api${path}`, {
+    const response = await this.mf.dispatchFetch(`${this.origin}/api${path}`, {
       method,
       headers: {
-        Origin: ORIGIN,
+        Origin: this.origin,
         "CF-Connecting-IP": this.ip,
         "Content-Type": "application/json",
         Cookie: [...this.cookies].map(([k, v]) => `${k}=${v}`).join("; "),

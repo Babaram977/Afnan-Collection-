@@ -3,6 +3,7 @@ import { nairaToKobo } from "@/lib/images";
 import { ProductManager, InventoryManager } from "@/components/admin/ProductManager";
 import { OrderManager } from "@/components/admin/OrderManager";
 import { BusinessSettings } from "@/components/admin/BusinessSettings";
+import { AdminSecurity } from "@/components/admin/AdminSecurity";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/site/PageHeader";
@@ -241,10 +242,14 @@ function Admin() {
             }}
           />
         ) : me?.userId && !me.role ? (
-          <p>Staff access is required. An account administrator must assign your role.</p>
+          <AdminSecurity onVerified={() => void load()} />
         ) : (
           me?.role && (
             <>
+              <details>
+                <summary className="cursor-pointer">Security and sign out</summary>
+                <AdminSecurity settings onVerified={() => void load()} />
+              </details>
               <nav aria-label="Administration" className="flex flex-wrap gap-2">
                 {tabs
                   .filter((t) => me.role === "admin" || ["overview", "orders"].includes(t))

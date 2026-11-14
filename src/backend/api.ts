@@ -2,6 +2,7 @@ import { business } from "../lib/business";
 import { z } from "zod";
 import type { Product, CategorySlug, AgeGroup } from "../lib/catalog";
 import { authFor } from "./auth";
+import { adminProof, adminSecurity, SecurityError, securityLimit, digest } from "./admin-security";
 import type { CommerceEnv } from "./types";
 import {
   orderInput,
@@ -91,7 +92,7 @@ async function actor(request: Request, env: CommerceEnv): Promise<Actor> {
       owner: session.user.id,
       userId: session.user.id,
       email: session.user.email,
-      role: staff?.role ?? null,
+      role: staff && (await adminProof(request, env, session)) ? staff.role : null,
     };
   }
   const token = request.headers
@@ -325,14 +326,52 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       fail(403, "Cross-site request rejected");
   }
   if (path.startsWith("/api/auth/")) {
+    const allowed = [
+      "/api/auth/email-otp/send-verification-otp",
+      "/api/auth/sign-in/email-otp",
+      "/api/auth/sign-out",
+      "/api/auth/get-session",
+    ];
+    if (!allowed.includes(path)) fail(404, "Not found");
     await limited(request, env, "auth", 15);
     if (method === "POST") {
       const data = await bounded(request);
-      return authFor(env).handler(
+      if (path === "/api/auth/email-otp/send-verification-otp") {
+        const parsed = z
+          .object({ email: z.string().email().max(254), type: z.literal("sign-in") })
+          .parse(JSON.parse(new TextDecoder().decode(data)));
+        if (typeof parsed.email === "string") {
+          const email = parsed.email.trim().toLowerCase();
+          await securityLimit(env, `email:${email}`, 5);
+          await securityLimit(env, `email-hour:${email}`, 20, 3600);
+          const cooldown = await env.DB.prepare(
+            "INSERT INTO auth_cooldowns(key,expires_at) VALUES(?,unixepoch()+30) ON CONFLICT(key) DO UPDATE SET expires_at=excluded.expires_at WHERE expires_at<=unixepoch() RETURNING key",
+          )
+            .bind(await digest(`email:${email}`))
+            .first();
+          if (!cooldown) fail(429, "Please wait before requesting another code");
+        }
+      }
+      const response = await authFor(env).handler(
         new Request(request.url, { method, headers: request.headers, body: data }),
       );
+      if (!response.ok && path === "/api/auth/email-otp/send-verification-otp") {
+        // Do not expose account existence via provider failures. Delivery monitoring is separate.
+        console.error(JSON.stringify({ event: "auth.email.unavailable" }));
+        return json({ success: true });
+      }
+      if (!response.ok && path === "/api/auth/sign-in/email-otp")
+        return json(
+          { error: "Authentication could not be completed" },
+          response.status === 429 ? 429 : 400,
+        );
+      return response;
     }
     return authFor(env).handler(request);
+  }
+  if (path.startsWith("/api/admin-security/")) {
+    await limited(request, env, "admin-security", 30);
+    return adminSecurity(request, env, method === "POST" ? await body(request) : {});
   }
   await limited(request, env, path.startsWith("/api/admin") ? "admin" : "api", 120);
   if (path === "/api/products" && method === "GET") return json(await catalog(env));
@@ -831,7 +870,7 @@ export async function api(request: Request, env: CommerceEnv) {
   try {
     response = await routes(request, env);
   } catch (error) {
-    if (error instanceof HttpError)
+    if (error instanceof HttpError || error instanceof SecurityError)
       response = json({ error: error.message, requestId }, error.status);
     else if (error instanceof SyntaxError)
       response = json({ error: "Invalid JSON", requestId }, 400);
@@ -852,6 +891,9 @@ export async function api(request: Request, env: CommerceEnv) {
     }
   }
   const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "no-store");
+  if (env.APP_ORIGIN.startsWith("https:"))
+    headers.set("Strict-Transport-Security", "max-age=31536000");
   headers.set("X-Request-Id", requestId);
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "same-origin");

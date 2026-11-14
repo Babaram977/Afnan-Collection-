@@ -20,7 +20,15 @@ input.on("line", async (line) => {
       )
       .bind(email)
       .run();
-    console.log("Verified local test account promoted if it exists. Reload /admin.");
+    await db
+      .prepare(
+        "INSERT OR IGNORE INTO admin_security(user_id,state,approval_ref,verified_by) SELECT id,'pending','local-fixture-evidence','local-fixture-operator' FROM user WHERE email=? AND email_verified=1",
+      )
+      .bind(email)
+      .run();
+    console.log(
+      "Verified local test account approved for pending MFA enrollment if it exists. Reload /admin and enroll a passkey/security key. No MFA bypass.",
+    );
   }
 });
 async function close() {

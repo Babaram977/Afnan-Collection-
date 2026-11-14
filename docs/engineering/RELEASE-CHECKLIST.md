@@ -90,3 +90,7 @@ workers.dev/public preview URLs remain disabled, and no production account/domai
 - Backup/restore/monitoring ownership and retention targets; repository private-visibility decision remains outstanding.
 
 Do not describe the backend as live or declare controlled remote acceptance complete until the relevant external-service evidence exists. PR #2 stays open for review.
+
+## Isolated administrator authentication release gate
+
+See ADMIN-AUTH-ADR.md, ADMIN-RECOVERY-RUNBOOK.md, SECURITY-TEST-REPORT.md and PRODUCTION-AUTH-READINESS.md. Application MFA is implemented for review, not hosted/owner-verified. Require exact-release CI, reviewed 0003 migration and backup, owner verification, personal WebAuthn plus backup/recovery, actual verified Resend delivery and protected-origin/hostname approval. Shared IdP remains unchanged; no account invite or MFA downgrade. Keep signup/checkout/payments disabled. New feature PR must remain unmerged pending review.

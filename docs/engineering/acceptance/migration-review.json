@@ -1,9 +1,11 @@
 {
-  "reviewedOn": "2026-11-13",
+  "reviewedOn": "2026-11-14",
   "orderedMigrations": {
     "0001_commerce.sql": "2d70de4c5724533dc9996e970b29be12efc79811e35a1e6e70b3cdc396d984bd",
-    "0002_admin_management.sql": "46f14700c325e271e5acbf68b70785ddc023a270f1ed75caf5769ee4210064e0"
+    "0002_admin_management.sql": "46f14700c325e271e5acbf68b70785ddc023a270f1ed75caf5769ee4210064e0",
+    "0003_administrator_mfa.sql": "c97402c5c7ae5d10ebe86ed4afcf99ab9abe7b23302448e8769a728deacc4be1"
   },
   "repeatability": "Wrangler ledger, not direct SQL replay",
-  "remoteApplied": false
+  "remoteApplied": false,
+  "securityNotes": "Additive MFA tables and staff role/removal revocation triggers; existing staff denied until enrollment; no destructive rollback"
 }
