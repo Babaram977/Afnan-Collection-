@@ -1,0 +1,102 @@
+{
+  "status": "prepared-only-not-applied",
+  "hostname": "afnan-collection-storefront.danwakili.workers.dev",
+  "accountWideChanges": false,
+  "prerequisite": "Existing Zero Trust team active; verified owner identity and supported independent MFA configuration still required",
+  "policyCollection": "/accounts/{account_id}/access/policies",
+  "reusablePolicyBodies": {
+    "owner": {
+      "name": "Afnan acceptance owner",
+      "decision": "allow",
+      "include": [
+        {
+          "email": {
+            "email": "admin@afnancollectionkn.com"
+          }
+        }
+      ],
+      "session_duration": "1h",
+      "mfa_config": {
+        "mfa_disabled": false,
+        "allowed_authenticators": [
+          "totp",
+          "biometrics",
+          "security_key"
+        ],
+        "session_duration": "1h"
+      }
+    }
+  },
+  "applicationCollection": "/accounts/{account_id}/access/apps",
+  "applicationBodies": [
+    {
+      "name": "Afnan acceptance storefront",
+      "type": "self_hosted",
+      "domain": "afnan-collection-storefront.danwakili.workers.dev",
+      "session_duration": "1h",
+      "http_only_cookie_attribute": true,
+      "app_launcher_visible": false,
+      "policies": [
+        {
+          "id": "RETURNED_REUSABLE_OWNER_POLICY_ID",
+          "precedence": 1
+        }
+      ],
+      "allowed_idps": [
+        "bf4de15a-2746-4034-952c-01433fbfa3aa"
+      ],
+      "destinations": [
+        {
+          "type": "public",
+          "uri": "afnan-collection-storefront.danwakili.workers.dev"
+        }
+      ]
+    }
+  ],
+  "defaultDeny": true,
+  "bypassPolicies": [],
+  "webhookExceptions": [],
+  "notes": [
+    "Prepared-only wrapper; send individual reviewed bodies only after approval.",
+    "One root application covers every path; separate admin apps with identical policies are unnecessary for owner-only access.",
+    "Restrict allowed_idps to the existing verified provider ID; exact email Allow does not prove mailbox or business ownership.",
+    "No auth_method=mfa shortcut is assumed for the Cloudflare IdP; independent MFA must be configured and tested.",
+    "Create reusable owner policy and exact-host application before uploading; keep all Worker routes disabled.",
+    "After authorized first upload, obtain and verify the actual Worker ID; attach its destination to this same application using full-body update. Never guess a Worker ID from its name.",
+    "Worker destination covers its associated domains/previews; leave previews disabled, no bypass/override and no all_workers destination.",
+    "No new organization enrollment, tester policy, shared-account enforcement or other-project changes.",
+    "Member-only IdP currently has no matching business-email owner member. Resolve explicitly without changing shared restrictions or granting broad account access. See OWNER-IDENTITY-MFA.md.",
+    "Owner direction: no shared-account invitation. Dedicated Afnan email-PIN IdP plus independent MFA is preferred for further review only; existing provider and prepared payload remain unapplied."
+  ],
+  "existingTeam": "falling-poetry-120a.cloudflareaccess.com",
+  "organizationEnrollmentRequired": false,
+  "identityProvider": {
+    "type": "cloudflare",
+    "id": "bf4de15a-2746-4034-952c-01433fbfa3aa",
+    "ownerIdentityVerified": false,
+    "restrictToAccountMembers": true,
+    "ownerMembershipFound": false,
+    "enrollmentBlockedPendingDecision": true
+  },
+  "postUploadDestinationToAttach": {
+    "type": "worker",
+    "worker_id": "RETURNED_VERIFIED_AFNAN_WORKER_ID"
+  },
+  "independentMfaPrerequisite": {
+    "existingOrganizationOnly": true,
+    "proposedOrganizationMfaFields": {
+      "mfa_config": {
+        "allowed_authenticators": [
+          "totp",
+          "biometrics",
+          "security_key"
+        ],
+        "session_duration": "1h"
+      },
+      "mfa_required_for_all_apps": false
+    },
+    "applicationScope": "Afnan reusable policy only",
+    "status": "not-configured-or-verified",
+    "updateMethod": "After approval GET the full existing organization, merge reviewed MFA fields and preserve every unrelated setting; never create another organization."
+  }
+}

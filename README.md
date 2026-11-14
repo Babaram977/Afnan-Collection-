@@ -1,132 +1,90 @@
 # Afnan Collection Online
 
-A mobile-first Nigerian children's lifestyle storefront for newborns, babies, toddlers and older children. Designed for a friendly, clear shopping experience with warm cream surfaces, muted cheerful accents and Nigerian naira pricing.
+A Nigerian children’s lifestyle store, initially serving Kano. This repository is separate from Heroine Collection, DrippleX and Afnan Homes. GitHub is authoritative; Lovable’s source transfer was one-time, without automatic synchronization.
 
-Afnan Collection Online is a separate business from Heroine Collection and Afnan Homes. The storefront currently uses an elegant text wordmark; no official logo or tagline has been supplied.
+**Implemented for local/test technical review; not launched or production-ready.** The approved cream/terracotta/pastel/cocoa storefront and Fraunces/Nunito Sans typography are preserved. No real merchandise, prices, stock, reviews, discounts or shipping promises are fabricated.
 
-## Current status
+## Current functionality
 
-**Frontend foundation — not a live, order-taking store.**
+- D1-backed active catalog, dynamic categories, age navigation, search, filters, price/name sorting, variants/SKUs, images and stock availability.
+- Persistent browser cart plus owner-scoped server copy, with catalog-based rehydration and authoritative checkout validation.
+- Email-code customer registration/sign-in/recovery, profiles, saved delivery addresses, account order history and browser-scoped guest order tracking.
+- Server-calculated NGN totals, configured delivery zones/fees, idempotent order preparation, transactional reservations, expiry/cancellation and guarded fulfilment.
+- Guided owner dashboard (no UUID entry for product/stock tasks): multi-photo upload/previews, main-image ordering, regular/promotional pricing, generated/assigned SKUs, opening stock, safe product deletion and publishing without a code deployment.
+- Protected staff dashboard: product/category/variant editing, R2 image uploads, audited stock changes and low-stock view, orders, customers/session revocation, banners, delivery settings, approved policy copy, payment verification/refunds and basic sales totals. Fulfilment staff have restricted access.
+- Paystack test adapter with signed webhooks, provider verification, duplicate-event handling, late-payment review and full-refund status reconciliation. Live keys are deliberately rejected. Real Paystack sandbox requests have **not** been verified.
+- Worker health endpoint, security headers, origin checks, validated/bounded requests, D1-backed rate limits, structured request IDs, local migrations and automated validation CI. No deployment workflow is included.
 
-The catalog is intentionally empty because real product records have not been supplied. No products, prices, stock, photographs, reviews, discounts, contact details, delivery promises or payment results are fabricated. Neutral image placeholders are not merchandise photographs.
+Checked-in defaults keep **checkout and payments disabled**. Controlled localhost fixtures explicitly enable simulated ordering. No public deployment, real orders, live payments, production DNS change or remote database/bucket provisioning has occurred.
 
-| Available now | Not connected yet |
-| --- | --- |
-| Homepage with age-group and category navigation | Product database and inventory synchronization |
-| Shop search and age, category, size and price filters | Customer sign-in and protected administration |
-| Product detail layouts with variants and galleries, ready for real records | Payments and order processing |
-| Browser-local cart with quantity changes and removal | Checkout submission and delivery calculations |
-| Mobile navigation and accessible UI controls | Product, inventory, order and banner management |
+## Official business details
 
-Product browsing and cart controls are implemented, but shoppers cannot exercise a purchase flow until verified catalog data is added. Featured and seasonal sections appear only when corresponding product records exist. Checkout submission and administrative writes are disabled and labelled **not connected**. About, contact and policy pages await approved business content.
+The owner supplied the address, WhatsApp, social accounts and domain. They are centralized in [`src/lib/business.ts`](src/lib/business.ts), used by the footer, contact/legal sections and SEO, with validated dashboard-editable contact/social overrides stored in Afnan D1. CAC and TIN are recorded as supplied, not independently verified, and displayed only in business information.
 
-## Catalog scope
+The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` is now installed at `public/brand/IMG_8842(1).png` through a byte-preserving rename. SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused. See [branding handoff](docs/engineering/BRANDING.md).
 
-- Clothing, shoes and accessories
-- Diapers and feeding accessories
-- Blankets and nursery essentials
-- Toys and learning products
-- Books, bath and care accessories
-- School essentials and gifts
+## Local setup
 
-These are navigation categories, not a claim that items are currently available. Age-group navigation is separate from product-specific suitability or safety guidance, which must come from factual product information.
-
-## Technology
-
-- React 19 and TypeScript
-- TanStack Start and TanStack Router
-- Vite and Tailwind CSS v4
-- Reusable shadcn/ui and Radix UI controls
-- Vitest and Testing Library
-- Bun dependency lockfile
-
-## Local development
-
-Install a current Node.js LTS release and [Bun](https://bun.sh). Then:
+Use **Node 24 and Bun 1.4.4** (pinned; version-scoped security overrides use Bun lockfile format 3).
 
 ```sh
-git clone https://github.com/Babaram977/Afnan-Collection-.git
-cd Afnan-Collection-
 bun install --frozen-lockfile
+cp .env.example .dev.vars
+# Set a generated AUTH_SECRET in .dev.vars; never commit it.
+bun run db:migrate:local
 bun run dev
 ```
 
-Open the local address printed by Vite. The current frontend does not require payment credentials or a connected database.
+`dev` builds then starts the local Worker at `http://localhost:8787`. This is the functional backend development path. `dev:ui` runs Vite for presentation-only work, with no D1 bindings; it is not a working commerce backend. Rebuild after application changes before starting `worker:dev`.
 
-### Commands
+For verified local customer sign-in, configure a transactional email sender through ignored `.dev.vars`. The current adapter supports Resend; sender/domain ownership and actual delivery remain unverified. No password crypto is implemented by the app; Better Auth manages email-code identity and sessions.
+
+For a local-only, **ephemeral fixture store** that needs no email/payment credentials:
 
 ```sh
-bun run test        # Run the test suite
-bun run test:watch  # Run tests in watch mode
-bun run lint        # Check code quality
-bun run build       # Create a production build
-bun run preview     # Preview the production build locally
+bun run worker:build
+bun run dev:fixture
 ```
 
-Building or previewing locally does not publish the store.
+This seeds explicitly labelled fictional test merchandise and one fictional delivery fee in an isolated Miniflare database. Use an `@example.com` test address. The terminal accepts `code email@example.com` to read its fixture OTP and `admin email@example.com` after verification to grant a local fixture role. These commands do not contact a real email or payment service and are not public API endpoints. The data disappears when the process ends.
 
-## Pages
+For the persistent local development database, `bun run admin:bootstrap -- verified-email@example.com` grants a role only to an already verified account and prints the matching row. It always uses `--local`. There is no public administrator bootstrap route. Production staff bootstrap requires a separately reviewed account-owned procedure.
 
-| Path | Purpose |
-| --- | --- |
-| `/` | Homepage and age/category entry points |
-| `/shop` | Catalog search and filters stored in the URL |
-| `/product/$slug` | Product details for an existing record |
-| `/cart` | Browser-local shopping cart |
-| `/checkout` | Checkout form shell; ordering disabled |
-| `/about` | Placeholder for approved business information |
-| `/contact` | Placeholder for verified contact details |
-| `/policies` | Placeholder for approved policies |
-| `/admin` | Read-only administration preview; no authentication or writes |
+## Validation
 
-The admin page is not a secure management system. Do not place private customer or operational data there before access controls are implemented.
-
-## Project structure
-
-```text
-src/
-  components/site/   Shared storefront elements
-  components/ui/     Reusable UI primitives
-  lib/catalog.ts    Product types, filters and catalog access
-  lib/cart.tsx      Client-only cart context
-  routes/           Storefront and administration pages
-  styles.css        Global styles and semantic design tokens
-  test/             Automated tests
-docs/design/
-  AFNAN-UI-STANDARD.md
-AGENTS.md           Contributor and implementation rules
+```sh
+bun run typecheck
+bun run lint
+bun run test
+bun run worker:build          # framework build and Wrangler packaging dry-run
+bun run test:integration      # actual local Worker + D1 + R2, controlled auth/payment fixtures
+bunx playwright install chromium
+bun run test:browser          # Chromium at 390, 768 and 1440 px; WCAG checks via axe
+bun audit
 ```
 
-## Data and backend handoff
+A clean frozen install has been exercised. Existing formatting failures were fixed in a separate formatting commit. Exact results and limits are recorded in [RELEASE-STATUS.md](docs/project-continuity/RELEASE-STATUS.md); local test success does not prove external email/Paystack integrations or production acceptance.
 
-All catalog access goes through `listProducts()` and `getProduct()` in `src/lib/catalog.ts`. Replace these implementations with API-backed reads while preserving the product types and storefront contract.
+## Architecture and deployment requirements
 
-- Store money as **integer kobo** and display it with `formatNaira` in NGN.
-- Treat browser cart totals as display-only. A future order service must recompute prices and validate stock on the server.
-- Supply verified product records, variant details, stock and authentic photographs before populating the catalog.
-- Render descriptions, age guidance and safety notes only when factual information is available.
-- Add authentication, authorization, persistent inventory, order processing and payment verification before enabling checkout or administrative writes.
-- Never store secret keys in source code or expose them to browser code.
+TanStack Start/Router, React 19, TypeScript, Tailwind 4 and shadcn/Radix UI; Nitro generates SSR modules/assets. A single `afnan-collection-storefront` Worker wraps them with the commerce API. D1 stores application records; R2 handles product images. D1 batches, database constraints and triggers protect stock/order atomicity. Money is integer kobo.
 
-The [UI Standard](docs/design/AFNAN-UI-STANDARD.md) documents the implemented tokens, components, routes, product model and **proposed, not implemented** API contracts. Read [AGENTS.md](AGENTS.md) before changing the architecture. Update the UI Standard when routes, tokens or API contracts change.
+[`wrangler.jsonc`](wrangler.jsonc) is **local preparation**, not a production resource manifest. Its D1 zero UUID is a placeholder; the media bucket is not provisioned. Workers.dev and public preview URLs are disabled; no account/domain routes are configured. `afnancollectionkn.com` is owner-supplied and reported active in Cloudflare; no DNS access or mutation was performed.
 
-## Before launch
+Runtime secrets: `AUTH_SECRET`; optional verified `RESEND_API_KEY`/`EMAIL_FROM`; optional `PAYSTACK_SECRET_KEY` **test key only**. They belong in protected runtime settings or ignored `.dev.vars`, never `VITE_*`, source, logs or chat. Use isolated environments and real binding IDs only after reviewing resource ownership. Do not run deployment or remote migrations under this task.
 
-- [ ] Supply and verify the real product catalog and photographs.
-- [ ] Approve business information, contact details and policy wording.
-- [ ] Supply the official logo if replacing the text wordmark.
-- [ ] Connect persistent catalog, inventory and order services.
-- [ ] Implement secure customer and administrator access where needed.
-- [ ] Connect and verify payments, order confirmation and fulfilment workflows.
-- [ ] Test the complete shopping flow on mobile and desktop with real data.
-- [ ] Obtain owner approval before publishing or deploying.
+Production blockers include actual email/Paystack sandbox acceptance, real catalog/opening inventory, approved delivery/returns/privacy/retention terms, staff bootstrap, backups/monitoring, account/plan limits, private repository preference and owner launch approval. A full test suite does not remove these blockers.
 
-## Repository and publishing
-
-Source repository: [Babaram977/Afnan-Collection-](https://github.com/Babaram977/Afnan-Collection-).
-
-The initial source upload was a one-time GitHub transfer, not a verified two-way Lovable Git sync connection. Do not assume future Lovable changes appear here automatically. Publishing and deployment require a separate, explicit owner request.
+Read the [owner administration guide](docs/engineering/ADMIN-GUIDE.md), [AGENTS.md](AGENTS.md), the five [continuity records](docs/project-continuity/PROJECT-STATUS.md), [commerce/security guide](docs/engineering/COMMERCE.md) and [UI standard](docs/design/AFNAN-UI-STANDARD.md) before future work.
 
 ## License
 
-No license has been declared in this repository. Public source visibility alone does not grant permission to reuse the code, brand or business assets.
+No license has been declared. Public visibility alone does not grant permission to reuse the code, brand or business assets.
+
+## Final activation handoff
+
+[RELEASE-CHECKLIST.md](docs/engineering/RELEASE-CHECKLIST.md) records the read-only Cloudflare inventory, exact proposed resource names, secure runtime inputs, isolated acceptance gates, backups/rollback and domain-cutover sequence. The intended account and active Afnan zone are now verified; dedicated acceptance D1/R2 were subsequently created with owner approval. The Afnan Worker remains uncreated; no migrations or deployment occurred. R2 lists two other-project buckets. Subscription inspection needs owner Dashboard review because OAuth lacks Billing Read access. See [acceptance runbook](docs/engineering/ACCEPTANCE-RUNBOOK.md) for exact isolated-resource procedures and approval gates. No resources or production routes were changed. The original logo is installed and checksum-verified; see BRANDING.md.
+
+Protected acceptance preparation is documented in [Gate 2 review](docs/engineering/acceptance/GATE-2-REVIEW.md). Acceptance mode disables public registration; the owner-only Access/MFA plan remains unapplied. The existing Zero Trust team is now verified active, while MFA/application configuration remains pending. Mailbox ownership and sender authentication are pending. All routes, checkout and payments remain disabled; no acceptance Worker is deployed. Run `bun run test:acceptance` alongside the existing suites.
+
+Local storefront review: [findings and reproduction](docs/engineering/STOREFRONT-REVIEW.md). After `bun run worker:build`, run `bun run test:storefront` for filter, gallery, option, naira-cart and mobile checks using local fixtures with checkout/payments disabled. Email setup is not needed for this review.

@@ -1,17 +1,47 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/site/PageHeader";
-import { EmptyState } from "@/components/site/EmptyState";
-
+import { BusinessContact } from "@/components/site/BusinessContact";
+import { business as defaultBusiness } from "@/lib/business";
+import { useBusiness } from "@/components/site/BusinessProvider";
+import { loadBusiness } from "@/lib/store";
 export const Route = createFileRoute("/contact")({
-  head: () => ({ meta: [{ title: "Contact — Afnan Collection Online" }, { name: "description", content: "How to reach Afnan Collection Online." }, { property: "og:title", content: "Contact — Afnan Collection Online" }, { property: "og:description", content: "How to reach Afnan Collection Online." }] }),
-  component: Page,
+  loader: () => loadBusiness(),
+  head: ({ loaderData }) => {
+    const business = loaderData ?? defaultBusiness;
+    return {
+      meta: [
+        { title: `Contact — ${business.siteName}` },
+        {
+          name: "description",
+          content: `Contact ${business.name} at ${business.address}. WhatsApp ${business.whatsappDisplay}.`,
+        },
+        { property: "og:title", content: `Contact ${business.name}` },
+        {
+          property: "og:description",
+          content: `Find us in Kano or contact us on WhatsApp: ${business.whatsappDisplay}.`,
+        },
+      ],
+    };
+  },
+  component: Contact,
 });
-
-function Page() {
+function Contact() {
+  const business = useBusiness();
   return (
     <>
-      <PageHeader title="Contact" intro="How to reach Afnan Collection Online." />
-      <div className="container-page py-8"><EmptyState title="Contact details coming soon">Official phone, email and address details have not been published yet. They will appear here once confirmed by the store.</EmptyState></div>
+      <PageHeader title="Contact" intro={`Get in touch with ${business.name}.`} />
+      <div className="container-page py-8">
+        <section
+          className="max-w-2xl rounded-2xl bg-card p-6 shadow-soft md:p-8"
+          aria-label="Official contact details"
+        >
+          <h2 className="mb-5 text-2xl font-semibold">Visit or message us</h2>
+          <BusinessContact />
+          <p className="mt-5 text-sm text-muted-foreground">
+            Follow {business.socialHandle} on Instagram and TikTok.
+          </p>
+        </section>
+      </div>
     </>
   );
 }

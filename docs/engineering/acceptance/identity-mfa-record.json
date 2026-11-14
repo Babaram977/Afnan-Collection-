@@ -1,0 +1,68 @@
+{
+  "status": "template-only-unverified",
+  "team": "falling-poetry-120a.cloudflareaccess.com",
+  "proposedOwner": "admin@afnancollectionkn.com",
+  "testers": "owner-only",
+  "verifiedReadOnly": {
+    "idpType": "cloudflare",
+    "restrictToAccountMembers": true,
+    "ownerMembershipFound": false,
+    "accessApplicationCount": 0,
+    "reusablePolicyCount": 0,
+    "organizationMfaFields": "not-returned"
+  },
+  "pendingEvidence": {
+    "approvalReference": null,
+    "verifiedIdentityReference": null,
+    "acceptedMembershipEvidenceReference": null,
+    "businessVerifierReference": null,
+    "verificationMethodReference": null,
+    "primaryAndSpareMfaEvidenceReference": null,
+    "challengeAndDenialEvidenceReference": null,
+    "oneHourExpiryEvidenceReference": null,
+    "sessionRevocationEvidenceReference": null,
+    "recoveryDrillEvidenceReference": null,
+    "recoveryOperatorReference": null,
+    "restrictedAuditStoreAndRetention": null,
+    "verifiedAtUtc": null,
+    "verifierWillingnessReference": null,
+    "trustedContactEstablishmentReference": null,
+    "perActionVerificationOutcome": null,
+    "verificationOperatorReference": null
+  },
+  "excludedEvidence": [
+    "passwords",
+    "OTP values",
+    "MFA QR seeds",
+    "private keys",
+    "JWTs",
+    "session cookies",
+    "raw identity documents",
+    "verifier phone number",
+    "verifier contact details",
+    "personal credentials"
+  ],
+  "applicationAdministratorGranted": false,
+  "remoteChangesPerformed": false,
+  "selectedArrangement": {
+    "recoveryOperator": "Existing authorized Cloudflare account administrator",
+    "recoveryOperatorIsStorefrontAdmin": false,
+    "primaryMfa": "TOTP (proposed, not enrolled)",
+    "backupMfa": "Separate hardware security key (proposed, not enrolled)",
+    "scope": "Afnan Collection only",
+    "independentHumanVerifier": "Aisha Idris Muhammad",
+    "authenticationAlternative": "Dedicated Afnan email-PIN identity provider with independent MFA; preferred for further review, not approved"
+  },
+  "verifierNomination": {
+    "fullName": "Aisha Idris Muhammad",
+    "relationship": "Owner’s wife",
+    "responsibility": "Independent business-owner identity verification during sensitive enrollment and recovery",
+    "source": "Owner-provided decision",
+    "recordedOn": "2026-11-14",
+    "status": "nominated-only",
+    "willingnessConfirmed": false,
+    "trustedContactEstablished": false,
+    "identityVerificationOccurred": false,
+    "permissionsGranted": false
+  }
+}

@@ -1,3 +1,6 @@
+import { business as defaultBusiness } from "@/lib/business";
+import { loadBusiness } from "@/lib/store";
+import { BusinessProvider } from "@/components/site/BusinessProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -78,31 +81,64 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    // Replace these placeholders with the app's name and description when first building the app.
-    // Each content route, / included, must still set its own head(). Never add og:image or
-    // twitter:image here: every page without its own would inherit the root's preview image.
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Afnan Collection Online" },
-      { name: "description", content: "Children's clothing, essentials, toys and gifts in Nigeria." },
-      { property: "og:title", content: "Afnan Collection Online" },
-      { property: "og:description", content: "Children's clothing, essentials, toys and gifts in Nigeria." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" },
-    ],
-  }),
+  loader: () => loadBusiness(),
+  head: ({ loaderData }) => {
+    const business = loaderData ?? defaultBusiness;
+    return {
+      // Replace these placeholders with the app's name and description when first building the app.
+      // Each content route, / included, must still set its own head(). Never add og:image or
+      // twitter:image here: every page without its own would inherit the root's preview image.
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { title: business.siteName },
+        {
+          name: "description",
+          content: "Children's clothing, essentials, toys and gifts in Nigeria.",
+        },
+        { property: "og:title", content: business.siteName },
+        {
+          property: "og:description",
+          content: "Children's clothing, essentials, toys and gifts in Nigeria.",
+        },
+        { property: "og:type", content: "website" },
+        { property: "og:site_name", content: business.name },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Store",
+            name: business.name,
+            url: business.website,
+            address: business.address,
+            telephone: business.whatsapp,
+            sameAs: [business.instagram, business.tiktok],
+            ...(business.logoUrl ? { logo: new URL(business.logoUrl, business.website).href } : {}),
+          }).replaceAll("<", String.fromCharCode(92) + "u003c"),
+        },
+      ],
+      links: [
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+        {
+          rel: "icon",
+          href: business.logoUrl ?? "/favicon.ico",
+          type: business.logoUrl ? "image/png" : "image/x-icon",
+        },
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap",
+        },
+      ],
+    };
+  },
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -127,16 +163,20 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <CartProvider>
-        <div className="flex min-h-screen flex-col">
-          <SiteHeader />
-          <main id="main" className="flex-1"><Outlet /></main>
-          <SiteFooter />
-        </div>
-        <Toaster />
-      </CartProvider>
-    </QueryClientProvider>
+    <BusinessProvider value={Route.useLoaderData()}>
+      <QueryClientProvider client={queryClient}>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <CartProvider>
+          <div className="flex min-h-screen flex-col">
+            <SiteHeader />
+            <main id="main" className="flex-1">
+              <Outlet />
+            </main>
+            <SiteFooter />
+          </div>
+          <Toaster />
+        </CartProvider>
+      </QueryClientProvider>
+    </BusinessProvider>
   );
 }

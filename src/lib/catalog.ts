@@ -1,3 +1,4 @@
+import { loadCatalog } from "./store";
 /**
  * Catalog model + local data source.
  * PRODUCTS is intentionally empty: no real product records have been supplied.
@@ -5,24 +6,39 @@
  */
 export type AgeGroup = "newborn" | "baby" | "toddler" | "kids";
 export type CategorySlug =
-  | "clothing" | "shoes" | "accessories" | "diapers" | "feeding" | "nursery"
-  | "toys" | "books" | "bath-care" | "school" | "gifts";
+  | "clothing"
+  | "shoes"
+  | "accessories"
+  | "diapers"
+  | "feeding"
+  | "nursery"
+  | "toys"
+  | "books"
+  | "bath-care"
+  | "school"
+  | "gifts";
 
 export interface ProductVariant {
   id: string;
   sku: string;
   size?: string;
   color?: string;
-  priceKobo: number; // integer minor units (NGN kobo)
+  priceKobo: number;
+  regularPriceKobo?: number;
+  salePriceKobo?: number | null; // integer minor units (NGN kobo)
   stock: number | null; // null = not tracked / unknown
 }
-export interface ProductImage { url: string; alt: string }
+export interface ProductImage {
+  url: string;
+  alt: string;
+}
 export interface Product {
   id: string;
   slug: string;
   name: string;
   description?: string;
   category: CategorySlug;
+  categoryLabel?: string;
   ageGroups: AgeGroup[];
   images: ProductImage[];
   variants: ProductVariant[];
@@ -57,7 +73,12 @@ export const PRODUCTS: Product[] = [];
 
 /** Currency is fixed to NGN; amounts only ever come from product records. */
 export function formatNaira(kobo: number): string {
-  return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(kobo / 100);
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(kobo / 100);
 }
 
 export function priceRange(p: Product): { min: number; max: number } | null {
@@ -89,10 +110,14 @@ export function filterProducts(products: Product[], f: ProductFilters): Product[
   });
 }
 
-export async function listProducts(): Promise<Product[]> { return PRODUCTS; }
+export async function listProducts(): Promise<Product[]> {
+  return loadCatalog();
+}
 export async function getProduct(slug: string): Promise<Product | null> {
-  return PRODUCTS.find((p) => p.slug === slug) ?? null;
+  return (await loadCatalog()).find((p) => p.slug === slug) ?? null;
 }
 export function allSizes(products: Product[]): string[] {
-  return [...new Set(products.flatMap((p) => p.variants.map((v) => v.size).filter(Boolean) as string[]))];
+  return [
+    ...new Set(products.flatMap((p) => p.variants.map((v) => v.size).filter(Boolean) as string[])),
+  ];
 }

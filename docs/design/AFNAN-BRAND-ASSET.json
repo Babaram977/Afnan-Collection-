@@ -1,0 +1,50 @@
+{
+  "brand": "Afnan Collection",
+  "recordedOn": "2026-11-13",
+  "authority": "Official logo supplied by the business owner in the project handoff",
+  "identity": {
+    "monogram": "Gold AC",
+    "ornament": "Black ornamental flourish",
+    "wordmark": "AFNAN COLLECTION in black",
+    "background": "White"
+  },
+  "original": {
+    "filename": "IMG_8842(1).png",
+    "mimeType": "image/png",
+    "expectedSha256": "d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1",
+    "repositoryPath": "public/brand/IMG_8842(1).png",
+    "fileAvailableToExecutionTools": true,
+    "checksumVerified": true,
+    "width": 460,
+    "height": 546,
+    "byteLength": 145165,
+    "receivedRepositoryPath": "public/brand/IMG_8842(2).png",
+    "receivedCommit": "3ef6de5",
+    "renamePreservedBytes": true
+  },
+  "integration": {
+    "status": "integrated-original-png",
+    "sharedComponent": "src/components/site/Wordmark.tsx",
+    "configuration": "src/lib/business.ts",
+    "websiteCompatibleOriginalFormat": "PNG",
+    "permittedFaithfulDerivativeFormats": ["PNG", "WebP", "ICO"],
+    "derivativesCreated": false,
+    "usage": [
+      "header",
+      "footer",
+      "PNG website icon",
+      "Store structured-data logo",
+      "homepage Open Graph and Twitter metadata"
+    ],
+    "referenceOnlyTrace": "public/brand/afnan-collection-traced.svg"
+  },
+  "rules": [
+    "Preserve the exact original bytes before producing derivatives.",
+    "Verify the owner's supplied SHA-256 against the original file.",
+    "Preserve aspect ratio, colours, lettering, flourish, composition and white background.",
+    "Do not redraw, trace, reconstruct from the chat preview, generate or substitute a logo.",
+    "Use the same authoritative source for website, packaging, social and future marketing materials.",
+    "Never claim installation, optimization or icon/social derivatives are complete before checking actual files and rendering.",
+    "Recover this project-specific brand memory from this record and BRANDING.md in future sessions."
+  ]
+}
