@@ -70,7 +70,7 @@ try {
     checks++;
     await page.getByRole("link", { name: "Track your order" }).click();
     await page.getByRole("button", { name: "Cancel reservation" }).click();
-    await page.getByText("cancelled", { exact: true }).waitFor();
+    await page.getByText("Cancelled", { exact: true }).waitFor();
     checks++;
     for (const path of [
       "/",
@@ -420,7 +420,7 @@ try {
     await page.getByText("Status: delivered", { exact: true }).waitFor();
     checks++;
     await customerPage.getByRole("button", { name: "Refresh order status", exact: true }).click();
-    await customerPage.getByText("delivered", { exact: true }).waitFor();
+    await customerPage.getByText("Delivered", { exact: true }).waitFor();
     checks++;
     const balance = await db.prepare("SELECT stock FROM variants WHERE sku='BROWSER-001'").first();
     assert.equal(balance.stock, 5);

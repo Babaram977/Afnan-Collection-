@@ -11,19 +11,47 @@ const check = (condition, message) => {
   assert.ok(condition, message);
   checks++;
 };
-// Minimal valid files, built in memory (no real customer data).
-const png = Buffer.concat([
-  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-  Buffer.from(randomUUID()),
-]);
-const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from(randomUUID())]);
-const webp = Buffer.concat([
-  Buffer.from("RIFF"),
-  Buffer.from([0x10, 0, 0, 0]),
-  Buffer.from("WEBPVP8 "),
-  Buffer.from(randomUUID()),
-]);
-const pdf = Buffer.from(`%PDF-1.4\n1 0 obj << >> endobj\n% ${randomUUID()}\n%%EOF\n`);
+// Minimal structurally valid files, built in memory (no real customer data). `tag` makes each
+// file unique so duplicate detection does not collapse unrelated uploads.
+const chunk = (type, data) => {
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length);
+  return Buffer.concat([len, Buffer.from(type), data, Buffer.alloc(4)]);
+};
+const makePng = (tag = randomUUID()) =>
+  Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", Buffer.from([0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0])),
+    chunk("tEXt", Buffer.from(`Comment\0${tag}`)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+const makeJpeg = (tag = randomUUID()) =>
+  Buffer.concat([
+    Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]),
+    Buffer.from("JFIF\0"),
+    Buffer.alloc(120),
+    Buffer.from(tag),
+    Buffer.from([0xff, 0xd9]),
+  ]);
+const makeWebp = (tag = randomUUID()) => {
+  const body = Buffer.concat([
+    Buffer.from("WEBPVP8 "),
+    Buffer.alloc(4),
+    Buffer.alloc(16),
+    Buffer.from(tag),
+  ]);
+  const size = Buffer.alloc(4);
+  size.writeUInt32LE(body.length);
+  return Buffer.concat([Buffer.from("RIFF"), size, body]);
+};
+const makePdf = (extra = "", tag = randomUUID()) =>
+  Buffer.from(
+    `%PDF-1.4\n1 0 obj << /Type /Catalog /Pages 2 0 R ${extra} >> endobj\n2 0 obj << /Type /Pages /Kids [] /Count 0 >> endobj\n% ${tag}\ntrailer << /Root 1 0 R >>\n%%EOF\n`,
+  );
+const png = makePng();
+const jpeg = makeJpeg();
+const webp = makeWebp();
+const pdf = makePdf();
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 
 const { mf, db, variantId, zoneId } = await createTestApp({
@@ -94,6 +122,49 @@ try {
       .status === 415,
     "Truncated PDF without %%EOF rejected",
   );
+  // Structure checks: truncated or malformed images and unsafe PDFs are refused with a reason.
+  const truncatedPng = makePng().subarray(0, 40);
+  const noIhdr = Buffer.from(makePng()).fill(0x41, 12, 16);
+  const badJpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0x00]), Buffer.alloc(200)]);
+  const lyingWebp = makeWebp();
+  lyingWebp.writeUInt32LE(0xffffff, 4);
+  for (const [label, bytes, expect] of [
+    ["Truncated PNG", truncatedPng, /damaged or incomplete/],
+    ["PNG without IHDR", noIhdr, /damaged or incomplete/],
+    ["JPEG with invalid marker", badJpeg, /damaged or incomplete/],
+    ["WebP with impossible size", lyingWebp, /damaged or incomplete/],
+    [
+      "PDF with JavaScript",
+      makePdf("/OpenAction << /S /JavaScript /JS (app.alert(1)) >>"),
+      /scripts, attachments or forms/,
+    ],
+    ["PDF with /JS only", makePdf("/AA << /O << /JS (x) >> >>"), /scripts, attachments or forms/],
+    [
+      "PDF with Launch action",
+      makePdf("/OpenAction << /S /Launch /F (cmd.exe) >>"),
+      /scripts, attachments or forms/,
+    ],
+    [
+      "PDF with embedded file",
+      makePdf("/Names << /EmbeddedFiles << /Names [] >> >>"),
+      /scripts, attachments or forms/,
+    ],
+    ["PDF with XFA form", makePdf("/AcroForm << /XFA 5 0 R >>"), /scripts, attachments or forms/],
+    ["Encrypted PDF", makePdf("/Encrypt 9 0 R"), /password-protected/],
+  ]) {
+    const r = await upload(guest, order.id, bytes);
+    check(
+      r.status === 415 && expect.test(r.body.error),
+      `${label} refused with reason (${r.status} ${r.body.error})`,
+    );
+  }
+  const plainPdfOrder = (await guest.request("/orders", "POST", makeOrder(1))).body;
+  check(
+    (await upload(guest, plainPdfOrder.id, makePdf("/OpenAction 3 0 R /PageMode /UseNone")))
+      .status === 201,
+    "Plain PDF with a harmless OpenAction is still accepted",
+  );
+
   const big = Buffer.concat([png, Buffer.alloc(5 * 1024 * 1024)]);
   check((await upload(guest, order.id, big)).status === 413, "Over 5 MB rejected");
   check((await upload(guest, order.id, Buffer.alloc(0))).status === 400, "Empty upload rejected");
@@ -200,9 +271,7 @@ try {
   // Per-order limit holds under concurrent uploads.
   const capped = (await guest.request("/orders", "POST", makeOrder(1))).body;
   const many = await Promise.all(
-    Array.from({ length: 8 }, () =>
-      upload(guest, capped.id, Buffer.concat([png, Buffer.from(randomUUID())])),
-    ),
+    Array.from({ length: 8 }, () => upload(guest, capped.id, makePng())),
   );
   check(
     many.filter((r) => r.status === 201).length === 5,
@@ -414,6 +483,25 @@ try {
       "expired",
     "Late receipt does not reactivate order",
   );
+  check(
+    (await guest.request(`/orders/${lapsed.id}`)).body.paymentStatus ===
+      "Expired — Late Payment Under Review",
+    "Customer sees expired-under-review, distinct from cancelled",
+  );
+  const lateQueue = (await admin.request("/admin/payment-review")).body.find(
+    (o) => o.id === lapsed.id,
+  );
+  check(
+    lateQueue?.queue_state === "expired_review",
+    `Admin queue marks expired order (${lateQueue?.queue_state})`,
+  );
+  const activeQueue = (await admin.request("/admin/payment-review")).body.filter(
+    (o) => o.status === "pending",
+  );
+  check(
+    activeQueue.length > 0 && activeQueue.every((o) => o.queue_state.startsWith("active_")),
+    "Active unpaid orders are never labelled expired",
+  );
   const lateAudit = JSON.parse(
     (
       await db
@@ -444,6 +532,17 @@ try {
     "Late approval leaves order expired and stock untouched",
   );
 
+  const silent = (await guest.request("/orders", "POST", makeOrder(1))).body;
+  await db.prepare("UPDATE orders SET expires_at=unixepoch()-1 WHERE id=?").bind(silent.id).run();
+  check(
+    (await guest.request(`/orders/${silent.id}`)).body.paymentStatus === "Expired",
+    "Expired without evidence shows Expired",
+  );
+  check(
+    !(await admin.request("/admin/payment-review")).body.some((o) => o.id === silent.id),
+    "Expired order without evidence leaves the review queue",
+  );
+
   // Per-IP upload rate limit: 10 per minute.
   const limitedOrder = (await guest.request("/orders", "POST", makeOrder(1))).body;
   const burst = [];
@@ -466,6 +565,10 @@ try {
   check(
     (await upload(guest, cancelled.id, png)).status === 409,
     "Cancelled order refuses receipts",
+  );
+  check(
+    (await guest.request(`/orders/${cancelled.id}`)).body.paymentStatus === "Cancelled",
+    "Cancelled shows Cancelled",
   );
 
   console.log(
@@ -515,7 +618,7 @@ try {
       await page.getByLabel("Upload your payment receipt").setInputFiles({
         name: "transfer.png",
         mimeType: "image/png",
-        buffer: Buffer.concat([png, Buffer.from(String(width))]),
+        buffer: makePng(String(width)),
       });
       await page.getByRole("button", { name: "Submit receipt" }).click();
       await page.getByText("Receipt received.").waitFor({ timeout: 10000 });
@@ -553,6 +656,142 @@ try {
       (await ui.db.prepare("SELECT COUNT(*) AS n FROM payment_receipts").first()).n === 2,
       "Browser uploads stored (invalid ones refused)",
     );
+    // Admin payment review renders active and expired orders apart, with MFA sign-in.
+    const makeUiOrder = async () => {
+      const shopper = new Client(ui.mf);
+      await shopper.request("/me");
+      const placed = await shopper.request("/orders", "POST", {
+        lines: [{ variantId: ui.variantId, qty: 1 }],
+        zoneId: ui.zoneId,
+        idempotencyKey: randomUUID(),
+        customer: { name: "Queue fixture buyer", email: "queue@example.com", phone: "08012345678" },
+        address: { street: "Fixture street 10", city: "Kano", state: "Kano" },
+      });
+      return { shopper, order: placed.body };
+    };
+    await ui.db.prepare("UPDATE variants SET stock=stock+10 WHERE id=?").bind(ui.variantId).run();
+    const late = await makeUiOrder();
+    await late.shopper.request(
+      `/orders/${late.order.id}/receipts`,
+      "POST",
+      new Uint8Array(makePng()),
+      {
+        "Content-Type": "image/png",
+      },
+    );
+    await ui.db
+      .prepare("UPDATE orders SET expires_at=unixepoch()-1 WHERE id=?")
+      .bind(late.order.id)
+      .run();
+    const waiting = await makeUiOrder();
+    await ui.db.prepare("DELETE FROM rate_limits").run();
+    const adminContext = await browser.newContext({
+      viewport: { width: 1440, height: 1000 },
+      extraHTTPHeaders: { "CF-Connecting-IP": "192.0.2.31" },
+    });
+    const adminPage = await adminContext.newPage();
+    const adminErrors = [];
+    adminPage.on("pageerror", (e) => adminErrors.push(e.message));
+    await adminPage.goto(`${ORIGIN}/admin`);
+    await adminPage.getByLabel("Email", { exact: true }).fill("review-admin@example.com");
+    await adminPage.getByLabel("Name", { exact: true }).fill("Review admin");
+    await adminPage.getByRole("button", { name: "Send sign-in code" }).click();
+    await adminPage.getByLabel("Email code").waitFor();
+    const { code } = await ui.db
+      .prepare("SELECT code FROM test_outbox WHERE email=?")
+      .bind("review-admin@example.com")
+      .first();
+    await adminPage.getByLabel("Email code").fill(code);
+    await adminPage.getByRole("button", { name: "Verify and sign in" }).click();
+    await adminPage.getByText("Staff access is required.", { exact: false }).waitFor();
+    await ui.db
+      .prepare(
+        "INSERT INTO staff(user_id,role) SELECT id,'admin' FROM user WHERE email='review-admin@example.com'",
+      )
+      .run();
+    await ui.db
+      .prepare(
+        "INSERT INTO admin_security(user_id,state,approval_ref,verified_by) SELECT id,'pending','fixture-evidence','fixture-operator' FROM user WHERE email='review-admin@example.com'",
+      )
+      .run();
+    const cdp = await adminContext.newCDPSession(adminPage);
+    await cdp.send("WebAuthn.enable");
+    await cdp.send("WebAuthn.addVirtualAuthenticator", {
+      options: {
+        protocol: "ctap2",
+        transport: "usb",
+        hasResidentKey: true,
+        hasUserVerification: true,
+        isUserVerified: true,
+        automaticPresenceSimulation: true,
+      },
+    });
+    await adminPage.reload();
+    await adminPage.getByRole("button", { name: "Enroll passkey or security key" }).click();
+    await adminPage.getByRole("button", { name: "I saved my recovery codes" }).click();
+    await adminPage.getByRole("navigation", { name: "Administration", exact: true }).waitFor();
+    await adminPage.getByRole("button", { name: "Payments", exact: true }).click();
+    await adminPage.getByRole("heading", { name: /Bank-transfer payments/ }).waitFor();
+    const activeSection = adminPage.getByRole("region", { name: /^Active — receipt submitted/ });
+    const expiredSection = adminPage.getByRole("region", { name: /^Expired — manual review only/ });
+    const awaitingSection = adminPage.getByRole("region", { name: /^Active — awaiting transfer/ });
+    await expiredSection.waitFor();
+    uiCheck(
+      (await activeSection.getByText("Active · receipt to review").count()) >= 2,
+      "Active-with-receipt section and badges",
+    );
+    uiCheck(
+      (await expiredSection.getByText(`Order ${late.order.reference}`).count()) === 1,
+      "Expired order listed under Expired",
+    );
+    uiCheck(
+      (await activeSection.getByText(`Order ${late.order.reference}`).count()) === 0,
+      "Expired order not in active section",
+    );
+    uiCheck(
+      (await expiredSection.getByText("Expired · manual review").count()) === 1,
+      "Expired badge shown",
+    );
+    uiCheck(
+      (await expiredSection
+        .getByRole("button", { name: "Record late payment for review" })
+        .count()) === 1 &&
+        (await expiredSection.getByRole("button", { name: "Approve payment" }).count()) === 0,
+      "Expired order offers only late-payment recording",
+    );
+    uiCheck(
+      (await awaitingSection.getByText(`Order ${waiting.order.reference}`).count()) === 1,
+      "Awaiting-transfer order in its own section",
+    );
+    const firstActive = activeSection
+      .getByRole("listitem")
+      .filter({ has: adminPage.getByText("Active · receipt to review") })
+      .first();
+    const approveButton = firstActive.getByRole("button", { name: "Approve payment" });
+    uiCheck(
+      await approveButton.isDisabled(),
+      "Approve disabled until the Moniepoint credit is confirmed",
+    );
+    const activeTotal = (await firstActive.innerText()).match(/₦([\d,]+)/)[1].replaceAll(",", "");
+    await firstActive.getByLabel("Amount credited (₦)").fill(activeTotal);
+    await firstActive.getByLabel("Bank transaction reference").fill("MONIE-UI-1");
+    await firstActive.getByLabel(/I have confirmed this exact amount/).check();
+    await approveButton.click();
+    await adminPage.getByText(/marked paid\./).waitFor({ timeout: 10000 });
+    uiCheck(true, "Admin approves from the review screen");
+    const axe = await new AxeBuilder({ page: adminPage }).include("#main").analyze();
+    const serious = axe.violations.filter((v) => ["serious", "critical"].includes(v.impact));
+    uiCheck(
+      serious.length === 0,
+      `Review screen has no serious a11y issues: ${serious.map((v) => v.id)}`,
+    );
+    uiCheck(adminErrors.length === 0, `No admin page errors: ${adminErrors}`);
+    if (process.env.RECEIPT_SCREENSHOTS)
+      await adminPage.screenshot({
+        path: `${process.env.RECEIPT_SCREENSHOTS}/payment-review-1440.png`,
+        fullPage: true,
+      });
+    await adminContext.close();
     console.log(`PASS: ${uiChecks} receipt UI assertions`);
   } finally {
     await browser.close();

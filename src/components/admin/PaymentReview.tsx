@@ -23,8 +23,37 @@ interface ReviewOrder {
   customer_name: string;
   customer_phone: string;
   decision: "paid" | "late_review" | null;
+  queue_state: QueueState;
   receipts: Receipt[];
 }
+type QueueState = "active_receipt" | "active_awaiting" | "expired_review" | "cancelled_review";
+// Expired and active unpaid orders are always shown apart; expired ones are manual review only.
+const SECTIONS: { state: QueueState; title: string; badge: string; help: string }[] = [
+  {
+    state: "active_receipt",
+    title: "Active — receipt submitted",
+    badge: "Active · receipt to review",
+    help: "Within the 24-hour window. Check the Moniepoint account, then approve or reject.",
+  },
+  {
+    state: "expired_review",
+    title: "Expired — manual review only",
+    badge: "Expired · manual review",
+    help: "The payment window closed and the items were released. A decision records the late payment for review; it never reactivates the order or reserves stock.",
+  },
+  {
+    state: "cancelled_review",
+    title: "Cancelled — evidence received",
+    badge: "Cancelled · evidence received",
+    help: "The customer cancelled after sending evidence. Resolve manually (for example a refund).",
+  },
+  {
+    state: "active_awaiting",
+    title: "Active — awaiting transfer",
+    badge: "Active · awaiting transfer",
+    help: "Within the 24-hour window; no receipt yet. You may still confirm a credit you can see.",
+  },
+];
 const when = (seconds: number) =>
   new Date(seconds * 1000).toLocaleString("en-NG", {
     timeZone: "Africa/Lagos",
@@ -59,30 +88,49 @@ export function PaymentReview() {
         </p>
       )}
       {!orders.length && <p>No bank-transfer payments are waiting for review.</p>}
-      <ul className="space-y-4">
-        {orders.map((o) => (
-          <ReviewCard
-            key={o.id}
-            order={o}
-            onDone={async (message) => {
-              setNotice(message);
-              setError("");
-              await load();
-            }}
-            onError={setError}
-          />
-        ))}
-      </ul>
+      {SECTIONS.map((section) => {
+        const group = orders.filter((o) => o.queue_state === section.state);
+        if (!group.length) return null;
+        return (
+          <section
+            key={section.state}
+            aria-labelledby={`queue-${section.state}`}
+            className="space-y-3"
+          >
+            <h3 id={`queue-${section.state}`} className="text-xl font-semibold">
+              {section.title} ({group.length})
+            </h3>
+            <p className="text-sm text-muted-foreground">{section.help}</p>
+            <ul className="space-y-4">
+              {group.map((o) => (
+                <ReviewCard
+                  key={o.id}
+                  order={o}
+                  badge={section.badge}
+                  onDone={async (message) => {
+                    setNotice(message);
+                    setError("");
+                    await load();
+                  }}
+                  onError={setError}
+                />
+              ))}
+            </ul>
+          </section>
+        );
+      })}
     </section>
   );
 }
 
 function ReviewCard({
   order,
+  badge,
   onDone,
   onError,
 }: {
   order: ReviewOrder;
+  badge: string;
   onDone: (message: string) => Promise<void>;
   onError: (message: string) => void;
 }) {
@@ -94,7 +142,11 @@ function ReviewCard({
   const [confirmed, setConfirmed] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const late = order.status === "expired" || order.expires_at * 1000 <= Date.now();
+  // Server state decides; the clock check only covers a page left open past the deadline.
+  const late =
+    order.queue_state !== "active_receipt" && order.queue_state !== "active_awaiting"
+      ? true
+      : order.expires_at * 1000 <= Date.now();
   const run = async (action: () => Promise<string>) => {
     setBusy(true);
     try {
@@ -107,7 +159,16 @@ function ReviewCard({
   };
   return (
     <li className="space-y-3 rounded-2xl bg-card p-5 shadow-soft">
-      <h3 className="text-lg font-semibold">Order {label}</h3>
+      <div className="flex flex-wrap items-center gap-2">
+        <h4 className="text-lg font-semibold">Order {label}</h4>
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+            late ? "bg-destructive/10 text-destructive" : "bg-secondary"
+          }`}
+        >
+          {badge}
+        </span>
+      </div>
       <p className="text-sm">
         {order.customer_name} · {order.customer_phone} · {formatNaira(order.total_kobo)}
       </p>
@@ -166,7 +227,9 @@ function ReviewCard({
             });
           }}
         >
-          <h4 className="font-semibold sm:col-span-2">Confirm payment</h4>
+          <h5 className="font-semibold sm:col-span-2">
+            {late ? "Record a late payment for manual review" : "Confirm payment"}
+          </h5>
           <div>
             <Label htmlFor={`amount-${order.id}`}>Amount credited (₦)</Label>
             <Input

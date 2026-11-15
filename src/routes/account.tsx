@@ -137,7 +137,7 @@ function Account() {
                   >
                     {o.reference ?? o.id}
                   </button>
-                  <span>{o.status}</span>
+                  <span>{orderStatusLabel(o)}</span>
                   <span>{formatNaira(o.total_kobo)}</span>
                   {o.status === "pending" && o.payment_method === "bank_transfer" && (
                     <span className="text-sm">
@@ -270,4 +270,20 @@ function Account() {
       </div>
     </>
   );
+}
+
+// Customer-readable order status; expired is shown distinctly from cancelled.
+function orderStatusLabel(o: Order) {
+  const labels: Record<string, string> = {
+    pending: "Awaiting payment",
+    expired: "Expired — payment window closed",
+    cancelled: "Cancelled",
+    paid: "Paid",
+    processing: "Processing",
+    shipped: "Dispatched",
+    delivered: "Delivered",
+    refund_pending: "Refund pending",
+    refunded: "Refunded",
+  };
+  return labels[o.status] ?? o.status;
 }

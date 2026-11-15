@@ -21,7 +21,7 @@ import {
   RECEIPT_MAX_BYTES,
   RECEIPTS_PER_ORDER,
   customerPaymentStatus,
-  detectReceiptType,
+  inspectReceipt,
   hasReceiptStorage,
   receiptHeaders,
   sha256Hex,
@@ -170,8 +170,9 @@ async function submitReceipt(request: Request, env: CommerceEnv, a: Actor, order
   await limited(request, env, "receipt", 10);
   const bytes = await bounded(request, RECEIPT_MAX_BYTES);
   if (!bytes.length) fail(400, "Choose a receipt file to upload");
-  const type = detectReceiptType(bytes);
-  if (!type) return fail(415, "Upload a JPEG, PNG, WebP or PDF receipt");
+  const inspection = inspectReceipt(bytes);
+  if (!inspection.ok) return fail(415, inspection.message);
+  const type = inspection.type;
   const sha256 = await sha256Hex(bytes);
   const existing = () =>
     env.DB.prepare("SELECT id,status FROM payment_receipts WHERE order_id=? AND sha256=?")
@@ -662,7 +663,15 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
           .bind(id)
           .first(),
         receipts,
-        paymentStatus: customerPaymentStatus(order, receipts[0] ?? null),
+        paymentStatus: customerPaymentStatus(
+          order,
+          receipts[0] ?? null,
+          (
+            await env.DB.prepare("SELECT outcome FROM bank_transfer_approvals WHERE order_id=?")
+              .bind(id)
+              .first<{ outcome: string }>()
+          )?.outcome ?? null,
+        ),
       });
     }
     if (method === "POST" && path === `/api/orders/${id}/receipts`)
@@ -775,7 +784,7 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       await expire(env);
       const orders = (
         await env.DB.prepare(
-          "SELECT o.id,o.reference,o.status,o.total_kobo,o.created_at,o.expires_at,json_extract(o.customer,'$.name') AS customer_name,json_extract(o.customer,'$.phone') AS customer_phone,(SELECT outcome FROM bank_transfer_approvals WHERE order_id=o.id) AS decision FROM orders o WHERE o.payment_method='bank_transfer' AND (o.status='pending' OR EXISTS (SELECT 1 FROM payment_receipts r WHERE r.order_id=o.id AND r.status='submitted')) ORDER BY EXISTS (SELECT 1 FROM payment_receipts r WHERE r.order_id=o.id AND r.status='submitted') DESC, o.created_at DESC LIMIT 200",
+          "SELECT o.id,o.reference,o.status,o.total_kobo,o.created_at,o.expires_at,json_extract(o.customer,'$.name') AS customer_name,json_extract(o.customer,'$.phone') AS customer_phone,(SELECT outcome FROM bank_transfer_approvals WHERE order_id=o.id) AS decision,CASE WHEN o.status='pending' AND EXISTS (SELECT 1 FROM payment_receipts r WHERE r.order_id=o.id AND r.status='submitted') THEN 'active_receipt' WHEN o.status='pending' THEN 'active_awaiting' WHEN o.status='cancelled' THEN 'cancelled_review' ELSE 'expired_review' END AS queue_state FROM orders o WHERE o.payment_method='bank_transfer' AND (o.status='pending' OR EXISTS (SELECT 1 FROM payment_receipts r WHERE r.order_id=o.id AND r.status='submitted')) ORDER BY EXISTS (SELECT 1 FROM payment_receipts r WHERE r.order_id=o.id AND r.status='submitted') DESC, o.created_at DESC LIMIT 200",
         ).all<{ id: string }>()
       ).results;
       const receipts = orders.length
