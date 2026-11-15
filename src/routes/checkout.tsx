@@ -7,6 +7,7 @@ import { useCart } from "@/lib/cart";
 import { formatNaira } from "@/lib/catalog";
 import { apiCall, type Zone, type Order, type Me } from "@/lib/store";
 import { PageHeader } from "@/components/site/PageHeader";
+import { business } from "@/lib/business";
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [{ title: "Checkout — Afnan Collection Online" }, { name: "robots", content: "noindex" }],
@@ -59,17 +60,21 @@ function Checkout() {
             <h2 className="text-2xl font-semibold">Order prepared</h2>
             <p>Reference: {order.id}</p>
             <p>Total: {formatNaira(order.total_kobo)}</p>
-            <p>
-              Awaiting payment. Items are reserved for 30 minutes. Payment is confirmed only after
-              server verification.
-            </p>
+            {order.payment_method === "bank_transfer" ? (
+              <BankTransferInstructions order={order} />
+            ) : (
+              <p>
+                Awaiting payment. Items are reserved for 30 minutes. Payment is confirmed only after
+                server verification.
+              </p>
+            )}
             <p>
               <Link to="/account" className="underline">
                 Track your order
               </Link>
               . Guest tracking is available on this browser.
             </p>
-            {payment ? (
+            {order.payment_method === "bank_transfer" ? null : payment ? (
               <Button
                 disabled={busy}
                 onClick={async () => {
@@ -285,5 +290,60 @@ function Checkout() {
         )}
       </div>
     </>
+  );
+}
+
+const deadlineFormat = new Intl.DateTimeFormat("en-NG", {
+  dateStyle: "full",
+  timeStyle: "short",
+  timeZone: "Africa/Lagos",
+});
+function BankTransferInstructions({ order }: { order: Order }) {
+  const [copied, setCopied] = useState(false);
+  const deadline = deadlineFormat.format(new Date(order.expires_at * 1000));
+  return (
+    <div className="space-y-3">
+      <p>
+        <strong>Pay by:</strong>{" "}
+        <time dateTime={new Date(order.expires_at * 1000).toISOString()}>{deadline}</time> (Nigeria
+        time). Your items are reserved until then. Unpaid orders are cancelled automatically after
+        24 hours and the items are released.
+      </p>
+      <dl className="grid gap-1 rounded-xl border p-4">
+        <dt className="text-sm text-muted-foreground">Bank</dt>
+        <dd>{business.bankName}</dd>
+        <dt className="text-sm text-muted-foreground">Account name</dt>
+        <dd>{business.bankAccountName}</dd>
+        <dt className="text-sm text-muted-foreground">Account number</dt>
+        <dd className="flex items-center gap-3">
+          <span className="font-semibold tracking-wider">{business.bankAccountNumber}</span>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(business.bankAccountNumber);
+                setCopied(true);
+              } catch {
+                setCopied(false);
+              }
+            }}
+          >
+            {copied ? "Copied" : "Copy account number"}
+          </Button>
+        </dd>
+        <dt className="text-sm text-muted-foreground">Amount to transfer</dt>
+        <dd className="font-semibold">{formatNaira(order.total_kobo)}</dd>
+      </dl>
+      <p>
+        Transfer the exact order total to the account shown. Your order will be processed once
+        payment is confirmed.
+        {/* Spec v1.0 §8 receipt-upload sentence is added with the receipt feature. */}
+      </p>
+      <p role="status">
+        Awaiting transfer. Payment is confirmed only after our team verifies the credit in our
+        account.
+      </p>
+    </div>
   );
 }

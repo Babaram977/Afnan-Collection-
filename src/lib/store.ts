@@ -60,4 +60,5 @@ export interface Order {
   total_kobo: number;
   created_at: number;
   expires_at: number;
+  payment_method?: "paystack" | "bank_transfer";
 }

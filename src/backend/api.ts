@@ -14,6 +14,7 @@ import {
   policyInput,
   addressInput,
   businessSettingsInput,
+  bankTransferApprovalInput,
 } from "./validation";
 import {
   initialize,
@@ -109,13 +110,23 @@ function requireRole(a: Actor, roles = ["admin"]) {
   if (!a.userId) fail(401, "Sign in required");
   if (!a.role || !roles.includes(a.role)) fail(403, "Staff access required");
 }
-async function audit(env: CommerceEnv, a: Actor, action: string, id: string) {
-  return env.DB.prepare("INSERT INTO audit(actor,action,entity_id) VALUES(?,?,?)").bind(
+async function audit(
+  env: CommerceEnv,
+  a: Actor,
+  action: string,
+  id: string,
+  detail: Record<string, unknown> = {},
+) {
+  return env.DB.prepare("INSERT INTO audit(actor,action,entity_id,detail) VALUES(?,?,?,?)").bind(
     a.userId ?? a.owner,
     action,
     id,
+    JSON.stringify(detail),
   );
 }
+// Owner-approved payment windows (seconds). Bank transfer: 24 hours. Paystack (disabled): 30 minutes.
+export const PAYMENT_WINDOW = { bank_transfer: 24 * 60 * 60, paystack: 30 * 60 } as const;
+const nowSeconds = () => Math.floor(Date.now() / 1000);
 async function limited(request: Request, env: CommerceEnv, route: string, max: number) {
   const window = Math.floor(Date.now() / 60000);
   const key = await hash(
@@ -129,10 +140,16 @@ async function limited(request: Request, env: CommerceEnv, route: string, max: n
   if ((row?.count ?? 999) > max) fail(429, "Too many requests. Try again later.");
 }
 async function expire(env: CommerceEnv) {
+  // One timestamp for both statements, so every expired order is audited exactly once.
+  // The batch is a single transaction; restore_stock releases each reservation once.
+  const now = nowSeconds();
   await env.DB.batch([
     env.DB.prepare(
-      "UPDATE orders SET status='expired' WHERE status='pending' AND expires_at<=unixepoch()",
-    ),
+      "INSERT INTO audit(actor,action,entity_id,detail) SELECT 'order-service','order.expired',id,json_object('paymentMethod',payment_method,'expiresAt',expires_at,'stockReleased',1) FROM orders WHERE status='pending' AND expires_at<=?",
+    ).bind(now),
+    env.DB.prepare(
+      "UPDATE orders SET status='expired' WHERE status='pending' AND expires_at<=?",
+    ).bind(now),
     env.DB.prepare("DELETE FROM rate_limits WHERE expires_at<unixepoch()"),
   ]);
 }
@@ -182,6 +199,7 @@ interface OrderRow {
   total_kobo: number;
   request_hash: string;
   expires_at: number;
+  payment_method: "paystack" | "bank_transfer";
   customer: string;
   address: string;
 }
@@ -221,9 +239,12 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
     .first<{ fee_kobo: number }>();
   if (!zone) fail(400, "Delivery is unavailable for this address");
   const id = uuid();
+  // Paystack is used only when it is explicitly enabled; otherwise orders are manual bank transfers.
+  const paymentMethod = paymentEnabled(env) ? "paystack" : "bank_transfer";
+  const expiresAt = nowSeconds() + PAYMENT_WINDOW[paymentMethod];
   const statements = [
     env.DB.prepare(
-      "INSERT INTO orders(id,owner,user_id,idempotency_key,request_hash,email,customer,address,zone_id,delivery_kobo) VALUES(?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO orders(id,owner,user_id,idempotency_key,request_hash,email,customer,address,zone_id,delivery_kobo,payment_method,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
     ).bind(
       id,
       a.owner,
@@ -235,6 +256,8 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       JSON.stringify(input.address),
       input.zoneId,
       zone.fee_kobo,
+      paymentMethod,
+      expiresAt,
     ),
   ];
   for (const line of input.lines) {
@@ -268,7 +291,13 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       "UPDATE orders SET total_kobo=delivery_kobo+(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?) WHERE id=?",
     ).bind(id, id),
   );
-  statements.push(await audit(env, a, "order.created", id));
+  statements.push(
+    await audit(env, a, "order.created", id, {
+      paymentMethod,
+      expiresAt,
+      stockReserved: input.lines.map(({ variantId, qty }) => ({ variantId, qty })),
+    }),
+  );
   try {
     await env.DB.batch(statements);
   } catch {
@@ -483,7 +512,7 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       return json(
         (
           await env.DB.prepare(
-            "SELECT id,status,total_kobo,created_at,expires_at FROM orders WHERE owner=? ORDER BY created_at DESC LIMIT 100",
+            "SELECT id,status,total_kobo,created_at,expires_at,payment_method FROM orders WHERE owner=? ORDER BY created_at DESC LIMIT 100",
           )
             .bind(a.owner)
             .all()
@@ -512,6 +541,8 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
     if (method === "POST" && path.endsWith("/pay")) {
       if (!paymentEnabled(env)) fail(503, "Payments are disabled");
       if (order.status !== "pending") fail(409, "Order is not awaiting payment");
+      if (order.payment_method !== "paystack")
+        fail(409, "This order is paid by bank transfer, not online payment");
       await env.DB.prepare(
         "INSERT OR IGNORE INTO payments(reference,order_id,amount_kobo,currency,status) VALUES(?,?,?,'NGN','initialized')",
       )
@@ -564,6 +595,11 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
         ...order,
         items: (await env.DB.prepare("SELECT * FROM order_items WHERE order_id=?").bind(id).all())
           .results,
+        bankTransferApproval: await env.DB.prepare(
+          "SELECT amount_kobo,bank_reference,outcome,approved_by,approved_at FROM bank_transfer_approvals WHERE order_id=?",
+        )
+          .bind(id)
+          .first(),
       });
     }
     if (path.startsWith("/api/admin/orders/") && method === "PATCH") {
@@ -591,6 +627,56 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       return json({ saved: true });
     }
     requireRole(a);
+    if (
+      path.startsWith("/api/admin/orders/") &&
+      path.endsWith("/bank-transfer-approval") &&
+      method === "POST"
+    ) {
+      // Admin only: requireRole above needs a verified WebAuthn admin session (see actor()).
+      const id = path.split("/")[4] ?? "";
+      const input = bankTransferApprovalInput.parse(await body(request));
+      await expire(env);
+      const order = await ownOrder(env, a, id, true);
+      if (order.payment_method !== "bank_transfer") fail(409, "Not a bank-transfer order");
+      if (input.amountKobo !== order.total_kobo)
+        fail(409, "Credited amount does not equal the order total; resolve manually");
+      const now = nowSeconds();
+      const decisionId = uuid();
+      // One transaction: record the decision (primary key = once per order), mark paid only when
+      // the decision is 'paid', and audit. A late payment is recorded for manual review and never
+      // reactivates the order or re-reserves stock. Approval does not touch inventory, so it
+      // cannot double-count against a concurrent expiry (which restores stock exactly once).
+      let recorded = 0;
+      try {
+        const results = await env.DB.batch([
+          env.DB.prepare(
+            "INSERT INTO bank_transfer_approvals(order_id,decision_id,amount_kobo,bank_reference,outcome,approved_by,approved_at) SELECT id,?,?,?,CASE WHEN status='pending' AND expires_at>? THEN 'paid' ELSE 'late_review' END,?,? FROM orders WHERE id=? AND payment_method='bank_transfer' AND status IN ('pending','expired','cancelled')",
+          ).bind(decisionId, input.amountKobo, input.bankReference, now, a.userId, now, id),
+          env.DB.prepare(
+            "UPDATE orders SET status='paid' WHERE id=? AND status='pending' AND EXISTS (SELECT 1 FROM bank_transfer_approvals WHERE order_id=? AND outcome='paid')",
+          ).bind(id, id),
+          env.DB.prepare(
+            "INSERT INTO audit(actor,action,entity_id,detail) SELECT ?,CASE outcome WHEN 'paid' THEN 'payment.bank_transfer.approved' ELSE 'payment.bank_transfer.late_review' END,order_id,json_object('amountKobo',amount_kobo,'bankReference',bank_reference) FROM bank_transfer_approvals WHERE decision_id=?",
+          ).bind(a.userId, decisionId),
+        ]);
+        recorded = results[0]?.meta.changes ?? 0;
+      } catch {
+        fail(409, "A payment decision is already recorded for this order");
+      }
+      const decision = await env.DB.prepare(
+        "SELECT outcome FROM bank_transfer_approvals WHERE order_id=?",
+      )
+        .bind(id)
+        .first<{ outcome: string }>();
+      if (!recorded)
+        fail(
+          409,
+          decision
+            ? "A payment decision is already recorded for this order"
+            : "This order cannot take a bank-transfer decision",
+        );
+      return json({ outcome: decision!.outcome });
+    }
     if (path.startsWith("/api/admin/customers/") && path.endsWith("/revoke") && method === "POST") {
       const id = path.split("/")[4] ?? "";
       await env.DB.batch([
