@@ -144,7 +144,7 @@ jobs:
             "routes": [],
             "assets": { "directory": "../../.output/public", "binding": "ASSETS", "run_worker_first": true },
             "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-acceptance", "database_id": "11950c2f-14bb-4a31-9add-356f155dea4e" }],
-            "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-acceptance" }]
+            "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-acceptance" }, { "binding": "RECEIPTS", "bucket_name": "afnan-payment-receipts-acceptance" }]
           }
           EOF
           "$RUNNER_TEMP/tool/node_modules/.bin/wrangler" deploy --config .wrangler/acceptance/wrangler.jsonc \
@@ -245,7 +245,7 @@ jobs:
               "EMAIL_SENDER_VERIFIED": "false"
             },
             "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-acceptance", "database_id": "11950c2f-14bb-4a31-9add-356f155dea4e" }],
-            "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-acceptance" }]
+            "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-acceptance" }, { "binding": "RECEIPTS", "bucket_name": "afnan-payment-receipts-acceptance" }]
           }
           EOF
           ls -A
