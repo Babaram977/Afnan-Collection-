@@ -65,3 +65,31 @@ Owner explicitly approved the credential package above "as written" on 2026-11-1
 ### Rollback
 
 This is the first version, so there is no previous version to roll back to. To withdraw it, disable the workers.dev subdomain (`POST …/workers/scripts/afnan-collection-storefront/subdomain {"enabled":false}`). Access deny-everyone stays in place either way. There were no D1 writes in this step.
+
+## Hosted acceptance — 2026-11-15, Worker version 0a2bfc57
+
+### Access transition
+
+- Owner created service token `8ead1dc6-a732-4e79-863c-51cd46ec6086` ("Afnan Automation", 24h, expires 2026-11-16T00:22:10Z) in the dashboard. Service Auth policy `d4c4d7c0` still referenced the expired token, so the operator repointed it (approved step 2) to include **only** `8ead1dc6`. Deny-everyone `4ef44160` (precedence 1) was untouched.
+- The client secret was supplied by the owner through the session's secure credential form; the session proxy injects it for this hostname only. It never appeared in chat, logs or Git.
+- With deny-everyone **still in place**, the new token reached `/` and `/admin` (200). Missing client ID → 401; old token's client ID → 401. Cloudflare evaluates Service Auth before Block, so deny-everyone does not block the authorized machine, but it does refuse everything else. **Decision: deny-everyone is retained.** Removing it would only reduce protection. Approval permitted removal but did not require it.
+- Expired token `ba3ec6f3` is no longer referenced by either Access app in the account or by the reusable policy. Deleting it was refused by the session proxy (same credential-change rule as creation). Owner to delete it in the dashboard.
+
+### Hosted results (live HTTPS through Access, response bodies checked) — 37/43 automated checks, 6 reviewed
+
+Passed:
+- 9 storefront pages server-render with the correct Afnan titles: `/`, `/shop`, `/about`, `/contact`, `/policies`, `/cart`, `/checkout`, `/account`, `/admin`.
+- All 11 `/assets/*` files referenced by the homepage are served and are byte-identical to the build. favicon, robots.txt and the traced SVG are also served.
+- `/api/health` → `{"status":"ok","checkoutEnabled":false,"paymentsEnabled":false}`.
+- D1 reads live: `/api/business` (business record), `/api/categories` (seeded categories), `/api/store`/`/api/products`/`/api/zones` return empty. The catalog is empty, as expected before owner provisioning.
+- No session is created for the machine credential. Admin APIs (`overview`, `products`, `orders`, `customers`, `media`, `admin-security/status`) → 401 "Sign in required". `/api/addresses` and anonymous `PATCH /api/profile` → 401.
+- Acceptance-mode sign-up → 404. OTP request for an unknown `@example.com` identity gets a non-enumerating 200, and no email can be sent (sender unverified, no Resend key). A bogus OTP → 400.
+- Order creation → 503 "Ordering is not enabled". Unsigned payment webhook → 503 "Payments are disabled".
+- R2: an unknown media key → 404, and private admin media → 401.
+- Security headers present: CSP (`frame-ancestors 'none'` …), nosniff, Referrer-Policy, HSTS, Permissions-Policy.
+
+Reviewed, not defects (test assumptions): `/api/me`, `/api/cart` and `/api/orders` return null/empty for anonymous callers by design; the queries are owner-scoped and expose nothing. `/api/profile` is PATCH-only (GET 404). `X-Frame-Options` is absent, but CSP `frame-ancestors 'none'` covers it.
+
+**Defect — launch blocker:** the authoritative logo `/brand/IMG_8842(1).png` returns **404 on the hosted Worker**, written literally or percent-encoded, although the file is in the build (SHA-256 d40111ef…) and the asset hashes are uploaded. The same request returns 200 under local `wrangler dev`. The homepage references this path 5 times (plus 3 absolute production URLs), so the hosted storefront shows a broken logo. The likely cause is the parentheses in the asset path on Cloudflare's hosted asset service. The proposed fix needs owner approval because AGENTS.md pins this path: publish the same bytes at a path without brackets (e.g. `/brand/afnan-collection-logo.png`), point `business.logoUrl` at it, update the branding test and docs, and redeploy as a new version.
+
+Not run: owner email OTP, WebAuthn enrolment, recovery, staff role assignment, product/photo upload and publication, real orders. These need the owner's verified identity, and real email, which remains disabled.
