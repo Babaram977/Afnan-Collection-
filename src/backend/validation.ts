@@ -115,4 +115,11 @@ export const bankTransferApprovalInput = z.object({
   amountKobo: money,
   // The bank's transaction reference for the credit, for reconciliation.
   bankReference: z.string().trim().min(1).max(120),
+  // Staff must explicitly confirm they saw the credit in the Moniepoint account.
+  creditConfirmed: z.literal(true),
+  // The receipt reviewed for this decision, when the customer submitted one.
+  receiptId: z.string().uuid().optional(),
+});
+export const receiptRejectionInput = z.object({
+  reason: z.string().trim().min(3).max(500),
 });

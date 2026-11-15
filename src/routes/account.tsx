@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
+import { ReceiptUpload } from "@/components/site/ReceiptUpload";
 import { PageHeader } from "@/components/site/PageHeader";
 import { SignIn } from "@/components/site/SignIn";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,17 @@ function Account() {
   const [me, setMe] = useState<Me | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [detail, setDetail] = useState<
-    (Order & { items: { name: string; qty: number; price_kobo: number }[] }) | null
+    | (Order & {
+        items: { name: string; qty: number; price_kobo: number }[];
+        paymentStatus?: string | null;
+        receipts?: {
+          id: string;
+          status: string;
+          submitted_at: number;
+          review_note: string | null;
+        }[];
+      })
+    | null
   >(null);
   const [addresses, setAddresses] = useState<{ id: string; label: string; data: string }[]>([]);
   const [error, setError] = useState("");
@@ -181,6 +192,26 @@ function Account() {
                 </p>
               ))}
               <p>Total: {formatNaira(detail.total_kobo)}</p>
+              {detail.paymentStatus && <p>Payment: {detail.paymentStatus}</p>}
+              {detail.receipts?.map((r) => (
+                <p key={r.id} className="text-sm">
+                  Receipt sent{" "}
+                  {new Date(r.submitted_at * 1000).toLocaleString("en-NG", {
+                    timeZone: "Africa/Lagos",
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                  : {r.status}
+                  {r.review_note ? ` — ${r.review_note}` : ""}
+                </p>
+              ))}
+              {detail.payment_method === "bank_transfer" &&
+                (detail.status === "pending" || detail.status === "expired") && (
+                  <ReceiptUpload
+                    orderId={detail.id}
+                    onUploaded={async () => setDetail(await apiCall(`/orders/${detail.id}`))}
+                  />
+                )}
             </div>
           )}
         </section>

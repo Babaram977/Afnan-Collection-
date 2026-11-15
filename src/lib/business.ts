@@ -22,6 +22,8 @@ export const business = {
   bankName: "Moniepoint Microfinance Bank",
   bankAccountName: "Afnan Collection",
   bankAccountNumber: "7035963225",
+  // Staff inbox for order/payment-review notices (spec v1.0 §10); mailbox ownership still to be verified.
+  salesEmail: "sales@afnancollectionkn.com",
   // Exact owner-provided PNG, SHA-256 verified; never substitute the traced reference.
   logoUrl: "/brand/afnan-collection-logo.png" as string | null,
 } as const;

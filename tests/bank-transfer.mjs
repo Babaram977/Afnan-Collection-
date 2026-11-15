@@ -149,6 +149,7 @@ try {
     client.request(`/admin/orders/${id}/bank-transfer-approval`, "POST", {
       amountKobo,
       bankReference,
+      creditConfirmed: true,
     });
   check((await approve(guest, order.id, order.total_kobo)).status === 401, "Guest cannot approve");
   const customer = new Client(mf);
@@ -180,6 +181,15 @@ try {
   check(
     (await approve(admin, order.id, order.total_kobo - 1)).status === 409,
     "Amount mismatch refused",
+  );
+  check(
+    (
+      await admin.request(`/admin/orders/${order.id}/bank-transfer-approval`, "POST", {
+        amountKobo: order.total_kobo,
+        bankReference: "MONIE-NOCONFIRM",
+      })
+    ).status === 400,
+    "Approval without explicit Moniepoint credit confirmation refused",
   );
 
   // 5/8. Approval within the window marks paid, audited, with no stock change.

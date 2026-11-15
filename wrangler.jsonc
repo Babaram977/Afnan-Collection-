@@ -22,5 +22,8 @@
       "migrations_dir": "migrations",
     },
   ],
-  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-development" }],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "afnan-product-media-development" },
+    { "binding": "RECEIPTS", "bucket_name": "afnan-payment-receipts-development" },
+  ],
 }

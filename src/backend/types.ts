@@ -1,5 +1,7 @@
 export interface CommerceEnv
   extends Pick<WorkerBindings, "DB">, Partial<Pick<WorkerBindings, "MEDIA">> {
+  // Private bucket for customer payment receipts; never served publicly.
+  RECEIPTS?: R2Bucket;
   APP_ENV: string;
   APP_ORIGIN: string;
   AUTH_SECRET: string;

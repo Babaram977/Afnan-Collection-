@@ -14,7 +14,7 @@ export async function createTestApp(options = {}) {
           compatibilityDate: "2026-11-13",
           compatibilityFlags: ["nodejs_compat"],
           d1Databases: ["DB"],
-          r2Buckets: ["MEDIA"],
+          r2Buckets: ["MEDIA", "RECEIPTS"],
           assets: {
             directory: ".output/public",
             binding: "ASSETS",
@@ -43,7 +43,9 @@ export async function createTestApp(options = {}) {
     "\n" +
     (await readFile("migrations/0003_administrator_mfa.sql", "utf8")) +
     "\n" +
-    (await readFile("migrations/0004_bank_transfer_reservation.sql", "utf8"))
+    (await readFile("migrations/0004_bank_transfer_reservation.sql", "utf8")) +
+    "\n" +
+    (await readFile("migrations/0005_payment_receipts.sql", "utf8"))
   ).replace(/--[^\n]*/g, "");
   const statements = [];
   let statement = "";
