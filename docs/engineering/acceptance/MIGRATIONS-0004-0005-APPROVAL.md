@@ -2,6 +2,19 @@
 
 Prepared 2026-11-15 for owner review. **Nothing in this document has been executed against the acceptance database.** Applying it requires separate, explicit owner approval. Scope is the acceptance D1 only (`afnan-collection-acceptance`, `11950c2f-14bb-4a31-9add-356f155dea4e`). No production database exists, and no other business's resources are involved.
 
+## 0a. Latest refresh — 2026-11-15T14:15:03Z (read-only)
+
+| Check | Result |
+|---|---|
+| Time Travel bookmark (reference) | `00000018-00000000-00005124-da656aa52bf1e2e3222603f358d73a20` |
+| Ledger / data / integrity | 0001–0003 · 0 orders, users, products, staff · `quick_check` ok |
+| Pending (Wrangler, remote) | exactly `0004_bank_transfer_reservation.sql`, `0005_payment_receipts.sql` |
+| Checksums | `0004` `00a07af1…a9e637` · `0005` `11974ae5…b33059` (unchanged) |
+| `main` | PR #5 merged as `d0966b5` (merge commit; live commit `93509da` remains reachable). PR #8 merged as `c719bfd`. The logo prerequisite in section 0 is **resolved**. |
+| Live Worker / rollback target | `2ca5f17b-dcd0-46cd-bdd0-e86608b08981` (commit `93509da`), unchanged since 06:23Z |
+
+A fresh bookmark is still captured immediately before applying.
+
 ## 0. Refresh — 2026-11-15T06:30:56Z (read-only)
 
 | Check | Result |
@@ -82,7 +95,7 @@ CREATE INDEX notifications_status_idx ON notifications(status,created_at);
 
 ## 3. Apply procedure (only after approval)
 
-1. **Preconditions:** PR #8 (merged, `c719bfd`), PR #9 and PR #5 are merged with passing CI. The files on `main` match the checksums above. Wrangler uses the reviewed acceptance config (`.wrangler/acceptance/wrangler.jsonc`, D1 `11950c2f-…`).
+1. **Preconditions:** PR #8 (merged, `c719bfd`), PR #5 (merged, `d0966b5`) and PR #9 are merged with passing CI. The files on `main` match the checksums above. Wrangler uses the reviewed acceptance config (`.wrangler/acceptance/wrangler.jsonc`, D1 `11950c2f-…`).
 2. **Recovery point:** read and record the current bookmark (`GET …/d1/database/11950c2f-…/time_travel/bookmark`) immediately before applying.
 3. **Dry check:** `wrangler d1 migrations list DB --remote --config .wrangler/acceptance/wrangler.jsonc` must list exactly 0004 and 0005 as pending.
 4. **Apply:** `wrangler d1 migrations apply DB --remote --config .wrangler/acceptance/wrangler.jsonc`.
