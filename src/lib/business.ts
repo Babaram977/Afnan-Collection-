@@ -17,6 +17,11 @@ export const business = {
   cacBusinessNumber: "BN 4050963",
   tin: "24511952-001",
   registrationVerification: "Owner-supplied; not independently verified",
+  // Manual bank transfer, owner-supplied in implementation spec v1.0 (2026-11-15). The owner is
+  // still to confirm the account receives transfers under this name before live checkout.
+  bankName: "Moniepoint Microfinance Bank",
+  bankAccountName: "Afnan Collection",
+  bankAccountNumber: "7035963225",
   // Exact owner-provided PNG, SHA-256 verified; never substitute the traced reference.
   logoUrl: "/brand/afnan-collection-logo.png" as string | null,
 } as const;

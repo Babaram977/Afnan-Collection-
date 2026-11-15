@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 interface StaffOrder {
   id: string;
+  reference?: string | null;
+  payment_method?: string;
   status: string;
   total_kobo: number;
   customer: string;
@@ -69,7 +71,10 @@ export function OrderManager() {
           .filter((o) => !filter || o.status === filter)
           .map((o) => (
             <li key={o.id} className="space-y-3 rounded-2xl bg-card p-5 shadow-soft">
-              <h3 className="break-all font-semibold">Order {o.id}</h3>
+              <h3 className="break-all font-semibold">Order {o.reference ?? o.id}</h3>
+              {o.reference && (
+                <p className="break-all text-xs text-muted-foreground">Internal ID: {o.id}</p>
+              )}
               <p>
                 {JSON.parse(o.customer).name} · {o.status} · {formatNaira(o.total_kobo)}
               </p>
@@ -91,7 +96,10 @@ export function OrderManager() {
       {!orders.length && <p>No orders yet.</p>}
       {detail && (
         <section className="space-y-4 rounded-2xl bg-card p-6 shadow-soft">
-          <h3 className="break-all text-xl font-semibold">Order {detail.id}</h3>
+          <h3 className="break-all text-xl font-semibold">Order {detail.reference ?? detail.id}</h3>
+          {detail.reference && (
+            <p className="break-all text-xs text-muted-foreground">Internal ID: {detail.id}</p>
+          )}
           <p>Status: {detail.status}</p>
           <p>
             {customer.name} · {customer.phone} · {customer.email}
