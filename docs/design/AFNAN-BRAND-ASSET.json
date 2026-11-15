@@ -9,10 +9,10 @@
     "background": "White"
   },
   "original": {
-    "filename": "IMG_8842(1).png",
+    "filename": "afnan-collection-logo.png",
     "mimeType": "image/png",
     "expectedSha256": "d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1",
-    "repositoryPath": "public/brand/IMG_8842(1).png",
+    "repositoryPath": "public/brand/afnan-collection-logo.png",
     "fileAvailableToExecutionTools": true,
     "checksumVerified": true,
     "width": 460,
@@ -20,14 +20,26 @@
     "byteLength": 145165,
     "receivedRepositoryPath": "public/brand/IMG_8842(2).png",
     "receivedCommit": "3ef6de5",
-    "renamePreservedBytes": true
+    "renamePreservedBytes": true,
+    "ownerSuppliedFilename": "IMG_8842(1).png",
+    "technicalRename": {
+      "date": "2026-11-15",
+      "from": "public/brand/IMG_8842(1).png",
+      "to": "public/brand/afnan-collection-logo.png",
+      "renamePreservedBytes": true,
+      "reason": "Owner-approved: the parenthesised filename returned HTTP 404 from Cloudflare's hosted Workers asset service although the asset was uploaded; served 200 locally."
+    }
   },
   "integration": {
     "status": "integrated-original-png",
     "sharedComponent": "src/components/site/Wordmark.tsx",
     "configuration": "src/lib/business.ts",
     "websiteCompatibleOriginalFormat": "PNG",
-    "permittedFaithfulDerivativeFormats": ["PNG", "WebP", "ICO"],
+    "permittedFaithfulDerivativeFormats": [
+      "PNG",
+      "WebP",
+      "ICO"
+    ],
     "derivativesCreated": false,
     "usage": [
       "header",
@@ -40,6 +52,7 @@
   },
   "rules": [
     "Preserve the exact original bytes before producing derivatives.",
+    "Only the technical filename may change, by byte-preserving rename verified against expectedSha256; public asset paths must not contain parentheses or characters needing URL encoding.",
     "Verify the owner's supplied SHA-256 against the original file.",
     "Preserve aspect ratio, colours, lettering, flourish, composition and white background.",
     "Do not redraw, trace, reconstruct from the chat preview, generate or substitute a logo.",

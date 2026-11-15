@@ -23,7 +23,7 @@ export const business = {
   bankAccountName: "Afnan Collection",
   bankAccountNumber: "7035963225",
   // Exact owner-provided PNG, SHA-256 verified; never substitute the traced reference.
-  logoUrl: "/brand/IMG_8842(1).png" as string | null,
+  logoUrl: "/brand/afnan-collection-logo.png" as string | null,
 } as const;
 
 export type BusinessConfig = {
