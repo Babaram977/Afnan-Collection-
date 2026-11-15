@@ -93,3 +93,51 @@ Reviewed, not defects (test assumptions): `/api/me`, `/api/cart` and `/api/order
 **Defect — launch blocker:** the authoritative logo `/brand/IMG_8842(1).png` returns **404 on the hosted Worker**, written literally or percent-encoded, although the file is in the build (SHA-256 d40111ef…) and the asset hashes are uploaded. The same request returns 200 under local `wrangler dev`. The homepage references this path 5 times (plus 3 absolute production URLs), so the hosted storefront shows a broken logo. The likely cause is the parentheses in the asset path on Cloudflare's hosted asset service. The proposed fix needs owner approval because AGENTS.md pins this path: publish the same bytes at a path without brackets (e.g. `/brand/afnan-collection-logo.png`), point `business.logoUrl` at it, update the branding test and docs, and redeploy as a new version.
 
 Not run: owner email OTP, WebAuthn enrolment, recovery, staff role assignment, product/photo upload and publication, real orders. These need the owner's verified identity, and real email, which remains disabled.
+
+## Logo-path correction — 2026-11-15 (owner-approved)
+
+- Fix: draft PR #5, branch `fix/logo-path`, commit `93509da0f629f112276c26e601bd317b1b6bd633`, based on approved main `2942789`. Byte-preserving rename `public/brand/IMG_8842(1).png` → `public/brand/afnan-collection-logo.png`; SHA-256 `d40111ef…cdc1` unchanged. `business.logoUrl` and the branding test are updated, with a new guard against public paths that need URL encoding. AGENTS.md, the brand manifest, BRANDING.md and the README record the rename.
+- Local verification on that commit: typecheck, lint (0 errors), unit 18, integration 85, acceptance 12, security 77, branding 88, browser 111, storefront 181, `bun audit` clean. The browser suites ran on Chromium build 1243 instead of the pinned 1254, under Node 22 (CI uses Node 24).
+- **Deployment blocked from the Claude cloud session.** The fix changes 17 hashed JS chunks. Wrangler uploads new assets with a short-lived upload JWT in `Authorization`, and the session's credential proxy replaces that header with the stored API token, so `POST …/workers/assets/upload` → 401. No version was created; deployment `12522c9a` / version `0a2bfc57` remains at 100%. The first deploy succeeded only because every asset hash already existed. The proxy refuses header-override workarounds, and none was attempted. **This applies to any future change that alters client assets, not just this one.**
+
+### Owner deploy (from a machine with direct Cloudflare access)
+
+```sh
+git clone https://github.com/Babaram977/Afnan-Collection-.git && cd Afnan-Collection-
+git checkout 93509da0f629f112276c26e601bd317b1b6bd633
+bun install --frozen-lockfile && bun run build
+mkdir -p .wrangler/acceptance   # ignored by Git; contains no secrets
+# Write .wrangler/acceptance/wrangler.jsonc with exactly the acceptance config below
+CLOUDFLARE_ACCOUNT_ID=b4e142fe9da84ef204eecda2efe4a730 npx wrangler deploy \
+  --config .wrangler/acceptance/wrangler.jsonc --message "Afnan acceptance: logo-path fix 93509da"
+```
+
+Acceptance config (paths relative to `.wrangler/acceptance/`). `workers_dev` is `true` because the protected workers.dev address is already enabled; setting it `false` would turn the address off.
+
+```json
+{
+  "name": "afnan-collection-storefront",
+  "account_id": "b4e142fe9da84ef204eecda2efe4a730",
+  "main": "../../worker.ts",
+  "compatibility_date": "2026-11-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "routes": [],
+  "assets": { "directory": "../../.output/public", "binding": "ASSETS", "run_worker_first": true },
+  "observability": { "enabled": true, "traces": { "enabled": true } },
+  "vars": {
+    "APP_ENV": "acceptance",
+    "APP_ORIGIN": "https://afnan-collection-storefront.danwakili.workers.dev",
+    "CHECKOUT_ENABLED": "false",
+    "PAYMENT_MODE": "disabled",
+    "EMAIL_SENDER_VERIFIED": "false"
+  },
+  "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-acceptance", "database_id": "11950c2f-14bb-4a31-9add-356f155dea4e", "migrations_dir": "../../migrations" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-acceptance" }]
+}
+```
+
+The existing `AUTH_SECRET` secret is kept across `wrangler deploy`; do not pass a secrets file. Do not run migrations. Do not change Access: the service-token policy and deny-everyone stay as they are. Rollback: `npx wrangler rollback 0a2bfc57-2cdb-48ec-887b-552d53db6bf3 --config .wrangler/acceptance/wrangler.jsonc`.
+
+After deploying, the operator session re-runs the hosted checks: logo 200 with the matching SHA-256, desktop and mobile rendering, and the full hosted suite.
