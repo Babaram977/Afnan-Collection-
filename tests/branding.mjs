@@ -4,7 +4,7 @@ import { readFile, mkdir } from "node:fs/promises";
 import { chromium } from "@playwright/test";
 import { createTestApp, ORIGIN } from "./harness.mjs";
 const expected = "d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1";
-const asset = "/brand/IMG_8842(1).png";
+const asset = "/brand/afnan-collection-logo.png";
 const absolute = "https://afnancollectionkn.com" + asset;
 const original = await readFile("public" + asset);
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
@@ -15,6 +15,14 @@ const manifest = JSON.parse(await readFile("docs/design/AFNAN-BRAND-ASSET.json",
 assert.equal(manifest.original.checksumVerified, true);
 assert.equal(manifest.original.expectedSha256, expected);
 assert.equal(manifest.integration.status, "integrated-original-png");
+assert.equal("public" + asset, manifest.original.repositoryPath);
+// Cloudflare's hosted asset service returned 404 for the parenthesised original filename
+// while local Miniflare served it, so guard every public path, not just the logo.
+const { readdir } = await import("node:fs/promises");
+const unsafe = (await readdir("public", { recursive: true })).filter(
+  (name) => !/^[A-Za-z0-9._\/-]+$/.test(name.replaceAll("\\", "/")),
+);
+assert.deepEqual(unsafe, [], "Public asset paths must not need URL encoding");
 const { mf } = await createTestApp({ port: 8787 });
 const browser = await chromium.launch();
 let checks = 6;

@@ -4,7 +4,7 @@ Owner instruction received 2026-11-13. `src/lib/business.ts` is the authoritativ
 
 The supplied official raster logo shows a gold AC monogram with a black ornamental flourish and the AFNAN COLLECTION wordmark on white. The owner confirmed this raster format is the only available version. That format is acceptable; a vector asset is not required.
 
-The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` is now installed at `public/brand/IMG_8842(1).png` through a byte-preserving rename. SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused.
+The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` was installed at `public/brand/IMG_8842(1).png` and, on 2026-11-15, renamed byte-for-byte to `public/brand/afnan-collection-logo.png` (owner-approved; the parenthesised name returned 404 on Cloudflare's hosted asset service). SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused.
 
 Owner-supplied public contacts:
 
@@ -18,7 +18,7 @@ CAC **BN 4050963** and TIN **24511952-001** are recorded as supplied, not indepe
 
 ## Final-integration source identity
 
-Owner-supplied original filename: `IMG_8842(1).png`.
+Owner-supplied original filename: `IMG_8842(1).png`. Current technical filename (byte-identical, owner-approved 2026-11-15): `afnan-collection-logo.png`.
 
 Expected SHA-256: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`.
 

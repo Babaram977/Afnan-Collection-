@@ -18,7 +18,7 @@ export const business = {
   tin: "24511952-001",
   registrationVerification: "Owner-supplied; not independently verified",
   // Exact owner-provided PNG, SHA-256 verified; never substitute the traced reference.
-  logoUrl: "/brand/IMG_8842(1).png" as string | null,
+  logoUrl: "/brand/afnan-collection-logo.png" as string | null,
 } as const;
 
 export type BusinessConfig = {

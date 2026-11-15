@@ -22,7 +22,7 @@ Checked-in defaults keep **checkout and payments disabled**. Controlled localhos
 
 The owner supplied the address, WhatsApp, social accounts and domain. They are centralized in [`src/lib/business.ts`](src/lib/business.ts), used by the footer, contact/legal sections and SEO, with validated dashboard-editable contact/social overrides stored in Afnan D1. CAC and TIN are recorded as supplied, not independently verified, and displayed only in business information.
 
-The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` is now installed at `public/brand/IMG_8842(1).png` through a byte-preserving rename. SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused. See [branding handoff](docs/engineering/BRANDING.md).
+The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` was installed at `public/brand/IMG_8842(1).png` and, on 2026-11-15, renamed byte-for-byte to `public/brand/afnan-collection-logo.png` (owner-approved; the parenthesised name returned 404 on Cloudflare's hosted asset service). SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused. See [branding handoff](docs/engineering/BRANDING.md).
 
 ## Local setup
 
