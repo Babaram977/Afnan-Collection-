@@ -9,7 +9,8 @@ Why it exists: the Claude cloud session's credential proxy replaces Wrangler's s
 - **Manual only:** `workflow_dispatch`. No push or pull-request trigger.
 - **Owner only:** the run fails unless the actor is the repository owner.
 - **Exact commit:** the input must be a full 40-character SHA contained in a branch of this repository. Commits that exist only on fork pull-request refs are refused. The SHA is shown in the run name and summary and is stamped on the Worker version message.
-- **Secret isolation:** tests and the build run the commit's code with **no secrets**. Only the `deploy` job, gated by the `afnan-acceptance` environment, receives `CLOUDFLARE_API_TOKEN`. That job installs dependencies with lifecycle scripts disabled and runs a pinned Wrangler (`4.160.0`) installed separately from the commit's lockfile.
+- **Secret isolation — deploy uses only the verified build artifact:** the `build` job runs the commit's code (install, tests, build, bundling with pinned Wrangler) with **no secrets** and produces one artifact: the final Worker module, the static assets, a `COMMIT` file and `MANIFEST.sha256` covering every file. The `deploy` job, which is the only job that receives `CLOUDFLARE_API_TOKEN`, **never checks out the repository and never installs or runs application code**. It checks that the artifact's commit equals the requested SHA, verifies every checksum and that no unlisted files exist, writes a fixed config into a directory containing only that artifact, and uploads with a pinned Wrangler (`4.160.0`, installed with `--ignore-scripts`) using `--no-bundle`. The uploaded module is byte-for-byte the one the build job produced.
+- **`main` only:** both jobs refuse to run unless the workflow was dispatched from `main`, in addition to the environment's branch policy.
 - **Fixed target:** the Worker name, account, D1/R2 bindings, variables, `workers_dev: true`, `preview_urls: false` and empty routes are written by the workflow, not read from the commit.
 - **Pinned actions:** every action is pinned to a full commit SHA.
 - **One at a time:** concurrency allows a single deploy; a second run queues and does not cancel the first.
@@ -26,7 +27,8 @@ Why it exists: the Claude cloud session's credential proxy replaces Wrangler's s
    - Permissions: **Account → Workers Scripts → Edit**. If the first deploy reports a missing permission for the D1 or R2 binding, add only **Account → D1 → Read** and/or **Account → Workers R2 Storage → Read**.
    - Account resources: include only account `b4e142fe9da84ef204eecda2efe4a730`.
    - TTL: set an expiry (for example 90 days) and rotate it.
-4. **Add the secret to the environment, not the repository.** Settings → Environments → `afnan-acceptance` → Environment secrets → **Add secret** → name `CLOUDFLARE_API_TOKEN` → paste the token. Never paste it into chat, issues or commits.
+4. **Test the protection before adding the token.** Run the workflow once (see Deploying) without the secret. Check that the `deploy` job pauses for your approval. Approve it: it must stop at "CLOUDFLARE_API_TOKEN is not set" without deploying. Re-run and **reject** it: the job must not start. Only then add the secret.
+5. **Add the secret to the environment, not the repository.** Settings → Environments → `afnan-acceptance` → Environment secrets → **Add secret** → name `CLOUDFLARE_API_TOKEN` → paste the token. Never paste it into chat, issues or commits.
 
 ## Deploying
 
@@ -35,3 +37,9 @@ Actions → **Deploy Afnan acceptance** → Run workflow (branch `main`) → `co
 ## Rollback
 
 `npx wrangler rollback <previous-version-id>`, run with the acceptance Worker selected, from a machine with Cloudflare access. Alternatively, dispatch the workflow with the previous commit SHA.
+
+## Residual risks (accepted for acceptance)
+
+- Cloudflare cannot scope a Workers Scripts token to one Worker: the token can edit every Worker in the account (including other businesses'). It is exposed only to the `deploy` job, which runs no repository code; keep it environment-scoped, short-lived and rotated, and use a separate token for production.
+- The artifact is produced by the job that runs the commit's code, so the artifact is exactly as trustworthy as the commit you approve. The manifest stops substitution between jobs, not a malicious commit. Approve only commits you have reviewed.
+- GitHub masks the secret in logs; the workflow never echoes it, and Wrangler does not print tokens.
