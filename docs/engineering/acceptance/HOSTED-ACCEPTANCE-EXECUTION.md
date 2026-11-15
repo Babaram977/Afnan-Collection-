@@ -147,3 +147,21 @@ After deploying, the operator session re-runs the hosted checks: logo 200 with t
 - Draft PR #6 (`ci/acceptance-deploy`, commit `51c492ccc7e913b9d59323a66cae4b54ef7e1f33`) adds a manual, owner-only `workflow_dispatch` deploy to the acceptance Worker, with secret-free build/test, an environment-gated deploy job, pinned Wrangler and actions, and a fixed target and bindings. Setup steps: `docs/engineering/ACCEPTANCE-DEPLOY-WORKFLOW.md` on that branch.
 - The logo fix (#5, `93509da`) is **not yet deployed**; version `0a2bfc57` remains live. It is waiting on owner setup: merge #6, create environment `afnan-acceptance` with yourself as required reviewer, create a dedicated Workers Scripts:Edit token, add it as the environment secret, then dispatch with `93509da0f629f112276c26e601bd317b1b6bd633`.
 - After that deploy, the operator session verifies the hosted logo returns 200 with SHA-256 `d40111ef…cdc1`, checks desktop and mobile rendering, and re-runs the hosted suite.
+
+## Integrated acceptance release — 2026-11-15 (owner-authorized, acceptance only)
+
+- **Merged to `main`:** #7 `b79981a` (hardened deploy workflow), #8 `c719bfd` (24-hour bank transfer), #5 `d0966b5` (logo, merge commit; `93509da` stays reachable), #9 `407347d` (receipts and payment review). CI on `main` at `407347d` passed (run #67).
+- **Deploy protection test (owner):** deploy run #2 rejected at the required-reviewer gate; run #3 approved, deploying `93509da` as version `2ca5f17b` with the hardened workflow and a replacement token. Revocation of the previous token is **not yet confirmed**: the operator session cannot read Cloudflare tokens.
+- **Migrations 0004 and 0005**, applied 14:35:27Z to acceptance D1 `11950c2f-…` only:
+  - Preflight: matched the approval package (checksums, pending list, empty data, integrity). Pre-apply bookmark: `00000019-00000000-00005124-5cb889cd9d0aa07d830a15da88649d0f`.
+  - After applying: ledger 0001–0005; `quick_check` ok; foreign-key check empty; all 11 new objects present; no data changes; post-apply bookmark `00000019-00000004-00005124-bdc1af2e72e951df2d4db0dfd5daed52`.
+- **Deployment:** run #4, owner-approved, conclusion success. Live version **`bee7b6a8-5bde-4cc6-992c-2b9a86722881`** (deployment `41d74f47-4e92-4ca3-9259-4b2d4502b8b3`, 14:47:38Z), commit `407347d`.
+  - Bindings: acceptance variables; `CHECKOUT_ENABLED=false`; `PAYMENT_MODE=disabled`; `EMAIL_SENDER_VERIFIED=false`; `AUTH_SECRET`; D1; MEDIA; RECEIPTS (private). Previews off; no routes.
+  - Rollback target: `2ca5f17b` (code-only; the schema can stay).
+- **Hosted checks:**
+  - Without the token, every path returns 401, including a forged JWT or cookie.
+  - With the token: health reports checkout and payments false; D1 reads work; the logo returns 200 with SHA-256 `d40111ef…`, and the homepage has no old-path references.
+  - Order creation → 503; payment webhook → 503; pay or receipt on an unknown order → 404.
+  - Admin review, receipt view and approval → 401 without an admin session. `/media` does not serve receipts. Acceptance sign-up → 404. Security headers are present.
+  - D1 was unchanged by these checks.
+- **Not done (separate approvals):** enabling acceptance checkout, test zone and product, and the payment workflow tests; Moniepoint account-name verification; email sender verification; production.
