@@ -15,7 +15,18 @@ import {
   addressInput,
   businessSettingsInput,
   bankTransferApprovalInput,
+  receiptRejectionInput,
 } from "./validation";
+import {
+  RECEIPT_MAX_BYTES,
+  RECEIPTS_PER_ORDER,
+  customerPaymentStatus,
+  inspectReceipt,
+  hasReceiptStorage,
+  receiptHeaders,
+  sha256Hex,
+} from "./receipts";
+import { sendPaymentReviewNotice } from "./email";
 import {
   initialize,
   paymentEnabled,
@@ -143,6 +154,101 @@ async function orderWithItems(env: CommerceEnv, order: OrderRow) {
     .bind(order.id)
     .all();
   return { ...order, items: items.results };
+}
+const naira = (kobo: number) =>
+  `₦${(kobo / 100).toLocaleString("en-NG", { maximumFractionDigits: 2 })}`;
+// Customer upload of bank-transfer payment evidence. Ownership is already enforced by ownOrder()
+// (signed-in owner or the guest-order cookie), and the Origin check guards against CSRF.
+async function submitReceipt(request: Request, env: CommerceEnv, a: Actor, order: OrderRow) {
+  if (order.payment_method !== "bank_transfer")
+    fail(409, "Receipts are only for bank-transfer orders");
+  // Expired orders still accept evidence so a late transfer can be reviewed manually;
+  // submitting never extends the deadline, reactivates the order or reserves stock.
+  if (order.status !== "pending" && order.status !== "expired")
+    fail(409, "This order is not awaiting payment evidence");
+  if (!hasReceiptStorage(env)) return fail(503, "Receipt upload is not available yet");
+  await limited(request, env, "receipt", 10);
+  const bytes = await bounded(request, RECEIPT_MAX_BYTES);
+  if (!bytes.length) fail(400, "Choose a receipt file to upload");
+  const inspection = inspectReceipt(bytes);
+  if (!inspection.ok) return fail(415, inspection.message);
+  const type = inspection.type;
+  const sha256 = await sha256Hex(bytes);
+  const existing = () =>
+    env.DB.prepare("SELECT id,status FROM payment_receipts WHERE order_id=? AND sha256=?")
+      .bind(order.id, sha256)
+      .first<{ id: string; status: string }>();
+  const prior = await existing();
+  if (prior) return json({ id: prior.id, status: prior.status, duplicate: true });
+  const id = uuid();
+  const notificationId = uuid();
+  const key = `receipts/${order.id}/${uuid()}.${type.extension}`;
+  const now = nowSeconds();
+  await env.RECEIPTS.put(key, bytes, { httpMetadata: { contentType: type.contentType } });
+  let saved = 0;
+  try {
+    const results = await env.DB.batch([
+      // The per-order limit is checked inside the insert, so concurrent uploads cannot exceed it.
+      env.DB.prepare(
+        "INSERT INTO payment_receipts(id,order_id,object_key,content_type,bytes,sha256,submitted_at) SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM payment_receipts WHERE order_id=?)<?",
+      ).bind(
+        id,
+        order.id,
+        key,
+        type.contentType,
+        bytes.length,
+        sha256,
+        now,
+        order.id,
+        RECEIPTS_PER_ORDER,
+      ),
+      env.DB.prepare(
+        "INSERT INTO notifications(id,kind,order_id,recipient,status,created_at,updated_at) SELECT ?,'payment_review',?,?,'pending',?,? WHERE EXISTS (SELECT 1 FROM payment_receipts WHERE id=?)",
+      ).bind(notificationId, order.id, business.salesEmail, now, now, id),
+      env.DB.prepare(
+        "INSERT INTO audit(actor,action,entity_id,detail) SELECT ?,'payment.receipt.submitted',?,? WHERE EXISTS (SELECT 1 FROM payment_receipts WHERE id=?)",
+      ).bind(
+        a.userId ?? a.owner,
+        order.id,
+        JSON.stringify({
+          receiptId: id,
+          contentType: type.contentType,
+          bytes: bytes.length,
+          sha256,
+          afterDeadline: order.status === "expired",
+        }),
+        id,
+      ),
+    ]);
+    saved = results[0]?.meta.changes ?? 0;
+  } catch {
+    saved = 0;
+  }
+  if (!saved) {
+    await env.RECEIPTS.delete(key);
+    const raced = await existing();
+    if (raced) return json({ id: raced.id, status: raced.status, duplicate: true });
+    return fail(429, "Receipt limit reached for this order. Contact us on WhatsApp for help.");
+  }
+  const notice = await sendPaymentReviewNotice(env, business.salesEmail, {
+    reference: order.reference ?? order.id,
+    totalNaira: naira(order.total_kobo),
+  });
+  await env.DB.prepare(
+    "UPDATE notifications SET status=?,attempts=attempts+1,last_error=?,updated_at=? WHERE id=?",
+  )
+    .bind(notice.status, notice.error ?? null, nowSeconds(), notificationId)
+    .run();
+  return json({ id, status: "submitted" }, 201);
+}
+async function orderReceipts(env: CommerceEnv, orderId: string) {
+  return (
+    await env.DB.prepare(
+      "SELECT id,content_type,bytes,status,submitted_at,review_note FROM payment_receipts WHERE order_id=? ORDER BY submitted_at DESC, rowid DESC",
+    )
+      .bind(orderId)
+      .all<{ id: string; status: string }>()
+  ).results;
 }
 async function limited(request: Request, env: CommerceEnv, route: string, max: number) {
   const window = Math.floor(Date.now() / 60000);
@@ -547,7 +653,8 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       );
     const id = path.split("/")[3] ?? "";
     const order = await ownOrder(env, a, id);
-    if (method === "GET")
+    if (method === "GET") {
+      const receipts = await orderReceipts(env, id);
       return json({
         ...order,
         items: (await env.DB.prepare("SELECT * FROM order_items WHERE order_id=?").bind(id).all())
@@ -555,7 +662,20 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
         payment: await env.DB.prepare("SELECT status FROM payments WHERE order_id=?")
           .bind(id)
           .first(),
+        receipts,
+        paymentStatus: customerPaymentStatus(
+          order,
+          receipts[0] ?? null,
+          (
+            await env.DB.prepare("SELECT outcome FROM bank_transfer_approvals WHERE order_id=?")
+              .bind(id)
+              .first<{ outcome: string }>()
+          )?.outcome ?? null,
+        ),
       });
+    }
+    if (method === "POST" && path === `/api/orders/${id}/receipts`)
+      return submitReceipt(request, env, a, order);
     if (method === "POST" && path.endsWith("/cancel")) {
       await env.DB.batch([
         env.DB.prepare("UPDATE orders SET status='cancelled' WHERE id=? AND status='pending'").bind(
@@ -608,6 +728,11 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
         sales: await env.DB.prepare(
           "SELECT COUNT(*) AS orders,COALESCE(SUM(total_kobo),0) AS revenueKobo FROM orders WHERE status IN ('paid','processing','shipped','delivered')",
         ).first(),
+        paymentsAwaitingReview: (
+          await env.DB.prepare(
+            "SELECT COUNT(DISTINCT order_id) AS n FROM payment_receipts WHERE status='submitted'",
+          ).first<{ n: number }>()
+        )?.n,
       });
     }
     if (path === "/api/admin/orders" && method === "GET")
@@ -654,6 +779,67 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       return json({ saved: true });
     }
     requireRole(a);
+    // Payment review (admin only: requireRole above needs a verified WebAuthn admin session).
+    if (path === "/api/admin/payment-review" && method === "GET") {
+      await expire(env);
+      const orders = (
+        await env.DB.prepare(
+          "SELECT o.id,o.reference,o.status,o.total_kobo,o.created_at,o.expires_at,json_extract(o.customer,'$.name') AS customer_name,json_extract(o.customer,'$.phone') AS customer_phone,(SELECT outcome FROM bank_transfer_approvals WHERE order_id=o.id) AS decision,CASE WHEN o.status='pending' AND EXISTS (SELECT 1 FROM payment_receipts r WHERE r.order_id=o.id AND r.status='submitted') THEN 'active_receipt' WHEN o.status='pending' THEN 'active_awaiting' WHEN o.status='cancelled' THEN 'cancelled_review' ELSE 'expired_review' END AS queue_state FROM orders o WHERE o.payment_method='bank_transfer' AND (o.status='pending' OR EXISTS (SELECT 1 FROM payment_receipts r WHERE r.order_id=o.id AND r.status='submitted')) ORDER BY EXISTS (SELECT 1 FROM payment_receipts r WHERE r.order_id=o.id AND r.status='submitted') DESC, o.created_at DESC LIMIT 200",
+        ).all<{ id: string }>()
+      ).results;
+      const receipts = orders.length
+        ? (
+            await env.DB.prepare(
+              "SELECT id,order_id,content_type,bytes,status,submitted_at,review_note FROM payment_receipts WHERE order_id IN (SELECT value FROM json_each(?)) ORDER BY submitted_at DESC, rowid DESC",
+            )
+              .bind(JSON.stringify(orders.map((o) => o.id)))
+              .all<{ order_id: string }>()
+          ).results
+        : [];
+      return json(
+        orders.map((o) => ({ ...o, receipts: receipts.filter((r) => r.order_id === o.id) })),
+      );
+    }
+    if (path.startsWith("/api/admin/receipts/") && method === "GET") {
+      const receiptId = path.split("/")[4] ?? "";
+      if (!hasReceiptStorage(env)) return fail(503, "Receipt storage is not configured");
+      const row = await env.DB.prepare(
+        "SELECT r.object_key,r.content_type,r.order_id,o.reference FROM payment_receipts r JOIN orders o ON o.id=r.order_id WHERE r.id=?",
+      )
+        .bind(receiptId)
+        .first<{
+          object_key: string;
+          content_type: string;
+          order_id: string;
+          reference: string | null;
+        }>();
+      if (!row) return fail(404, "Receipt not found");
+      const object = await env.RECEIPTS.get(row.object_key);
+      if (!object) return fail(404, "Receipt file not found");
+      await (await audit(env, a, "payment.receipt.viewed", row.order_id, { receiptId })).run();
+      const extension = row.object_key.split(".").pop() ?? "bin";
+      return new Response(object.body, {
+        headers: receiptHeaders(row.content_type, row.reference ?? row.order_id, extension),
+      });
+    }
+    if (path.startsWith("/api/admin/receipts/") && path.endsWith("/reject") && method === "POST") {
+      const receiptId = path.split("/")[4] ?? "";
+      const input = receiptRejectionInput.parse(await body(request));
+      const row = await env.DB.prepare("SELECT order_id FROM payment_receipts WHERE id=?")
+        .bind(receiptId)
+        .first<{ order_id: string }>();
+      if (!row) return fail(404, "Receipt not found");
+      const results = await env.DB.batch([
+        env.DB.prepare(
+          "UPDATE payment_receipts SET status='rejected',reviewed_by=?,reviewed_at=?,review_note=? WHERE id=? AND status='submitted'",
+        ).bind(a.userId, nowSeconds(), input.reason, receiptId),
+        env.DB.prepare(
+          "INSERT INTO audit(actor,action,entity_id,detail) SELECT ?,'payment.receipt.rejected',?,? WHERE changes()=1",
+        ).bind(a.userId, row.order_id, JSON.stringify({ receiptId, reason: input.reason })),
+      ]);
+      if (!results[0]?.meta.changes) fail(409, "This receipt has already been reviewed");
+      return json({ status: "rejected" });
+    }
     if (
       path.startsWith("/api/admin/orders/") &&
       path.endsWith("/bank-transfer-approval") &&
@@ -667,6 +853,15 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       if (order.payment_method !== "bank_transfer") fail(409, "Not a bank-transfer order");
       if (input.amountKobo !== order.total_kobo)
         fail(409, "Credited amount does not equal the order total; resolve manually");
+      if (input.receiptId) {
+        const receipt = await env.DB.prepare(
+          "SELECT status FROM payment_receipts WHERE id=? AND order_id=?",
+        )
+          .bind(input.receiptId, id)
+          .first<{ status: string }>();
+        if (!receipt) fail(404, "Receipt not found for this order");
+        if (receipt!.status !== "submitted") fail(409, "This receipt has already been reviewed");
+      }
       const now = nowSeconds();
       const decisionId = uuid();
       // One transaction: record the decision (primary key = once per order), mark paid only when
@@ -683,8 +878,12 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
             "UPDATE orders SET status='paid' WHERE id=? AND status='pending' AND EXISTS (SELECT 1 FROM bank_transfer_approvals WHERE order_id=? AND outcome='paid')",
           ).bind(id, id),
           env.DB.prepare(
-            "INSERT INTO audit(actor,action,entity_id,detail) SELECT ?,CASE outcome WHEN 'paid' THEN 'payment.bank_transfer.approved' ELSE 'payment.bank_transfer.late_review' END,order_id,json_object('amountKobo',amount_kobo,'bankReference',bank_reference) FROM bank_transfer_approvals WHERE decision_id=?",
-          ).bind(a.userId, decisionId),
+            "INSERT INTO audit(actor,action,entity_id,detail) SELECT ?,CASE outcome WHEN 'paid' THEN 'payment.bank_transfer.approved' ELSE 'payment.bank_transfer.late_review' END,order_id,json_object('amountKobo',amount_kobo,'bankReference',bank_reference,'creditConfirmed',1,'receiptId',?) FROM bank_transfer_approvals WHERE decision_id=?",
+          ).bind(a.userId, input.receiptId ?? null, decisionId),
+          // Close out submitted evidence only when this request recorded the decision.
+          env.DB.prepare(
+            "UPDATE payment_receipts SET status=CASE WHEN id=? THEN 'accepted' ELSE 'superseded' END,reviewed_by=?,reviewed_at=? WHERE order_id=? AND status='submitted' AND EXISTS (SELECT 1 FROM bank_transfer_approvals WHERE decision_id=?)",
+          ).bind(input.receiptId ?? "", a.userId, now, id, decisionId),
         ]);
         recorded = results[0]?.meta.changes ?? 0;
       } catch {

@@ -2,6 +2,7 @@ import { BannerPhoto } from "@/components/admin/BannerPhoto";
 import { nairaToKobo } from "@/lib/images";
 import { ProductManager, InventoryManager } from "@/components/admin/ProductManager";
 import { OrderManager } from "@/components/admin/OrderManager";
+import { PaymentReview } from "@/components/admin/PaymentReview";
 import { BusinessSettings } from "@/components/admin/BusinessSettings";
 import { AdminSecurity } from "@/components/admin/AdminSecurity";
 import { createFileRoute } from "@tanstack/react-router";
@@ -283,6 +284,10 @@ function Admin() {
                     <p className="text-3xl">{String(overview["products"] ?? 0)}</p>
                   </div>
                   <div className="rounded-2xl bg-card p-6 shadow-soft">
+                    <h2 className="text-lg">Payments awaiting review</h2>
+                    <p className="text-3xl">{String(overview["paymentsAwaitingReview"] ?? 0)}</p>
+                  </div>
+                  <div className="rounded-2xl bg-card p-6 shadow-soft">
                     <h2 className="text-lg">Paid sales</h2>
                     <p className="text-3xl">
                       {formatNaira(
@@ -301,6 +306,10 @@ function Admin() {
                 </section>
               ) : (
                 <>
+                  {tab === "payments" && <PaymentReview />}
+                  {tab === "payments" && (
+                    <h2 className="text-xl font-semibold">Online payments (Paystack, disabled)</h2>
+                  )}
                   {forms[tab] && (
                     <Editor
                       kind={tab}

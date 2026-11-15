@@ -8,6 +8,7 @@ import { formatNaira } from "@/lib/catalog";
 import { apiCall, type Zone, type Order, type Me } from "@/lib/store";
 import { PageHeader } from "@/components/site/PageHeader";
 import { business } from "@/lib/business";
+import { ReceiptUpload } from "@/components/site/ReceiptUpload";
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [{ title: "Checkout — Afnan Collection Online" }, { name: "robots", content: "noindex" }],
@@ -345,14 +346,14 @@ function BankTransferInstructions({ order }: { order: Order }) {
         <dd className="font-semibold">{formatNaira(order.total_kobo)}</dd>
       </dl>
       <p>
-        Transfer the exact order total to the account shown. Your order will be processed once
-        payment is confirmed.
-        {/* Spec v1.0 §8 receipt-upload sentence is added with the receipt feature. */}
+        Transfer the exact order total to the account shown. After payment, upload your receipt for
+        verification. Your order will be processed once payment is confirmed.
       </p>
       <p role="status">
         Awaiting transfer. Payment is confirmed only after our team verifies the credit in our
         account.
       </p>
+      <ReceiptUpload orderId={order.id} />
     </div>
   );
 }

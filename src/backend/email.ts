@@ -35,3 +35,40 @@ export async function sendSignInCode(env: CommerceEnv, email: string, otp: strin
   await response.body?.cancel();
   if (!response.ok) throw new Error("Email delivery failed");
 }
+// Staff notice that payment evidence awaits review. Contains no receipt link or file: staff open
+// the authenticated admin dashboard. Returns a delivery state; it never throws, so a failed
+// notice cannot change an order or payment.
+export async function sendPaymentReviewNotice(
+  env: CommerceEnv,
+  to: string,
+  notice: { reference: string; totalNaira: string },
+): Promise<{ status: "sent" | "failed" | "unconfigured" | "test"; error?: string }> {
+  if (testMode(env)) return { status: "test" };
+  try {
+    validateSender(env);
+  } catch {
+    return { status: "unconfigured" };
+  }
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.EMAIL_FROM,
+        to,
+        subject: `Payment evidence to review: ${notice.reference}`,
+        text: `A customer submitted bank-transfer payment evidence for order ${notice.reference} (total ${notice.totalNaira}).\n\nReview it in the Afnan admin dashboard: ${env.APP_ORIGIN}/admin\n\nConfirm the credit in the Moniepoint account before approving. Do not forward receipts outside the dashboard.`,
+      }),
+    });
+    await response.body?.cancel();
+    return response.ok
+      ? { status: "sent" }
+      : { status: "failed", error: `http_${response.status}` };
+  } catch {
+    return { status: "failed", error: "network" };
+  }
+}
