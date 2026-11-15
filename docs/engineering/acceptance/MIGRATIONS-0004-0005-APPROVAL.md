@@ -2,7 +2,20 @@
 
 Prepared 2026-11-15 for owner review. **Nothing in this document has been executed against the acceptance database.** Applying it requires separate, explicit owner approval. Scope is the acceptance D1 only (`afnan-collection-acceptance`, `11950c2f-14bb-4a31-9add-356f155dea4e`). No production database exists, and no other business's resources are involved.
 
-## 1. Current state (read-only, captured 2026-11-15T05:30:42Z)
+## 0. Refresh — 2026-11-15T06:30:56Z (read-only)
+
+| Check | Result |
+|---|---|
+| Time Travel bookmark (reference) | `00000017-00000000-00005124-5f0279ecc64ed770c0c5935e81491dc5` |
+| Ledger / data / integrity | 0001–0003 · 0 orders, users, products, staff · `quick_check` ok |
+| `wrangler d1 migrations list DB --remote` | Pending: exactly `0004_bank_transfer_reservation.sql`, `0005_payment_receipts.sql` |
+| `0004` checksum | `00a07af1…a9e637`, identical on `main` (merged in #8, `c719bfd`) |
+| `0005` checksum | `11974ae5…b33059`, arrives with #9 (head `3d7fe5b`) |
+| Live Worker | `2ca5f17b-dcd0-46cd-bdd0-e86608b08981`, deployed 06:23:25Z by the hardened #7 workflow from commit `93509da` (message "acceptance 93509da: Protected deployment approval test…"); bindings include `RECEIPTS`; checkout/payments off; Access deny-all + service token |
+
+**New prerequisite: PR #5 (logo fix) must be merged before any deployment from `main`.** The live code (`93509da`) exists only on `fix/logo-path`. `main`, and so #8 and #9, still reference `/brand/IMG_8842(1).png`, which Cloudflare's asset service returns as 404. Deploying from `main` without #5 would break the logo again.
+
+## 1. Earlier state (read-only, captured 2026-11-15T05:30:42Z)
 
 | Check | Result |
 |---|---|
@@ -69,7 +82,7 @@ CREATE INDEX notifications_status_idx ON notifications(status,created_at);
 
 ## 3. Apply procedure (only after approval)
 
-1. **Preconditions:** PR #8 and PR #9 are merged with passing CI. The files on `main` match the checksums above. Wrangler uses the reviewed acceptance config (`.wrangler/acceptance/wrangler.jsonc`, D1 `11950c2f-…`).
+1. **Preconditions:** PR #8 (merged, `c719bfd`), PR #9 and PR #5 are merged with passing CI. The files on `main` match the checksums above. Wrangler uses the reviewed acceptance config (`.wrangler/acceptance/wrangler.jsonc`, D1 `11950c2f-…`).
 2. **Recovery point:** read and record the current bookmark (`GET …/d1/database/11950c2f-…/time_travel/bookmark`) immediately before applying.
 3. **Dry check:** `wrangler d1 migrations list DB --remote --config .wrangler/acceptance/wrangler.jsonc` must list exactly 0004 and 0005 as pending.
 4. **Apply:** `wrangler d1 migrations apply DB --remote --config .wrangler/acceptance/wrangler.jsonc`.
@@ -91,7 +104,7 @@ Order matters: **schema, then code**. The currently deployed code works on the n
 **Rule:** a rollback target is never taken from this document. Immediately before deploying, and again before any rollback, read `GET …/workers/scripts/afnan-collection-storefront/deployments` and record the live version ID, its commit (from the version message) and its bindings. That recorded version is the rollback target.
 
 ### 4.1 Code only (preferred; no data change)
-Roll back the Worker to the version recorded immediately before deployment: `wrangler rollback <recorded-version-id>`, or redeploy its commit through the workflow. **As of 05:33Z that is `54023cdd-7b70-4331-bf78-561a277e5ff3` (commit `93509da`), not `0a2bfc57`.**
+Roll back the Worker to the version recorded immediately before deployment: `wrangler rollback <recorded-version-id>`, or redeploy its commit through the workflow. **As of 06:25Z that is `2ca5f17b-dcd0-46cd-bdd0-e86608b08981` (commit `93509da`).** It superseded `54023cdd` (same commit) at 06:23Z; `0a2bfc57` is two versions back.
 
 **Verified:** the oldest application code involved, commit `2942789`, passes its own integration (85), acceptance (12) and security (77) suites against a database with 0001–0005 applied. Old code is unaffected by the new columns, tables and triggers, so the schema can stay in place. Commit `93509da` differs from `2942789` only in the logo filename and its branding test (PR #5), with no backend or schema code, so the same holds. Re-run this check against the recorded rollback commit if it is anything else.
 
