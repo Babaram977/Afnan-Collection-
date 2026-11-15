@@ -30,8 +30,16 @@ on:
         description: "Why this commit is being deployed (recorded in the run and the Worker version message)"
         required: true
         type: string
+      acceptance_checkout:
+        description: "Acceptance checkout (bank-transfer orders on the protected acceptance Worker only). Payments stay disabled either way."
+        required: true
+        type: choice
+        options:
+          - disabled
+          - enabled
+        default: disabled
 
-run-name: "Acceptance deploy ${{ inputs.commit }} by ${{ github.actor }}"
+run-name: "Acceptance deploy ${{ inputs.commit }} (checkout ${{ inputs.acceptance_checkout }}) by ${{ github.actor }}"
 
 permissions:
   contents: read
@@ -67,6 +75,15 @@ jobs:
             echo "::error::Only the repository owner may deploy to Afnan acceptance (actor: $ACTOR)."
             exit 1
           fi
+
+      - name: Validate acceptance_checkout input
+        env:
+          CHECKOUT: ${{ inputs.acceptance_checkout }}
+        run: |
+          case "$CHECKOUT" in
+            disabled|enabled) echo "- Acceptance checkout: **$CHECKOUT** (payments stay disabled)" >> "$GITHUB_STEP_SUMMARY" ;;
+            *) echo "::error::acceptance_checkout must be 'disabled' or 'enabled'."; exit 1 ;;
+          esac
 
       - name: Validate commit input
         id: commit
@@ -223,6 +240,8 @@ jobs:
 
       - name: Write fixed acceptance configuration
         working-directory: ${{ runner.temp }}/work
+        env:
+          CHECKOUT: ${{ inputs.acceptance_checkout }}
         run: |
           cat > wrangler.jsonc <<'EOF'
           {
@@ -248,6 +267,13 @@ jobs:
             "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-acceptance" }, { "binding": "RECEIPTS", "bucket_name": "afnan-payment-receipts-acceptance" }]
           }
           EOF
+          # The only variable an operator may choose. Strict mapping; PAYMENT_MODE stays pinned.
+          case "$CHECKOUT" in
+            enabled) value=true ;;
+            disabled) value=false ;;
+            *) echo "::error::acceptance_checkout must be 'disabled' or 'enabled'."; exit 1 ;;
+          esac
+          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];if(c.vars.PAYMENT_MODE!=="disabled")process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$value"
           ls -A
 
       - name: Deploy
@@ -258,12 +284,13 @@ jobs:
           WRANGLER_SEND_METRICS: "false"
           COMMIT: ${{ needs.build.outputs.commit }}
           REASON: ${{ inputs.reason }}
+          CHECKOUT: ${{ inputs.acceptance_checkout }}
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::error::CLOUDFLARE_API_TOKEN is not set on the afnan-acceptance environment."
             exit 1
           fi
-          msg="acceptance ${COMMIT:0:7}: ${REASON}"
+          msg="acceptance ${COMMIT:0:7} checkout=${CHECKOUT}: ${REASON}"
           "$RUNNER_TEMP/tool/node_modules/.bin/wrangler" deploy --config wrangler.jsonc \
             --message "${msg:0:100}" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
           version=$(grep -oE 'Current Version ID: [0-9a-f-]{36}' "$RUNNER_TEMP/deploy.log" | awk '{print $4}')
@@ -273,6 +300,7 @@ jobs:
             echo "- Worker: \`afnan-collection-storefront\` (acceptance, Access-protected workers.dev only)"
             echo "- Commit: \`$COMMIT\`"
             echo "- Version: \`$version\`"
+            echo "- Acceptance checkout: $CHECKOUT ($(grep -o '"CHECKOUT_ENABLED": "[a-z]*"' wrangler.jsonc)); payments: disabled"
             echo "- Reason: $REASON"
             echo "- Rollback: \`wrangler rollback <previous-version-id>\`"
           } >> "$GITHUB_STEP_SUMMARY"
