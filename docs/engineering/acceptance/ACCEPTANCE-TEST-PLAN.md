@@ -151,3 +151,63 @@ Delete the Allow policy and set `allowed_idps` back to `[]`. That returns the ap
 4. `EMAIL_SENDER_VERIFIED=true` needs a workflow change, a PR like #10, because the variables are pinned in the workflow.
 5. First real email: one sign-in code to the owner only. Sales notices to `sales@` start only after you confirm that mailbox.
 6. **Rollback:** set `EMAIL_SENDER_VERIFIED=false` by redeploying, and revoke the Resend key.
+
+
+---
+
+# Stage B — verified policy evaluation, corrected cutover and mailbox finding (2026-11-15T15:10Z, read-only)
+
+## Cloudflare Access evaluation (official documentation)
+From [Access policies](https://developers.cloudflare.com/cloudflare-one/access-controls/policies/) and the [Policies FAQ](https://developers.cloudflare.com/cloudflare-one/faq/policies-faq/):
+1. **Bypass and Service Auth** policies are evaluated first, top to bottom.
+2. Then **Allow and Block** policies, top to bottom. **The first match stops evaluation.**
+3. Access is **deny by default**; a request must match an Allow policy.
+
+This matches the observed behaviour: the service token reaches the app although deny-everyone sits at precedence 1, because Service Auth is evaluated first. It also means **an owner Allow placed below deny-everyone would never be reached.** The cutover must put the owner Allow **above** deny-everyone.
+
+## Current policies on `00b0cf57` (read-only)
+| Precedence | Policy | Decision |
+|---|---|---|
+| 1 | Deny all pending acceptance credential approval (`4ef44160`) | deny, everyone |
+| 2 | Afnan acceptance automation only (`d4c4d7c0`) | non_identity, service token `8ead1dc6` |
+
+## Minimal-diff cutover (proposal; separate approval)
+1. Move deny-everyone from precedence 1 to **3** (`PUT …/policies/4ef44160`, precedence only).
+2. Create the owner Allow at precedence **1**: `include: email == admin@afnancollectionkn.com`, `require: login_method == 382280d1…` (the organisation's one-time-PIN method), session 4 h.
+3. Set the application's `allowed_idps` to `["382280d1…"]`, with auto-redirect on.
+
+Resulting order: Service Auth (evaluated first) → **Allow owner (1)** → **deny everyone (3)**. The owner is allowed explicitly; every other identity matches deny-everyone; the service token is unchanged.
+
+**No exposure window:** between steps 1 and 2 there is no Allow policy, and Access denies by default.
+
+**Rollback (reverse order, read back after each):**
+1. Delete the Allow.
+2. Set deny-everyone back to precedence 1.
+3. Set `allowed_idps` back to `[]`.
+
+Each is one API call.
+
+**Verification after cutover:**
+- no credentials → Access login page;
+- service token → 200;
+- a non-owner email completing a PIN login → refused (only with approval, because it sends a PIN email);
+- the owner → reaches the app's own sign-in, which still needs the app email code and WebAuthn.
+
+## Mailbox ownership: **not ready**
+Read-only DNS for `afnancollectionkn.com` (3 records in total, all created 2026-11-14 14:28Z):
+
+| Type | Name | Points to | Purpose |
+|---|---|---|---|
+| CNAME | `send.afnancollectionkn.com` | `send.forge.rmta.net` | Resend sending |
+| CNAME | `rsend.afnancollectionkn.com` | `rsend-euw1.forge.rmta.net` | Resend return path |
+| TXT | `resend._domainkey.afnancollectionkn.com` | DKIM key | Resend DKIM |
+
+- **There is no MX record, so the domain cannot receive email.** `admin@afnancollectionkn.com` and `sales@afnancollectionkn.com` are not deliverable mailboxes today. A Cloudflare Access PIN or an app sign-in code sent there would not arrive.
+- Sending-side Resend records are present. Whether Resend shows the domain as verified must be checked in the owner's Resend account; no API key is configured on the Worker.
+
+**Owner decision needed before Stage B can proceed** (each is a DNS/mail change requiring approval):
+- (a) **Cloudflare Email Routing:** forward `admin@` and `sales@` to a mailbox you already control. This adds Cloudflare MX and SPF records to the zone and is the smallest change.
+- (b) A hosted mailbox provider (for example Zoho Mail or Google Workspace) with its own MX records.
+- (c) Use a different, already working owner address for Access and admin sign-in. That changes the documented owner identity and needs your explicit decision.
+
+Until one is done and you confirm receipt of a test message, Stage B (access cutover, owner provisioning, sales notices) stays blocked.
