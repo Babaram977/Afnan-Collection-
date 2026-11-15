@@ -86,12 +86,24 @@ Order matters: **schema, then code**. The currently deployed code works on the n
 
 ## 4. Rollback (three tiers; least destructive first)
 
-### 4.1 Code only (preferred; no data change)
-Roll back the Worker to the previous version: `wrangler rollback <previous-version-id>`, or redeploy the previous commit through the workflow. Today that is version `0a2bfc57-2cdb-48ec-887b-552d53db6bf3` (commit `2942789`).
+**Live deployment check (2026-11-15T05:33Z, read-only):** the Worker is serving version **`54023cdd-7b70-4331-bf78-561a277e5ff3`** at 100% (deployment `0784161d-c875-4f8d-99ab-b7f5d89a22c7`, created 01:25:26Z, message "acceptance 93509da: logo-path fix"). That is commit `93509da` (PR #5), deployed through the GitHub workflow. The earlier version `0a2bfc57` (commit `2942789`) is no longer live. Its bindings were read back: acceptance variables, checkout and payments off, `AUTH_SECRET` (secret_text), D1 `11950c2f-…`, MEDIA, no RECEIPTS yet. Hosted `/brand/afnan-collection-logo.png` returns 200 with SHA-256 `d40111ef…cdc1`.
 
-**Verified:** commit `2942789`'s own integration (85), acceptance (12) and security (77) suites pass against a database with 0001–0005 applied. Old code is unaffected by the new columns, tables and triggers, so the schema can stay in place.
+**Rule:** a rollback target is never taken from this document. Immediately before deploying, and again before any rollback, read `GET …/workers/scripts/afnan-collection-storefront/deployments` and record the live version ID, its commit (from the version message) and its bindings. That recorded version is the rollback target.
+
+### 4.1 Code only (preferred; no data change)
+Roll back the Worker to the version recorded immediately before deployment: `wrangler rollback <recorded-version-id>`, or redeploy its commit through the workflow. **As of 05:33Z that is `54023cdd-7b70-4331-bf78-561a277e5ff3` (commit `93509da`), not `0a2bfc57`.**
+
+**Verified:** the oldest application code involved, commit `2942789`, passes its own integration (85), acceptance (12) and security (77) suites against a database with 0001–0005 applied. Old code is unaffected by the new columns, tables and triggers, so the schema can stay in place. Commit `93509da` differs from `2942789` only in the logo filename and its branding test (PR #5), with no backend or schema code, so the same holds. Re-run this check against the recorded rollback commit if it is anything else.
 
 ### 4.2 Schema reversal (only if the schema itself must go; separate approval)
+
+> **Destructive to payment records. Never automatic.** Once any payment testing has begun, these scripts delete receipt records, payment decisions (approvals and late reviews), staff notifications and customer-facing order references. Orders are kept, but their payment history is not. Before any reversal:
+> 1. Use tier 4.1 first; it loses nothing.
+> 2. Obtain explicit owner approval naming this step.
+> 3. Export the affected tables (`wrangler d1 export afnan-collection-acceptance --remote --table payment_receipts --table bank_transfer_approvals --table notifications --table order_reference_counters`, plus the `orders` reference column), store the export encrypted outside Git, and verify it.
+> 4. Record a fresh Time Travel bookmark.
+>
+> No script, workflow or runbook may run 4.2 as an automatic follow-up to a failed deployment.
 Run `docs/engineering/acceptance/rollback/0005_payment_receipts.down.sql`, then `0004_bank_transfer_reservation.down.sql`, after 4.1. This deletes receipt metadata, notifications, payment decisions and order references; orders themselves are kept. **Receipt files in the private R2 bucket are not deleted by the SQL**; remove them separately if required.
 
 ```sql
