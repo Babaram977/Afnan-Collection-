@@ -58,7 +58,10 @@ function Checkout() {
         {order ? (
           <section className="space-y-4 rounded-2xl bg-card p-6 shadow-soft">
             <h2 className="text-2xl font-semibold">Order prepared</h2>
-            <p>Reference: {order.id}</p>
+            <p>
+              Order reference:{" "}
+              <strong className="tracking-wide">{order.reference ?? order.id}</strong>
+            </p>
             <p>Total: {formatNaira(order.total_kobo)}</p>
             {order.payment_method === "bank_transfer" ? (
               <BankTransferInstructions order={order} />
@@ -269,19 +272,25 @@ function Checkout() {
         )}
         <aside className="h-fit rounded-2xl bg-card p-6 shadow-soft">
           <h2 className="text-xl font-semibold">Summary</h2>
-          {lines.map((l) => (
-            <p key={l.variantId} className="mt-2 text-sm">
-              {l.qty} × {l.name} — {formatNaira(l.qty * l.priceKobo)}
-            </p>
-          ))}
-          <p className="mt-4">Subtotal: {formatNaira(subtotalKobo)}</p>
-          <p>Delivery: {zone ? formatNaira(zone.fee_kobo) : "Choose an area"}</p>
-          <p className="mt-2 font-bold">
-            Estimated total: {formatNaira(subtotalKobo + (zone?.fee_kobo ?? 0))}
-          </p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Final total is calculated on the server.
-          </p>
+          {order ? (
+            <OrderSummary order={order} />
+          ) : (
+            <>
+              {lines.map((l) => (
+                <p key={l.variantId} className="mt-2 text-sm">
+                  {l.qty} × {l.name} — {formatNaira(l.qty * l.priceKobo)}
+                </p>
+              ))}
+              <p className="mt-4">Subtotal: {formatNaira(subtotalKobo)}</p>
+              <p>Delivery: {zone ? formatNaira(zone.fee_kobo) : "Choose an area"}</p>
+              <p className="mt-2 font-bold">
+                Estimated total: {formatNaira(subtotalKobo + (zone?.fee_kobo ?? 0))}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Final total is calculated on the server.
+              </p>
+            </>
+          )}
         </aside>
         {error && (
           <p role="alert" className="text-destructive">
@@ -345,5 +354,24 @@ function BankTransferInstructions({ order }: { order: Order }) {
         account.
       </p>
     </div>
+  );
+}
+
+// After the order is prepared the cart is cleared, so the summary must come from the order the
+// server saved (its item price snapshot, delivery fee and total), never from the empty cart.
+function OrderSummary({ order }: { order: Order }) {
+  const delivery = order.delivery_kobo ?? 0;
+  return (
+    <>
+      {(order.items ?? []).map((i) => (
+        <p key={i.variant_id} className="mt-2 text-sm">
+          {i.qty} × {i.name} — {formatNaira(i.qty * i.price_kobo)}
+        </p>
+      ))}
+      <p className="mt-4">Subtotal: {formatNaira(order.total_kobo - delivery)}</p>
+      <p>Delivery: {formatNaira(delivery)}</p>
+      <p className="mt-2 font-bold">Order total: {formatNaira(order.total_kobo)}</p>
+      <p className="mt-2 text-xs text-muted-foreground">Saved with your order.</p>
+    </>
   );
 }

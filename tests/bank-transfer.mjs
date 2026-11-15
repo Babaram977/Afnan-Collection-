@@ -59,6 +59,69 @@ try {
   );
   check(createdDetail.stockReserved?.[0]?.qty === 2, "Reserved quantities audited");
 
+  // Short customer-facing reference + saved snapshot in the creation response.
+  const lagosDay = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .format(new Date())
+    .replaceAll("-", "");
+  check(
+    new RegExp(`^AC-${lagosDay}-\\d{4}$`).test(order.reference),
+    `Reference AC-YYYYMMDD-NNNN in Lagos date (got ${order.reference})`,
+  );
+  check(order.items?.length === 1 && order.items[0].qty === 2, "Response carries item snapshot");
+  check(
+    order.total_kobo === order.delivery_kobo + order.items[0].price_kobo * 2,
+    "Snapshot total = items + delivery",
+  );
+  const retry = await guest.request("/orders", "POST", {
+    ...makeOrder(2),
+    idempotencyKey: undefined,
+  });
+  check(retry.status === 400, "Malformed retry rejected");
+  // Concurrent checkouts get distinct, sequential references; a failed checkout uses none.
+  await db.prepare("UPDATE variants SET stock=stock+6 WHERE id=?").bind(variantId).run();
+  const burst = await Promise.all(
+    Array.from({ length: 6 }, () => new Client(mf)).map(async (c) => {
+      await c.request("/me");
+      return c.request("/orders", "POST", makeOrder(1));
+    }),
+  );
+  const refs = burst.map((r) => r.body.reference);
+  check(
+    burst.every((r) => r.status === 201),
+    "Concurrent checkouts succeed",
+  );
+  check(new Set(refs).size === refs.length, `Concurrent references unique: ${refs}`);
+  const seq = refs.map((r) => Number(r.slice(-4))).sort((a, b) => a - b);
+  check(
+    seq.every((n, i) => i === 0 || n === seq[i - 1] + 1),
+    `Concurrent references sequential: ${seq}`,
+  );
+  const counterBefore = (
+    await db.prepare("SELECT last FROM order_reference_counters WHERE day=?").bind(lagosDay).first()
+  ).last;
+  const tooMany = await guest.request("/orders", "POST", makeOrder(99));
+  check(tooMany.status === 409, "Out-of-stock checkout refused");
+  check(
+    (
+      await db
+        .prepare("SELECT last FROM order_reference_counters WHERE day=?")
+        .bind(lagosDay)
+        .first()
+    ).last === counterBefore,
+    "Failed checkout does not consume a reference number",
+  );
+  // Release the burst orders (each belongs to a different guest session).
+  await db
+    .prepare("UPDATE orders SET status='cancelled' WHERE status='pending' AND id<>?")
+    .bind(order.id)
+    .run();
+  await db.prepare("UPDATE variants SET stock=8 WHERE id=?").bind(variantId).run();
+
   // 2. The customer's order view carries the deadline.
   const mine = await guest.request(`/orders/${order.id}`);
   check(mine.body.expires_at === order.expires_at, "Customer order shows payment deadline");
@@ -310,6 +373,14 @@ try {
         `Bank details shown at ${width}`,
       );
       check(!/30 minutes/.test(main), `No Paystack 30-minute copy at ${width}`);
+      check(/Order reference: AC-\d{8}-\d{4}/.test(main), `Short reference shown at ${width}`);
+      const summary = await page.locator("aside").innerText();
+      const confirmTotal = main.match(/Total: (₦[\d,]+)/)?.[1];
+      check(
+        Boolean(confirmTotal) && summary.includes(`Order total: ${confirmTotal}`),
+        `Summary total matches order total at ${width}: ${confirmTotal} / ${summary.replace(/\n/g, " | ")}`,
+      );
+      check(!/Subtotal: ₦0\b/.test(summary), `Summary not built from empty cart at ${width}`);
       check(
         (await page.getByRole("button", { name: "Continue to payment" }).count()) === 0,
         `No online payment button at ${width}`,
@@ -334,6 +405,21 @@ try {
           path: `${process.env.BANK_TRANSFER_SCREENSHOTS}/bank-transfer-${width}.png`,
           fullPage: true,
         });
+      await page.goto(`${ORIGIN}/account`);
+      await page
+        .getByText(/^AC-\d{8}-\d{4}$/)
+        .first()
+        .waitFor({ timeout: 10000 });
+      const account = await page.locator("#main").innerText();
+      check(
+        /Awaiting bank transfer until/.test(account),
+        `Account shows transfer deadline at ${width}`,
+      );
+      check(
+        (await page.getByRole("button", { name: "Continue to payment" }).count()) === 0,
+        `Account offers no online payment for bank transfer at ${width}`,
+      );
+      await page.goBack();
       await context.close();
     }
   } finally {

@@ -124,11 +124,21 @@ function Account() {
                       }
                     }}
                   >
-                    {o.id}
+                    {o.reference ?? o.id}
                   </button>
                   <span>{o.status}</span>
                   <span>{formatNaira(o.total_kobo)}</span>
-                  {o.status === "pending" && (
+                  {o.status === "pending" && o.payment_method === "bank_transfer" && (
+                    <span className="text-sm">
+                      Awaiting bank transfer until{" "}
+                      {new Date(o.expires_at * 1000).toLocaleString("en-NG", {
+                        timeZone: "Africa/Lagos",
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </span>
+                  )}
+                  {o.status === "pending" && o.payment_method !== "bank_transfer" && (
                     <Button
                       variant="outline"
                       onClick={async () => {
@@ -163,7 +173,7 @@ function Account() {
           )}
           {detail && (
             <div className="mt-4 rounded-xl bg-secondary p-4">
-              <h3 className="font-semibold">Order {detail.id}</h3>
+              <h3 className="font-semibold">Order {detail.reference ?? detail.id}</h3>
               <p>Status: {detail.status}</p>
               {detail.items.map((i, n) => (
                 <p key={n}>

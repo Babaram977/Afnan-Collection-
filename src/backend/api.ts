@@ -127,6 +127,23 @@ async function audit(
 // Owner-approved payment windows (seconds). Bank transfer: 24 hours. Paystack (disabled): 30 minutes.
 export const PAYMENT_WINDOW = { bank_transfer: 24 * 60 * 60, paystack: 30 * 60 } as const;
 const nowSeconds = () => Math.floor(Date.now() / 1000);
+// Africa/Lagos calendar day as YYYYMMDD, for the customer-facing order reference.
+const lagosDay = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Africa/Lagos",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const referenceDay = () => lagosDay.format(new Date()).replaceAll("-", "");
+// The order as saved, with its item price snapshot, for the customer's confirmation.
+async function orderWithItems(env: CommerceEnv, order: OrderRow) {
+  const items = await env.DB.prepare(
+    "SELECT variant_id,name,sku,price_kobo,qty FROM order_items WHERE order_id=?",
+  )
+    .bind(order.id)
+    .all();
+  return { ...order, items: items.results };
+}
 async function limited(request: Request, env: CommerceEnv, route: string, max: number) {
   const window = Math.floor(Date.now() / 60000);
   const key = await hash(
@@ -200,6 +217,8 @@ interface OrderRow {
   request_hash: string;
   expires_at: number;
   payment_method: "paystack" | "bank_transfer";
+  reference: string | null;
+  delivery_kobo: number;
   customer: string;
   address: string;
 }
@@ -230,7 +249,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
   if (existing) {
     if (existing.request_hash !== requestHash)
       fail(409, "Idempotency key already used for another request");
-    return json(existing);
+    return json(await orderWithItems(env, existing));
   }
   const zone = await env.DB.prepare(
     "SELECT * FROM zones WHERE id=? AND active=1 AND lower(state)=lower(?)",
@@ -242,9 +261,15 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
   // Paystack is used only when it is explicitly enabled; otherwise orders are manual bank transfers.
   const paymentMethod = paymentEnabled(env) ? "paystack" : "bank_transfer";
   const expiresAt = nowSeconds() + PAYMENT_WINDOW[paymentMethod];
+  const day = referenceDay();
+  // The counter increment and the order insert share one transaction: a failed checkout
+  // (stock or price changed) rolls back and does not consume a reference number.
   const statements = [
     env.DB.prepare(
-      "INSERT INTO orders(id,owner,user_id,idempotency_key,request_hash,email,customer,address,zone_id,delivery_kobo,payment_method,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO order_reference_counters(day,last) VALUES(?,1) ON CONFLICT(day) DO UPDATE SET last=last+1",
+    ).bind(day),
+    env.DB.prepare(
+      "INSERT INTO orders(id,owner,user_id,idempotency_key,request_hash,email,customer,address,zone_id,delivery_kobo,payment_method,expires_at,reference) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,(SELECT 'AC-'||day||'-'||printf('%04d',last) FROM order_reference_counters WHERE day=?))",
     ).bind(
       id,
       a.owner,
@@ -258,6 +283,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       zone.fee_kobo,
       paymentMethod,
       expiresAt,
+      day,
     ),
   ];
   for (const line of input.lines) {
@@ -304,10 +330,11 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
     const replay = await env.DB.prepare("SELECT * FROM orders WHERE owner=? AND idempotency_key=?")
       .bind(a.owner, input.idempotencyKey)
       .first<OrderRow>();
-    if (replay && replay.request_hash === requestHash) return json(replay);
+    if (replay && replay.request_hash === requestHash)
+      return json(await orderWithItems(env, replay));
     return fail(409, "Stock changed or this request conflicts. Refresh your cart.");
   }
-  return json(await ownOrder(env, a, id), 201);
+  return json(await orderWithItems(env, await ownOrder(env, a, id)), 201);
 }
 async function reconcile(env: CommerceEnv, reference: string) {
   await expire(env);
@@ -512,7 +539,7 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       return json(
         (
           await env.DB.prepare(
-            "SELECT id,status,total_kobo,created_at,expires_at,payment_method FROM orders WHERE owner=? ORDER BY created_at DESC LIMIT 100",
+            "SELECT id,reference,status,total_kobo,created_at,expires_at,payment_method FROM orders WHERE owner=? ORDER BY created_at DESC LIMIT 100",
           )
             .bind(a.owner)
             .all()
