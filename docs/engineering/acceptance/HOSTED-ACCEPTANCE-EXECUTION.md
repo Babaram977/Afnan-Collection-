@@ -141,3 +141,9 @@ Acceptance config (paths relative to `.wrangler/acceptance/`). `workers_dev` is 
 The existing `AUTH_SECRET` secret is kept across `wrangler deploy`; do not pass a secrets file. Do not run migrations. Do not change Access: the service-token policy and deny-everyone stay as they are. Rollback: `npx wrangler rollback 0a2bfc57-2cdb-48ec-887b-552d53db6bf3 --config .wrangler/acceptance/wrangler.jsonc`.
 
 After deploying, the operator session re-runs the hosted checks: logo 200 with the matching SHA-256, desktop and mobile rendering, and the full hosted suite.
+
+## Deployment pipeline — 2026-11-15 (owner-approved Option 2)
+
+- Draft PR #6 (`ci/acceptance-deploy`, commit `51c492ccc7e913b9d59323a66cae4b54ef7e1f33`) adds a manual, owner-only `workflow_dispatch` deploy to the acceptance Worker, with secret-free build/test, an environment-gated deploy job, pinned Wrangler and actions, and a fixed target and bindings. Setup steps: `docs/engineering/ACCEPTANCE-DEPLOY-WORKFLOW.md` on that branch.
+- The logo fix (#5, `93509da`) is **not yet deployed**; version `0a2bfc57` remains live. It is waiting on owner setup: merge #6, create environment `afnan-acceptance` with yourself as required reviewer, create a dedicated Workers Scripts:Edit token, add it as the environment secret, then dispatch with `93509da0f629f112276c26e601bd317b1b6bd633`.
+- After that deploy, the operator session verifies the hosted logo returns 200 with SHA-256 `d40111ef…cdc1`, checks desktop and mobile rendering, and re-runs the hosted suite.
