@@ -110,3 +110,9 @@ export const businessSettingsInput = z.object({
       "Use a valid TikTok profile URL",
     ),
 });
+export const bankTransferApprovalInput = z.object({
+  // The exact amount staff confirmed as credited in the receiving account, in kobo.
+  amountKobo: money,
+  // The bank's transaction reference for the credit, for reconciliation.
+  bankReference: z.string().trim().min(1).max(120),
+});

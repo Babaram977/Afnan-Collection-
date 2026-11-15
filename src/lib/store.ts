@@ -60,4 +60,9 @@ export interface Order {
   total_kobo: number;
   created_at: number;
   expires_at: number;
+  payment_method?: "paystack" | "bank_transfer";
+  /** Short customer-facing reference (AC-YYYYMMDD-NNNN); the UUID `id` stays internal. */
+  reference?: string | null;
+  delivery_kobo?: number;
+  items?: { variant_id: string; name: string; sku: string; price_kobo: number; qty: number }[];
 }
