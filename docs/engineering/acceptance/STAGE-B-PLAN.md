@@ -420,3 +420,13 @@ The exact DNS records will then be taken from that provider's own setup page and
 | L9  | Public launch: narrow Access to `afnancollectionkn.com/admin*` and `/api/admin*` (this also covers `/api/admin-security/*`), so the storefront is public, checkout enabled; live verification on phone and desktop; rollback = re-widen Access to the whole host | Operator                         | **Final launch authorization** |
 
 **Customer accounts:** production keeps sign-up disabled (`disableSignUp: !testMode(env)`, `src/backend/auth.ts`). Customers check out as guests, and the order reference and receipt upload work without an account. Opening customer registration would be a separate owner decision and code change.
+
+## Owner Access cutover: executed 2026-11-16 (acceptance app `00b0cf57`)
+
+- `RESEND_API_KEY` was added by the owner in the dashboard, producing acceptance version `7f93d8e5` (bindings otherwise unchanged).
+- Steps done:
+  1. Deny-everyone `4ef44160` moved to precedence 3.
+  2. Owner Allow `e5f39644` created (`admin@afnancollectionkn.com`, requires PIN login `382280d1`, 4 h session) at precedence 2. Cloudflare renumbered Service Auth `d4c4d7c0` to 1.
+  3. `allowed_idps` set to `["382280d1…"]` and `auto_redirect_to_identity: true`; read-back confirmed only these two fields changed.
+- **Finding:** with the deny-everyone policy present, anonymous browser requests return 401 instead of the PIN login. Access matches `everyone` Block before identity is known, so the owner cannot start sign-in. Heroine's app (same IdP) has no Block policy and redirects normally. Access denies by default, so removing `4ef44160` would expose nothing; **this deletion is awaiting explicit owner approval** (a deviation from the plan, which kept the policy).
+- Current state: everyone, including the owner, is denied. Rollback: delete `e5f39644` → `4ef44160` back to 1 → `allowed_idps []`, `auto_redirect false`.
