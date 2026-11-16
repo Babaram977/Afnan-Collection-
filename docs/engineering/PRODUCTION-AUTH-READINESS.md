@@ -10,7 +10,7 @@ Implementation branch: feat/isolated-admin-mfa, based on approved cef6e6e. This 
 | Authentication | Local email + signed WebAuthn flow tested. Real owner/mailbox verification BLOCKED. |
 | MFA/recovery | Local replay/expiry/UV/signature/recovery tests and browser virtual-device enrollment. Real devices, backup key and supervised recovery BLOCKED. |
 | Resend | Server integration and mocked failure tests implemented. Actual account, domain, key and authorized delivery BLOCKED. |
-| D1 | Additive 0003 migration, local tests and ledger replay; remote migrations/recovery point/restore rehearsal BLOCKED. |
+| D1 | All three migrations passed against the restored encrypted empty acceptance export; integrity and checksum checks passed. Durable backup/key custody/retention and remote migration authorization remain pending. |
 | R2 | Dedicated bucket public access remains disabled. Local private upload tests; hosted authorized/denied operations BLOCKED. |
 | Secrets | AUTH_SECRET and restricted Resend key not installed. Secure production configuration BLOCKED. |
 | Domain | afnancollectionkn.com is proposed; exact public origin/cutover approval and TLS/routing evidence BLOCKED. |
@@ -48,3 +48,7 @@ Read-only refresh: no application deployment, workers.dev/previews false, D1 zer
 First release: no prior Worker version exists. If checks fail, keep or restore the origin to disabled under incident authorization, preserve sanitized evidence and stop. Do not enable a placeholder or remove security to recover. Subsequent releases: record the prior deployment/version ID and reviewed rollback command before publishing; use `wrangler rollback <previous-version-id> --config <reviewed-config>` only with incident authorization. Version rollback does not restore D1/R2. Never roll back to pre-MFA code after enrolling administrators; disabling the origin is safer than removing mandatory MFA.
 
 0003 is additive and blocks existing staff until enrollment. Leave the schema in place for a forward fix; do not drop MFA tables or restore stale sessions to undo a release. Restore data only from a verified protected recovery point with separate approval and an isolated rehearsal, then invalidate sessions/epochs and reverify security. Preserve media objects unless a separately approved operation requires removal. Never modify Heroine, DrippleX, Landonova or Lovable/DNS routing for this rollback.
+
+### Subsequent controlled recovery validation
+
+Owner-approved acceptance export completed to restricted encrypted storage outside Git. New isolated in-memory SQLite restoration, integrity/foreign-key checks, SHA-256/authenticated decryption and all three migration checks passed. Source application schema/data remain unchanged; only Cloudflare recovery bookmarks advanced during export. This resolves the previously unapproved export transfer and local restoration portion, not remote production migrations or durable disaster-recovery custody. No secrets/email/hostname/deployment actions were authorized or performed.
