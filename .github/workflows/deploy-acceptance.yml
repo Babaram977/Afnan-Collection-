@@ -38,8 +38,16 @@ on:
           - disabled
           - enabled
         default: disabled
+      email_sender:
+        description: "Mark the Resend sender as verified (requires RESEND_API_KEY Worker secret). Admin sign-in codes need this."
+        required: true
+        type: choice
+        options:
+          - unverified
+          - verified
+        default: unverified
 
-run-name: "Acceptance deploy ${{ inputs.commit }} (checkout ${{ inputs.acceptance_checkout }}) by ${{ github.actor }}"
+run-name: "Acceptance deploy ${{ inputs.commit }} (checkout ${{ inputs.acceptance_checkout }}, sender ${{ inputs.email_sender }}) by ${{ github.actor }}"
 
 permissions:
   contents: read
@@ -84,6 +92,7 @@ jobs:
             disabled|enabled) echo "- Acceptance checkout: **$CHECKOUT** (payments stay disabled)" >> "$GITHUB_STEP_SUMMARY" ;;
             *) echo "::error::acceptance_checkout must be 'disabled' or 'enabled'."; exit 1 ;;
           esac
+          case "${{ inputs.email_sender }}" in unverified|verified) ;; *) echo "::error::email_sender must be 'unverified' or 'verified'."; exit 1 ;; esac
 
       - name: Validate commit input
         id: commit
@@ -242,6 +251,7 @@ jobs:
         working-directory: ${{ runner.temp }}/work
         env:
           CHECKOUT: ${{ inputs.acceptance_checkout }}
+          SENDER: ${{ inputs.email_sender }}
         run: |
           cat > wrangler.jsonc <<'EOF'
           {
@@ -261,6 +271,7 @@ jobs:
               "APP_ORIGIN": "https://afnan-collection-storefront.danwakili.workers.dev",
               "CHECKOUT_ENABLED": "false",
               "PAYMENT_MODE": "disabled",
+              "EMAIL_FROM": "orders@afnancollectionkn.com",
               "EMAIL_SENDER_VERIFIED": "false"
             },
             "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-acceptance", "database_id": "11950c2f-14bb-4a31-9add-356f155dea4e" }],
@@ -273,7 +284,8 @@ jobs:
             disabled) value=false ;;
             *) echo "::error::acceptance_checkout must be 'disabled' or 'enabled'."; exit 1 ;;
           esac
-          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];if(c.vars.PAYMENT_MODE!=="disabled")process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$value"
+          case "$SENDER" in verified) sv=true ;; unverified) sv=false ;; *) exit 1 ;; esac
+          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];if(c.vars.PAYMENT_MODE!=="disabled")process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$value" "$sv"
           ls -A
 
       - name: Deploy
