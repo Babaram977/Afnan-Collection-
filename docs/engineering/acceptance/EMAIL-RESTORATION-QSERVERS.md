@@ -72,3 +72,53 @@ cPanel → Email → **Forwarders** → Add Forwarder:
 2. **Approval of the exact filled-in records** before anything is added in Cloudflare.
 3. The owner confirms cPanel Email Routing is **Local Mail Exchanger**.
 4. After verification passes, approval to create the two cPanel forwarders (owner action in cPanel).
+
+---
+
+## Owner-supplied QServers cPanel records (Zone Editor screenshots, 2026-11-16)
+
+| Name | Type | Value | TTL |
+|---|---|---|---|
+| `afnancollectionkn.com.` | A | `192.154.254.25` | 14400 |
+| `afnancollectionkn.com.` | MX | priority `0`, destination `afnancollectionkn.com` | 14400 |
+| `afnancollectionkn.com.` | TXT | `v=spf1 +a +mx +ip4:192.154.254.25 ~all` | 14400 |
+| *(name not visible; expected `_dmarc.afnancollectionkn.com.`)* | TXT | `v=DMARC1; p=none;` | — |
+| `default._domainkey.afnancollectionkn.com.` | TXT | `v=DKIM1; k=rsa; p=MIIBIjAN…IDAQAB;` (screenshot truncated at the right edge; **full text required**) | 14400 |
+| `ftp.afnancollectionkn.com.` | A | (value not shown) | 14400 |
+| `_carddav._tcp.afnancollectionkn.com.` | SRV/TXT | (cPanel calendar/contacts discovery) | 14400 |
+
+**cPanel zone's own nameservers:** `ns29.qservers.net`, `ns30.qservers.net`, `ns29.qserverscloud.com`, `ns30.qserverscloud.com`. **cPanel server:** `14.qservers.net`.
+
+**Observation:** before 2026-11-13 the registrar delegated to `ns1/ns2.qservers.net` (Cloudflare's `original_name_servers`), not the `ns29/ns30` servers this zone lists. If `ns1/ns2` did not carry the zone, that explains why Cloudflare's import scan found nothing, and outside mail may have been failing before 13 Nov as well. The restoration below fixes both cases.
+
+## Decision: MX target
+
+- **Option 1, original exactly:** root A `192.154.254.25` (DNS-only) + MX → root.
+  - It would make the root domain serve whatever QServers hosts.
+  - It conflicts with a future Cloudflare-hosted website: a proxied root cannot be an MX target, so mail breaks unless the MX and SPF change at the same moment.
+- **Option 2 (recommended), dedicated mail hostname:** A `mail` `192.154.254.25` (DNS-only) + MX → `mail.afnancollectionkn.com`.
+  - QServers accepts mail for its local domains regardless of the MX hostname, provided cPanel Email Routing = Local.
+  - The root stays free for the website decision.
+  - SPF is unchanged: `ip4:` covers the server and `+mx` resolves through `mail`; `+a` finds no root address, which is a single tolerated void lookup.
+- **Condition for Option 2:** the iPhone's incoming and outgoing server must **not** be the bare `afnancollectionkn.com`. If it is, either keep Option 1 temporarily, or change the iPhone server to `mail.afnancollectionkn.com` (owner decision).
+
+## Final minimal restoration (Option 2; for approval)
+
+| # | Type | Name (Cloudflare) | Value | Proxy | TTL |
+|---|---|---|---|---|---|
+| 1 | A | `mail` | `192.154.254.25` | **DNS only** | Auto |
+| 2 | MX | `@` | `mail.afnancollectionkn.com`, priority `0` | n/a | Auto |
+| 3 | TXT | `@` | `v=spf1 +a +mx +ip4:192.154.254.25 ~all` | n/a | Auto |
+| 4 | TXT | `default._domainkey` | `v=DKIM1; k=rsa; p=<full key from cPanel>` | n/a | Auto |
+| 5 | TXT | `_dmarc` | `v=DMARC1; p=none;` | n/a | Auto |
+
+- **Stages:** records **1–2 restore inbound delivery** (urgent) and can be applied first. Records **3–5** cover outgoing authentication and DMARC.
+- **Not restored:** root A (website decision), `ftp`, the cPanel service names (`cpanel`, `webmail`, `autodiscover`, `autoconfig`) and the CardDAV/CalDAV entries. None is needed for mail delivery or IMAP/SMTP; each can be added later on request, DNS-only.
+- **No duplicates:** the zone currently has no root SPF, no `_dmarc` and no `default._domainkey`. Resend's `send`, `rsend` and `resend._domainkey` are untouched, and their names do not collide.
+
+## Still required before approval
+1. **The full DKIM value as text**, from Zone Editor → `default._domainkey` → Edit (copy the Record field), or from Email Deliverability.
+2. **Confirm the DMARC record's name** (expected `_dmarc`).
+3. **iPhone server names** (incoming and outgoing) for the support account.
+4. **cPanel Email → Email Routing**: confirm "Local Mail Exchanger".
+5. Optional: the **CNAME** tab of Zone Editor, to see whether cPanel had a `mail` CNAME, and cPanel → Email Accounts → Connect Devices for `support@` (the recommended client server names).
