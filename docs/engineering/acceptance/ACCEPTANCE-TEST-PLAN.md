@@ -211,3 +211,57 @@ Read-only DNS for `afnancollectionkn.com` (3 records in total, all created 2026-
 - (c) Use a different, already working owner address for Access and admin sign-in. That changes the documented owner identity and needs your explicit decision.
 
 Until one is done and you confirm receipt of a test message, Stage B (access cutover, owner provisioning, sales notices) stays blocked.
+
+---
+
+# Stage A results — CLOSED 2026-11-16T01:02Z
+
+**Gate 0:** the previous GitHub deploy token was revoked by the owner on 2026-11-15. Read-back at 15:22Z confirmed it is no longer in the account. Every deploy since 06:23Z used the current user-owned token.
+
+**Deployments (all via the hardened workflow, owner-approved):**
+
+| Run | Version | Checkout | Live from (UTC) |
+|---|---|---|---|
+| #5 | `b1512a07-5def-4469-b3be-5766e8d5f16f` | `true` | 2026-11-15 15:26:22 |
+| #6 | **`c515b292-40b6-4443-a01a-459e7f5dfa5e`** | **`false`** | 2026-11-16 01:00:44 |
+
+Both: commit `407347d`, `PAYMENT_MODE=disabled`, all other bindings unchanged.
+
+**Hosted tests on `b1512a07` — 53/53 passed** (fictional data; pre-test bookmark `0000001c-00000000-00005124-bd7dbb65ae6d4c8f9e9610d5a8509124`):
+- **Catalog:** only the test product and test zone.
+- **Order:** bank transfer, `AC-20261115-0001`, deadline exactly 86,400 s ahead, total ₦5,500 (2 × 2,500 + 500), stock 5 → 3, reservation movement and `order.created` audit recorded.
+- **Idempotency:** a replay returns the same order with no extra reservation; a changed payload with the same key → 409.
+- **Oversell:** **20/20** rounds of two simultaneous 3-unit orders on 5 units had exactly one winner, and stock never went negative. Each winner was cancelled, so stock never had to be edited directly.
+- **Receipts:**
+  - A valid PNG → 201, stored byte-for-byte in the private bucket, not served by `/media`.
+  - GIF-as-PNG, PDF with JavaScript and truncated PNG → 415 with reasons.
+  - A duplicate is idempotent; the 6th receipt → 429; exactly 5 were stored.
+- **Privacy:** another guest cannot read or upload (404); admin receipt view → 401; the customer view shows status only.
+- **No side effects from receipts:** the order stayed pending with its deadline unchanged.
+- **Expiry:**
+  - A deadline extension is refused by the trigger ("cannot be extended").
+  - Expiry restores stock once, and a repeated sweep restores nothing more; `order.expired` audited once.
+  - The customer sees "Expired". A late receipt → 201, flagged `afterDeadline`; the order stays expired and stock is unchanged; the customer sees "Expired — Late Payment Under Review".
+- **Cancellation:** cancelled twice, stock restored once; "Cancelled"; receipts refused (409).
+- **Consistency:** stock 5 = 5 − 0 held; the movement ledger sums to 5; `quick_check` ok; foreign-key check empty.
+
+**Failures:** no application failures. One **test-harness defect**: D1 returns a trigger refusal as HTTP 400, which the script raised instead of recording. That left one pending test order (`AC-20261115-0022`), which was expired through the normal sweep (stock restored once). The harness was fixed and resumed. The refusal text was verified directly.
+
+**Closure checks (2026-11-16T01:01Z):**
+- Live `c515b292`: `CHECKOUT_ENABLED=false`, `PAYMENT_MODE=disabled`; GitHub run #6 succeeded.
+- Evidence preserved: 22 cancelled and 2 expired orders; 6 receipt rows matching 6 private R2 objects; 56 audit rows.
+- Stock 5 = ledger 5, 0 held; `quick_check` ok; foreign keys clean; 0 users and 0 staff.
+- Other Workers unmodified since before Stage A (Heroine last changed 2026-11-13/14; DrippleX ≤ 2026-11-10). No production resources exist.
+- **The hosted order-rejection request was not possible:** the Access service token expired at 2026-11-16T00:22Z, before run #6, and Access now refuses every request (401 with or without it). Checkout-off is verified from the live binding and from every earlier hosted check while checkout was off ("Ordering is not enabled").
+
+**Test catalog hidden:** `stage-a-hide.sql` (`aa4a16eb…`) ran 01:02Z after bookmark `0000001e-00000000-00005125-7f5e740169c7e1048b9fb8e614ab2785`. Zone inactive, product archived; 0 active products and zones. Orders, receipts, movements and audit are preserved. Removal (`stage-a-remove.sql`) needs separate approval.
+
+**Outstanding:**
+- **Hosted testing credential:** a new short-lived Access service token is needed for any further hosted checks. The owner creates it and repoints Service Auth policy `d4c4d7c0`; the expired token `8ead1dc6` should then be deleted.
+- **Stage B prerequisites:**
+  - a deliverable mailbox for `admin@` and `sales@afnancollectionkn.com` (no MX record today);
+  - Resend verification status and an API key;
+  - approval of the Access cutover (owner Allow above deny-everyone, pinned to the PIN login method);
+  - owner provisioning;
+  - WebAuthn enrolment.
+- **Token hygiene:** replace the operator's broad Cloudflare token with a scoped, expiring one; identify `soft-boat-8d1f` (broad, no expiry); confirm the 2026-11-14 change to the R2 token.
