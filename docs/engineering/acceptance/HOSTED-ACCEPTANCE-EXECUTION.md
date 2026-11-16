@@ -165,3 +165,11 @@ After deploying, the operator session re-runs the hosted checks: logo 200 with t
   - Admin review, receipt view and approval → 401 without an admin session. `/media` does not serve receipts. Acceptance sign-up → 404. Security headers are present.
   - D1 was unchanged by these checks.
 - **Not done (separate approvals):** enabling acceptance checkout, test zone and product, and the payment workflow tests; Moniepoint account-name verification; email sender verification; production.
+
+## Stage A controlled acceptance testing — closed 2026-11-16 (acceptance only)
+
+- **Test catalog:** fictional zone `ACCEPTANCE TEST — Kano` and product `ACCEPTANCE TEST — not for sale` (₦2,500, stock 5) seeded with reviewed SQL. Checkout was enabled through the new workflow input (PR #10, `6bfa8b1`) in run #5 (`b1512a07`); `PAYMENT_MODE` stayed `disabled`.
+- **53/53 hosted checks passed:** order, deadline and total; stock reservation; idempotency; oversell 20/20; receipts, validation, private storage and privacy; expiry and late receipt; cancellation; stock and ledger consistency; D1 integrity. One test-harness defect was fixed (no application failures).
+- **Restored:** run #6 deployed version **`c515b292-40b6-4443-a01a-459e7f5dfa5e`** (01:00:44Z) with `CHECKOUT_ENABLED=false`, `PAYMENT_MODE=disabled`. The test catalog is hidden (non-destructive); 24 test orders, 6 private receipts and the audit trail are preserved; stock reconciled at 5.
+- **Previous GitHub deploy token revoked** (owner; read-back confirmed). The Access service token expired at 2026-11-16T00:22Z, so Access currently refuses all requests until a new token is issued.
+- Full results: `docs/engineering/acceptance/ACCEPTANCE-TEST-PLAN.md` on `docs/acceptance-test-plan`.
