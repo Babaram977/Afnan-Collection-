@@ -66,7 +66,15 @@ export function PasswordSignIn({ onSignedIn }: { onSignedIn: () => void }) {
 }
 
 /** One-time password setup from the operator's setup link (?setup=<token>). */
-export function SetupPassword({ token, onDone }: { token: string; onDone: () => void }) {
+export function SetupPassword({
+  token,
+  onDone,
+  onSignInInstead,
+}: {
+  token: string;
+  onDone: () => void;
+  onSignInInstead: () => void;
+}) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -91,7 +99,13 @@ export function SetupPassword({ token, onDone }: { token: string; onDone: () => 
           window.history.replaceState(null, "", window.location.pathname);
           onDone();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Setup failed");
+          // A dropped connection (fetch TypeError, e.g. Safari "Load failed") can happen after the
+          // server has already saved the password and used up the single-use link.
+          setError(
+            err instanceof TypeError
+              ? "The connection dropped before we heard back. Your password may already be saved: try signing in."
+              : `${err instanceof Error ? err.message : "Setup failed"}. If you already set your password, sign in instead.`,
+          );
         } finally {
           setBusy(false);
         }
@@ -132,6 +146,18 @@ export function SetupPassword({ token, onDone }: { token: string; onDone: () => 
         </p>
       )}
       <Button disabled={busy}>{busy ? "Saving…" : "Set password"}</Button>
+      {error && (
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            window.history.replaceState(null, "", window.location.pathname);
+            onSignInInstead();
+          }}
+        >
+          Go to sign in
+        </Button>
+      )}
     </form>
   );
 }
