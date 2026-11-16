@@ -40,7 +40,7 @@ export function OrderManager() {
   const address = detail ? JSON.parse(detail.address) : null;
   return (
     <section className="space-y-5">
-      <h2 className="text-2xl font-semibold">Customer orders</h2>
+      <h2 className="text-lg font-medium">Customer orders</h2>
       {error && <p role="alert">{error}</p>}
       <div>
         <Label htmlFor="order-filter">Show orders</Label>
@@ -70,7 +70,7 @@ export function OrderManager() {
         {orders
           .filter((o) => !filter || o.status === filter)
           .map((o) => (
-            <li key={o.id} className="space-y-3 rounded-2xl bg-card p-5 shadow-soft">
+            <li key={o.id} className="space-y-3 rounded-xl border bg-card p-4">
               <h3 className="break-all font-semibold">Order {o.reference ?? o.id}</h3>
               {o.reference && (
                 <p className="break-all text-xs text-muted-foreground">Internal ID: {o.id}</p>
@@ -95,8 +95,8 @@ export function OrderManager() {
       </ul>
       {!orders.length && <p>No orders yet.</p>}
       {detail && (
-        <section className="space-y-4 rounded-2xl bg-card p-6 shadow-soft">
-          <h3 className="break-all text-xl font-semibold">Order {detail.reference ?? detail.id}</h3>
+        <section className="space-y-4 rounded-xl border bg-card p-4 md:p-6">
+          <h3 className="break-all text-base font-medium">Order {detail.reference ?? detail.id}</h3>
           {detail.reference && (
             <p className="break-all text-xs text-muted-foreground">Internal ID: {detail.id}</p>
           )}

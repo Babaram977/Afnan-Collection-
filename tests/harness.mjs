@@ -151,3 +151,18 @@ export class Client {
     return (await this.request("/me")).body;
   }
 }
+// Select an administrator section on either layout: the phone "Sections" panel or the desktop row.
+export async function openAdminSection(page, name) {
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  const trigger = page.getByRole("button", { name: "Admin sections" });
+  if (await trigger.isVisible()) {
+    await trigger.click();
+    await page.getByRole("dialog").getByRole("button", { name, exact: true }).click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+  } else {
+    await page
+      .getByRole("navigation", { name: "Administration", exact: true })
+      .getByRole("button", { name, exact: true })
+      .click();
+  }
+}

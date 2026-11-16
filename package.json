@@ -30,7 +30,8 @@
     "test:receipts": "node tests/receipts.mjs",
     "test:admin-otp": "node tests/admin-otp.mjs",
     "test:admin-password": "node tests/admin-password.mjs",
-    "admin:provision": "node scripts/admin-provision-password.mjs"
+    "admin:provision": "node scripts/admin-provision-password.mjs",
+    "test:admin-dashboard": "node tests/admin-dashboard.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1",

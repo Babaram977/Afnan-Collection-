@@ -76,7 +76,7 @@ export function PaymentReview() {
   useEffect(() => void load(), [load]);
   return (
     <section className="space-y-4">
-      <h2 className="text-2xl font-semibold">Bank-transfer payments</h2>
+      <h2 className="text-lg font-medium">Bank-transfer payments</h2>
       <p className="text-sm text-muted-foreground">
         Approve only after you have seen the exact credit in the Moniepoint account. A receipt is
         evidence, not proof of payment.
@@ -97,7 +97,7 @@ export function PaymentReview() {
             aria-labelledby={`queue-${section.state}`}
             className="space-y-3"
           >
-            <h3 id={`queue-${section.state}`} className="text-xl font-semibold">
+            <h3 id={`queue-${section.state}`} className="text-base font-medium">
               {section.title} ({group.length})
             </h3>
             <p className="text-sm text-muted-foreground">{section.help}</p>
@@ -158,7 +158,7 @@ function ReviewCard({
     }
   };
   return (
-    <li className="space-y-3 rounded-2xl bg-card p-5 shadow-soft">
+    <li className="space-y-3 rounded-xl border bg-card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h4 className="text-lg font-semibold">Order {label}</h4>
         <span

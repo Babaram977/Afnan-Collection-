@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { createTestApp, ORIGIN, AUTH_SECRET } from "./harness.mjs";
+import { createTestApp, ORIGIN, AUTH_SECRET, openAdminSection } from "./harness.mjs";
 const { mf, db, zoneId } = await createTestApp({ port: 8787 });
 const browser = await chromium.launch();
 let checks = 0;
@@ -206,7 +206,7 @@ try {
   await page.getByRole("navigation", { name: "Administration", exact: true }).waitFor();
   checks++;
 
-  await page.getByRole("button", { name: "Products", exact: true }).click();
+  await openAdminSection(page, "Products");
   await page.getByRole("button", { name: "Add product", exact: true }).click();
   await page.getByLabel("Product name", { exact: true }).fill("Browser draft fixture");
   await page.getByLabel("Product link name").fill("browser-draft-fixture");
@@ -314,7 +314,7 @@ try {
   await catalogPage.getByText(/2,100\.25/).waitFor();
   checks++;
   await catalogPage.close();
-  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await openAdminSection(page, "Inventory");
   await page
     .getByLabel("Product and option")
     .selectOption({ label: "Browser updated fixture — BROWSER-001 — 4 available" });
@@ -323,7 +323,7 @@ try {
   await page.getByRole("button", { name: "Record stock movement" }).click();
   await page.getByText("Stock updated and movement recorded.").waitFor();
   checks++;
-  await page.getByRole("button", { name: "Zones", exact: true }).click();
+  await openAdminSection(page, "Zones");
   await page.getByLabel("Area name").fill("Browser fixture delivery");
   await page.getByLabel("State (e.g. Kano)").fill("Kano");
   await page.getByLabel("Delivery charge (₦)").fill("600");
@@ -405,7 +405,7 @@ try {
     });
     assert.equal(paid.status, 200);
     checks++;
-    await page.getByRole("button", { name: "Orders", exact: true }).click();
+    await openAdminSection(page, "Orders");
     await page.getByLabel("Show orders").selectOption("paid");
     const orderCard = page.getByRole("listitem").filter({ hasText: order.id });
     await orderCard
@@ -428,7 +428,7 @@ try {
   } finally {
     await customerContext.close();
   }
-  await page.getByRole("button", { name: "Business", exact: true }).click();
+  await openAdminSection(page, "Business");
   await page
     .getByLabel("Business address", { exact: true })
     .fill("Fixture updated business address in Kano");

@@ -818,7 +818,8 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
         products: (await catalog(env, true)).length,
         lowStock: (
           await env.DB.prepare(
-            "SELECT id,sku,stock,low_stock FROM variants WHERE stock<=low_stock LIMIT 100",
+            // Archived products are out of the catalogue, so their options are not "low stock".
+            "SELECT v.id,v.sku,v.stock,v.low_stock,p.name FROM variants v JOIN products p ON p.id=v.product_id WHERE p.status<>'archived' AND v.stock<=v.low_stock ORDER BY v.stock,p.name LIMIT 100",
           ).all()
         ).results,
         sales: await env.DB.prepare(

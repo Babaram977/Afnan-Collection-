@@ -169,6 +169,7 @@ jobs:
       - run: bun audit
       - run: bunx playwright install --with-deps chromium
       - run: bun run test:branding
+      - run: bun run test:admin-dashboard
 
       - name: Install pinned Wrangler outside the checkout
         run: |
