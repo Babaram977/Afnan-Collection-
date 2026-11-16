@@ -430,3 +430,21 @@ The exact DNS records will then be taken from that provider's own setup page and
   3. `allowed_idps` set to `["382280d1…"]` and `auto_redirect_to_identity: true`; read-back confirmed only these two fields changed.
 - **Finding:** with the deny-everyone policy present, anonymous browser requests return 401 instead of the PIN login. Access matches `everyone` Block before identity is known, so the owner cannot start sign-in. Heroine's app (same IdP) has no Block policy and redirects normally. Access denies by default, so removing `4ef44160` would expose nothing; **this deletion is awaiting explicit owner approval** (a deviation from the plan, which kept the policy).
 - Current state: everyone, including the owner, is denied. Rollback: delete `e5f39644` → `4ef44160` back to 1 → `allowed_idps []`, `auto_redirect false`.
+
+## Incident 2026-11-16: "code sent" but no email (root cause and fix)
+
+**Symptom:** the owner requested a code for `admin@afnancollectionkn.com` on the acceptance site. The UI advanced, no email arrived, and Resend showed no request.
+
+**Root cause:** no administrator was provisioned (`user` 0 rows). With sign-up disabled, Better Auth 1.7.20 (`plugins/email-otp/routes.mjs` 103–108) answers a code request for an address with no account with `{success:true}`. It generates no code, stores no verification row and never calls the sender. This is intended non-enumerating behaviour: Resend, the key and `noreply@` were never exercised.
+
+**Changes (PR "admin email-code diagnostics"):**
+
+- **Client:** the response is unchanged and still non-enumerating. The UI now says a code arrives only if the address belongs to an existing account, and that administrator accounts are created by the store operator.
+- **Operator-only Worker log events** (no address, code or key): `auth.otp.no_account`, `auth.email.accepted`, and `auth.email.provider_rejected` with the HTTP status.
+- **`tests/admin-otp.mjs`** (25 assertions, Resend stubbed, part of CI and both deploy gates):
+  - no account → no provider call and no verification row;
+  - provisioned administrator (real bootstrap SQL) → exactly one Resend request from `noreply@` to the owner;
+  - provider 403 → still a generic 200 to the client, status visible to operators;
+  - the code and address never appear in logs.
+
+**Provisioning remains gated** (`OWNER-IDENTITY-MFA.md`, `AGENTS.md`). Before the bootstrap SQL runs on acceptance D1, the nominated verifier must confirm through an already-trusted channel both the owner's identity and this specific action ("create pending administrator admin@afnancollectionkn.com on Afnan acceptance; owner then enrols WebAuthn"). The outcome, date, method and an approval reference go in restricted storage. Only the reference is given to the operator. The operator records whether it independently contacted the verifier.

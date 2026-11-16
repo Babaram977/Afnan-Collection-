@@ -164,6 +164,7 @@ jobs:
       - run: bun run test:integration
       - run: bun run test:acceptance
       - run: bun run test:security
+      - run: bun run test:admin-otp
       - run: bun audit
       - run: bunx playwright install --with-deps chromium
       - run: bun run test:branding

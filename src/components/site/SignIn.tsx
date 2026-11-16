@@ -64,6 +64,13 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
         />
       </div>
       {sent && (
+        <p role="status" className="text-sm text-muted-foreground" data-otp-notice>
+          If {email} belongs to an existing account, a 6-digit code is on its way. It expires in 5
+          minutes; check your spam folder too. Administrator accounts are created by the store
+          operator and cannot be created here.
+        </p>
+      )}
+      {sent && (
         <div>
           <Label htmlFor="signin-code">Email code</Label>
           <Input

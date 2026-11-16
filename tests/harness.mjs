@@ -29,6 +29,7 @@ export async function createTestApp(options = {}) {
             TEST_FIXTURES: "true",
             ...options.bindings,
           },
+          ...(options.outboundService ? { outboundService: options.outboundService } : {}),
         },
       ],
       ...(options.port ? { port: options.port } : {}),

@@ -27,7 +27,8 @@
     "test:storefront": "node tests/storefront.mjs",
     "test:security": "node tests/admin-security.mjs",
     "test:bank-transfer": "node tests/bank-transfer.mjs",
-    "test:receipts": "node tests/receipts.mjs"
+    "test:receipts": "node tests/receipts.mjs",
+    "test:admin-otp": "node tests/admin-otp.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1",

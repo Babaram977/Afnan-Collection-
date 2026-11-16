@@ -33,7 +33,14 @@ export async function sendSignInCode(env: CommerceEnv, email: string, otp: strin
     }),
   });
   await response.body?.cancel();
-  if (!response.ok) throw new Error("Email delivery failed");
+  // Status code only: never the recipient, code, key or provider response body.
+  if (!response.ok) {
+    console.error(
+      JSON.stringify({ event: "auth.email.provider_rejected", status: response.status }),
+    );
+    throw new Error("Email delivery failed");
+  }
+  console.log(JSON.stringify({ event: "auth.email.accepted" }));
 }
 // Staff notice that payment evidence awaits review. Contains no receipt link or file: staff open
 // the authenticated admin dashboard. Returns a delivery state; it never throws, so a failed
