@@ -159,3 +159,24 @@ cPanel → Email → **Forwarders** → Add Forwarder:
 1. **cPanel → Email → Email Routing** for `afnancollectionkn.com`: confirm **Local Mail Exchanger**. If it shows Remote or Automatic, set it to Local *before* Stage 1, or delivery will be refused at the server.
 2. **The complete DKIM record** as text (Zone Editor → `default._domainkey` → Edit → copy the Record field, or Email Deliverability). It should begin `v=DKIM1; k=rsa; p=MIIBIjAN` and end `IDAQAB;`.
 3. **The DMARC record's hostname** (Zone Editor → TXT filter → the `v=DMARC1; p=none;` row → Name).
+
+## Stage 1 APPLIED — 2026-11-16T01:53Z (owner-approved)
+
+**Pre-checks (owner):** cPanel Shared IP `192.154.254.25`; Email Routing = Local Mail Exchanger; iPhone IMAP/SMTP = `14.qservers.net`.
+
+**Pre-check (operator, 01:52:42Z):** the zone held exactly the 3 Resend records, with no MX and no record at `mail`. PASS.
+
+| Record ID | Type | Name | Content | Priority | Proxy | TTL |
+|---|---|---|---|---|---|---|
+| `6904a51db7ab8870c30f7ab8995d9d20` | A | `mail.afnancollectionkn.com` | `192.154.254.25` | — | DNS only | Auto |
+| `08f6a4e8b056e8644c05b765c19a7b16` | MX | `afnancollectionkn.com` | `mail.afnancollectionkn.com` | 0 | — | Auto |
+
+**Read-back (01:53:20Z):** 5 records; both new records match exactly; **the Resend records (`send`, `rsend`, `resend._domainkey`) are unchanged** (type, name, content, proxy and TTL compared against the pre-check). The zone is active on Cloudflare nameservers.
+
+**Public resolution:** not observable from the operator sandbox (no resolver; public DNS-over-HTTPS blocked). The owner verifies with a public lookup and an external delivery test.
+
+**Rollback:** delete record IDs `08f6a4e8…` (MX) and `6904a51d…` (A).
+
+**Not changed:** root website, SPF, DKIM, DMARC (Stage 2, separate approval), Resend, Email Routing, other zones and resources.
+
+**Separate finding (owner):** cPanel shows a self-signed certificate warning. Inbound delivery is unaffected, because sending servers use opportunistic TLS. The mail server's certificate for `14.qservers.net` and `mail.afnancollectionkn.com` should be reviewed separately (cPanel → SSL/TLS Status / AutoSSL), now that `mail` resolves to the server.
