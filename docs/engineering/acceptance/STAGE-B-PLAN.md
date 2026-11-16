@@ -222,3 +222,48 @@ Cloudflare-computed records (`GET /zones/…/email/routing/dns`):
 - **Backup key:** the owner enrols a second key during the provisioning session.
 - **Recovery codes:** shown once at first enrolment; the owner stores them offline (paper or password manager), never in chat or email.
 - Any admin who loses all keys uses a recovery code, which resets keys and sessions and requires fresh email sign-in plus a new key.
+
+## P1 update — adding `support@afnancollectionkn.com` (2026-11-16T01:13Z, read-only)
+
+**Status:** `support@afnancollectionkn.com` is **not a working mailbox**. Read-back shows no MX record, no root SPF, Email Routing **unconfigured**, and only a disabled placeholder catch-all (action `drop`). No address on the domain can receive mail yet.
+
+**How Email Routing works** ([routing rules and addresses](https://developers.cloudflare.com/email-service/configuration/email-routing-addresses/), [route emails](https://developers.cloudflare.com/email-service/get-started/route-emails/)):
+- It forwards each custom address to **one verified destination mailbox**. Rules stay disabled until the destination is verified.
+- It **holds no mailboxes**, so `support@` cannot be the inbox for `admin@` and `sales@`.
+- It **cannot send or reply from the domain**; replies go out from the destination address.
+- Chaining one custom address to another on the same domain is not documented, and is not used.
+
+### Option A (recommended; smallest change): three direct forwards, no chain
+
+| Custom address | Action | Destination |
+|---|---|---|
+| `admin@afnancollectionkn.com` | forward | `<owner's existing external mailbox>` |
+| `sales@afnancollectionkn.com` | forward | `<same or a sales mailbox>` |
+| `support@afnancollectionkn.com` | forward | `<same or a support mailbox>` |
+| catch-all | **stays disabled** (`drop`) | — |
+
+- **No loop is possible:** every destination is outside `afnancollectionkn.com`, and no address forwards to another address on the domain. Each rule is checked to have a destination with a different domain before it is enabled.
+- **The destination must be verified first:** Cloudflare emails it a link, and the owner clicks it. Until then the rules stay disabled.
+- **Limit:** customers who write to `support@` receive replies from the destination address, not from `support@`.
+- DNS: the five Cloudflare records listed in P1, with no other zone changes.
+
+### Option B: a real inbox you can reply from as `support@` (hosted mailbox provider, e.g. Zoho Mail or Google Workspace)
+- The provider's MX records go on the root domain **instead of** Email Routing; both cannot own the root MX.
+- `support@` is a real mailbox, and `admin@` and `sales@` are aliases or extra mailboxes at the same provider.
+- SPF must **combine** the provider and anything else sending as the root domain. Resend sends from `send.afnancollectionkn.com` and signs with `resend._domainkey`, so it needs no root SPF entry.
+- Costs and setup are the provider's; all are owner decisions.
+
+### Application impact (either option)
+- Sign-in codes are sent by Resend **from** `orders@afnancollectionkn.com`. Receiving `admin@` is what matters for the owner PIN and OTP.
+- Payment-review notices are addressed **to** `sales@` (`business.salesEmail`).
+- `support@` is **not referenced in the application**. Publishing it as a customer contact (footer or contact page) would be a separate content change and is not part of this plan.
+
+### Verification before any forwarding is relied on
+1. The destination is shown as verified in Email Routing.
+2. Each rule is enabled with exactly one destination, outside the domain.
+3. A test message from an outside account to each of `admin@`, `sales@` and `support@` arrives once, in the expected destination, and not in spam.
+4. The catch-all is still disabled.
+
+**Rollback:** disable the rules, or disable Email Routing (which removes its records).
+
+**Owner decision needed:** Option A or B, and the destination mailbox address(es). The address is entered in the Cloudflare dashboard by the owner; it is not needed in chat.
