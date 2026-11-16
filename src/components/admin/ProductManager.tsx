@@ -127,9 +127,9 @@ function ProductEditor({
     await onSaved(id);
   }
   return (
-    <section className="space-y-5 rounded-2xl bg-card p-5 shadow-soft md:p-7">
+    <section className="space-y-5 rounded-xl border bg-card p-4 md:p-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-semibold">{id ? "Edit product" : "New product"}</h2>
+        <h2 className="text-lg font-medium">{id ? "Edit product" : "New product"}</h2>
         <Button variant="outline" onClick={onClose}>
           Back to products
         </Button>
@@ -305,7 +305,7 @@ function ProductEditor({
           />
         </div>
         <section className="space-y-4 sm:col-span-2" aria-labelledby="product-photos">
-          <h3 id="product-photos" className="text-xl font-semibold">
+          <h3 id="product-photos" className="text-base font-medium">
             Photographs
           </h3>
           <p className="text-sm text-muted-foreground">
@@ -401,7 +401,7 @@ function ProductEditor({
       </form>
       {id ? (
         <section className="space-y-4 border-t pt-5">
-          <h3 className="text-xl font-semibold">Prices, sizes, colours and stock</h3>
+          <h3 className="text-base font-medium">Prices, sizes, colours and stock</h3>
           <ul className="space-y-3">
             {variants.map((v) => (
               <li
@@ -442,6 +442,18 @@ export function ProductManager() {
   const [categories, setCategories] = useState<{ slug: CategorySlug; label: string }[]>([]);
   const [selected, setSelected] = useState<Managed | null | undefined>(undefined);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const needle = query.trim().toLowerCase();
+  const shown = products.filter(
+    (p) =>
+      (statusFilter === "all" || p.status === statusFilter) &&
+      (categoryFilter === "all" || p.category === categoryFilter) &&
+      (!needle ||
+        p.name.toLowerCase().includes(needle) ||
+        p.variants.some((v) => v.sku.toLowerCase().includes(needle))),
+  );
   const load = useCallback(async () => {
     try {
       const [p, c] = await Promise.all([
@@ -475,18 +487,72 @@ export function ProductManager() {
         />
       ) : (
         <>
-          <Button onClick={() => setSelected(null)}>Add product</Button>
-          <ul className="grid gap-4 md:grid-cols-2">
-            {products.map((p) => (
-              <li key={p.id} className="space-y-3 rounded-2xl bg-card p-5 shadow-soft">
-                <h2 className="text-xl font-semibold">{p.name}</h2>
-                <p>
-                  {p.status} · {p.variants.length} options ·{" "}
-                  {p.variants.reduce((sum, v) => sum + (v.stock ?? 0), 0)} available
-                </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <Button onClick={() => setSelected(null)}>Add product</Button>
+            {products.length > 0 && (
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-1 sm:justify-end">
+                <Input
+                  type="search"
+                  aria-label="Search products by name or SKU"
+                  placeholder="Search name or SKU"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="col-span-2 sm:w-56"
+                />
+                <select
+                  aria-label="Filter by visibility"
+                  className="h-10 rounded-md border bg-background px-2 text-sm"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">All visibility</option>
+                  <option value="active">Published</option>
+                  <option value="draft">Draft</option>
+                  <option value="archived">Archived</option>
+                </select>
+                <select
+                  aria-label="Filter by category"
+                  className="h-10 rounded-md border bg-background px-2 text-sm"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                >
+                  <option value="all">All categories</option>
+                  {categories.map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <ul className="grid gap-3 md:grid-cols-2" data-product-list>
+            {shown.map((p) => (
+              <li key={p.id} className="space-y-2 rounded-xl border bg-card p-4">
+                <div className="flex items-start gap-3">
+                  {p.images[0] && (
+                    <img
+                      src={p.images[0].url}
+                      alt=""
+                      className="size-14 shrink-0 rounded-md object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <h2 className="truncate text-base font-medium">{p.name}</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {{ active: "Published", draft: "Draft", archived: "Archived" }[p.status]} ·{" "}
+                      {p.variants.length} option{p.variants.length === 1 ? "" : "s"} ·{" "}
+                      {p.variants.reduce((sum, v) => sum + (v.stock ?? 0), 0)} in stock
+                    </p>
+                  </div>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => setSelected(p)}>Edit product</Button>
+                  <Button size="sm" onClick={() => setSelected(p)}>
+                    Edit product
+                  </Button>
                   <Button
+                    size="sm"
                     variant="outline"
                     onClick={async () => {
                       if (
@@ -510,6 +576,9 @@ export function ProductManager() {
             ))}
           </ul>
           {!products.length && <p>No products yet. Add your first genuine product above.</p>}
+          {products.length > 0 && !shown.length && (
+            <p className="text-sm text-muted-foreground">No products match these filters.</p>
+          )}
         </>
       )}
     </div>
@@ -539,8 +608,8 @@ export function InventoryManager() {
     void load();
   }, [load]);
   return (
-    <section className="space-y-5 rounded-2xl bg-card p-6 shadow-soft">
-      <h2 className="text-2xl font-semibold">Adjust stock</h2>
+    <section className="space-y-5 rounded-xl border bg-card p-4 md:p-6">
+      <h2 className="text-lg font-medium">Adjust stock</h2>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
       <form
@@ -606,7 +675,7 @@ export function InventoryManager() {
         <Button disabled={busy}>Record stock movement</Button>
       </form>
       <section className="border-t pt-5" aria-labelledby="stock-ledger">
-        <h3 id="stock-ledger" className="mb-3 text-xl font-semibold">
+        <h3 id="stock-ledger" className="mb-3 text-base font-medium">
           Inventory movements
         </h3>
         <ul className="space-y-3">

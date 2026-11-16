@@ -6,9 +6,9 @@ import { PaymentReview } from "@/components/admin/PaymentReview";
 import { BusinessSettings } from "@/components/admin/BusinessSettings";
 import { AdminSecurity } from "@/components/admin/AdminSecurity";
 import { PasswordSignIn, SetupPassword, SignOutButton } from "@/components/admin/PasswordAuth";
+import { AdminNav, StatTile } from "@/components/admin/AdminShell";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { PageHeader } from "@/components/site/PageHeader";
 import { SignIn } from "@/components/site/SignIn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,7 +74,7 @@ function Editor({
   return (
     <form
       key={`${kind}-${JSON.stringify(initial)}`}
-      className="grid gap-4 rounded-2xl bg-card p-6 shadow-soft sm:grid-cols-2"
+      className="grid gap-4 rounded-xl border bg-card p-4 md:p-6 sm:grid-cols-2"
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
@@ -101,7 +101,7 @@ function Editor({
         }
       }}
     >
-      <h3 className="text-xl font-semibold sm:col-span-2">
+      <h3 className="text-base font-medium sm:col-span-2">
         {initial["id"] ? "Edit" : "Add / update"} {kind}
       </h3>
       {(forms[kind] ?? []).map((field) => {
@@ -230,11 +230,28 @@ function Admin() {
   }
   return (
     <>
-      <PageHeader
-        title="Store management"
-        intro="Manage catalog, stock and fulfilment with your staff account."
-      />
-      <div className="container-page space-y-6 py-8">
+      <div
+        data-admin-page
+        className="container-page space-y-4 pb-[max(6rem,env(safe-area-inset-bottom))] pt-4 md:space-y-6 md:pt-8"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-medium md:text-2xl">Store management</h1>
+            {!me?.role && (
+              <p className="text-sm text-muted-foreground">
+                Manage catalogue, stock and fulfilment with your staff account.
+              </p>
+            )}
+          </div>
+          {me?.role && passwordMode && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="max-w-[12rem] truncate" title={me.email ?? ""}>
+                {me.email}
+              </span>
+              <SignOutButton compact onSignedOut={() => void load()} />
+            </div>
+          )}
+        </div>
         {error && (
           <p role="alert" className="rounded-xl bg-warning p-4 text-warning-foreground">
             {error}
@@ -260,7 +277,7 @@ function Admin() {
             }}
           />
         ) : passwordMode && me?.userId && !me.role ? (
-          <div className="max-w-md space-y-4 rounded-2xl bg-card p-6 shadow-soft">
+          <div className="max-w-md space-y-4 rounded-xl border bg-card p-4 md:p-6">
             <p role="alert">This account does not have administrator access.</p>
             <SignOutButton onSignedOut={() => void load()} />
           </div>
@@ -276,32 +293,22 @@ function Admin() {
         ) : (
           me?.role && (
             <>
-              {passwordMode ? (
-                <SignOutButton onSignedOut={() => void load()} />
-              ) : (
+              {!passwordMode && (
                 <details>
                   <summary className="cursor-pointer">Security and sign out</summary>
                   <AdminSecurity settings onVerified={() => void load()} />
                 </details>
               )}
-              <nav aria-label="Administration" className="flex flex-wrap gap-2">
-                {tabs
-                  .filter((t) => me.role === "admin" || ["overview", "orders"].includes(t))
-                  .map((t) => (
-                    <Button
-                      key={t}
-                      variant={t === tab ? "default" : "outline"}
-                      onClick={() => {
-                        setTab(t);
-                        setEdit({});
-                        setNotice("");
-                      }}
-                    >
-                      {t[0]?.toUpperCase()}
-                      {t.slice(1)}
-                    </Button>
-                  ))}
-              </nav>
+              <AdminNav
+                tabs={tabs.filter((t) => me.role === "admin" || ["overview", "orders"].includes(t))}
+                current={tab}
+                onSelect={(t) => {
+                  setTab(t);
+                  setEdit({});
+                  setNotice("");
+                  window.scrollTo({ top: 0 });
+                }}
+              />
               {tab === "products" ? (
                 <ProductManager />
               ) : tab === "inventory" ? (
@@ -311,37 +318,48 @@ function Admin() {
               ) : tab === "business" ? (
                 <BusinessSettings />
               ) : tab === "overview" ? (
-                <section className="grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-card p-6 shadow-soft">
-                    <h2 className="text-lg">Products</h2>
-                    <p className="text-3xl">{String(overview["products"] ?? 0)}</p>
-                  </div>
-                  <div className="rounded-2xl bg-card p-6 shadow-soft">
-                    <h2 className="text-lg">Payments awaiting review</h2>
-                    <p className="text-3xl">{String(overview["paymentsAwaitingReview"] ?? 0)}</p>
-                  </div>
-                  <div className="rounded-2xl bg-card p-6 shadow-soft">
-                    <h2 className="text-lg">Paid sales</h2>
-                    <p className="text-3xl">
-                      {formatNaira(
+                <section aria-label="Overview" className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <StatTile label="Products" value={String(overview["products"] ?? 0)} />
+                    <StatTile
+                      label="Awaiting review"
+                      value={String(overview["paymentsAwaitingReview"] ?? 0)}
+                      hint="Bank-transfer receipts"
+                    />
+                    <StatTile
+                      label="Paid orders"
+                      value={String((overview["sales"] as Row | undefined)?.["orders"] ?? 0)}
+                    />
+                    <StatTile
+                      label="Paid sales"
+                      value={formatNaira(
                         Number((overview["sales"] as Row | undefined)?.["revenueKobo"] ?? 0),
                       )}
-                    </p>
+                    />
                   </div>
-                  <div className="rounded-2xl bg-card p-6 shadow-soft">
-                    <h2 className="text-lg">Low stock</h2>
-                    {((overview["lowStock"] ?? []) as Row[]).map((v) => (
-                      <p key={String(v["id"])}>
-                        {String(v["sku"])}: {String(v["stock"])}
-                      </p>
-                    ))}
+                  <div className="rounded-xl border bg-card px-4 py-3">
+                    <h2 className="font-sans text-sm font-medium">Low stock</h2>
+                    {((overview["lowStock"] ?? []) as Row[]).length ? (
+                      <ul className="mt-2 divide-y text-sm">
+                        {((overview["lowStock"] ?? []) as Row[]).map((v) => (
+                          <li key={String(v["id"])} className="flex justify-between gap-3 py-1.5">
+                            <span className="min-w-0 truncate">
+                              {String(v["name"] ?? "")} · {String(v["sku"])}
+                            </span>
+                            <span className="tabular-nums">{String(v["stock"])} left</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-1 text-sm text-muted-foreground">Nothing is running low.</p>
+                    )}
                   </div>
                 </section>
               ) : (
                 <>
                   {tab === "payments" && <PaymentReview />}
                   {tab === "payments" && (
-                    <h2 className="text-xl font-semibold">Online payments (Paystack, disabled)</h2>
+                    <h2 className="text-base font-medium">Online payments (Paystack, disabled)</h2>
                   )}
                   {forms[tab] && (
                     <Editor
@@ -355,47 +373,11 @@ function Admin() {
                       onError={setError}
                     />
                   )}
-                  {tab === "products" && (
-                    <form
-                      className="rounded-2xl bg-card p-6"
-                      onSubmit={async (e) => {
-                        e.preventDefault();
-                        const f = new FormData(e.currentTarget);
-                        const image = f.get("image");
-                        if (!(image instanceof File)) return;
-                        try {
-                          const response = await fetch("/api/admin/media", {
-                            method: "POST",
-                            body: image,
-                            headers: { "Content-Type": image.type },
-                          });
-                          const data = (await response.json()) as { error?: string; url?: string };
-                          if (!response.ok) throw new Error(data.error);
-                          setNotice(`Image uploaded. Use this URL: ${data.url}`);
-                        } catch (e) {
-                          setError((e as Error).message);
-                        }
-                      }}
-                    >
-                      <Label htmlFor="product-upload">
-                        Product image (PNG, JPEG, WebP; up to 5 MB)
-                      </Label>
-                      <input
-                        className="my-3 block w-full"
-                        id="product-upload"
-                        name="image"
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        required
-                      />
-                      <Button>Upload image</Button>
-                    </form>
-                  )}
                   <section
-                    className="overflow-x-auto rounded-2xl bg-card p-4 shadow-soft"
+                    className="overflow-x-auto rounded-xl border bg-card p-4"
                     aria-label={`${tab} records`}
                   >
-                    <h2 className="mb-4 text-xl font-semibold capitalize">{tab}</h2>
+                    <h2 className="mb-3 text-base font-medium capitalize">{tab}</h2>
                     {!rows.length ? (
                       <p>No records yet.</p>
                     ) : (

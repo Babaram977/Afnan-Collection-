@@ -5,7 +5,7 @@ export function Wordmark({
   placement = "header",
 }: {
   className?: string;
-  placement?: "header" | "footer";
+  placement?: "header" | "footer" | "compact";
 }) {
   const business = useBusiness();
   return (
@@ -18,7 +18,7 @@ export function Wordmark({
         <img
           src={business.logoUrl}
           alt={business.name}
-          className={`${placement === "footer" ? "w-44" : "w-28"} h-auto max-w-full rounded-md bg-white object-contain`}
+          className={`${placement === "footer" ? "w-44" : placement === "compact" ? "w-11" : "w-28"} h-auto max-w-full rounded-md bg-white object-contain`}
           data-brand-logo="original"
           width={460}
           height={546}

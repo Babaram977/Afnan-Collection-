@@ -13,7 +13,7 @@ export function BusinessSettings() {
   const router = useRouter();
   return (
     <form
-      className="space-y-4 rounded-2xl bg-card p-6 shadow-soft"
+      className="space-y-4 rounded-xl border bg-card p-4 md:p-6"
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
@@ -36,7 +36,7 @@ export function BusinessSettings() {
         }
       }}
     >
-      <h2 className="text-2xl font-semibold">Business contacts</h2>
+      <h2 className="text-lg font-medium">Business contacts</h2>
       <p className="text-sm text-muted-foreground">
         These details appear on your contact page, footer and business information. Registration
         numbers and the official logo retain their owner-approved source.
