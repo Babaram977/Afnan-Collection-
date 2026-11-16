@@ -301,3 +301,23 @@ cPanel → Email → **Forwarders** → Add Forwarder:
 3. **Resend:** the dashboard is still **Verified**. If a Resend message is ever sent, its headers show DKIM pass for `s=resend` and SPF on `send.afnancollectionkn.com`.
 
 **Rollback:** delete the 3 created TXT IDs. Inbound mail (MX, `mail`) and Resend are untouched.
+
+## Stage 2 — pre-publication checks (2026-11-16; NOT published)
+
+**DKIM value received from owner** (record 4, exact): `v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwvy+Bym6+KLC9taHS1vHsi1PZ7ZXGXx4MT0maB7naLEGZQoBq2ABvwYHn5hJZTFN1XLFCBG4ksm9q6R3I17OqoTrhpBg7fqK8a1IX2VH8DJILmmiGSRw1kfqYodlDi/3mExtVAW6eE+VJWvXLQs9LAOmn2Y9e0SYncDCkTytrEzlviNMXT1JqUlgrinFMJEZ29WYQ++7bb8BvgbSnksEM1Vx9xN7gRDdXHzQYPIp7p373ClDafzyuEWjsrT/zAhq3glGW9CEUohSe6otH4R0f19Z57wvXRhe8SQiPCWyV4UL/5pRLhGIfdKUWJ7Oj0P8IWEfLaXPL2frVOo6nRxwRQIDAQAB;`
+
+Local validation:
+- tags `v`, `k`, `p` only; the trailing `;` is permitted by RFC 6376 tag-list syntax;
+- `p=` is 392 base64 characters with no whitespace, decoding to a 294-byte DER SubjectPublicKeyInfo; OpenSSL reads it as a **2048-bit RSA** key;
+- SHA-256 of the DER: `739532479f9e1fa6c0e63907410b15910fc225baa3463f96a8dc210e50fee4a9`;
+- start `MIIBIjANBgkqhkiG9w0BAQEFAA` and end `LaXPL2frVOo6nRxwRQIDAQAB` match the cPanel screenshot;
+- the value is 411 characters, so Cloudflare stores it as 2 TXT strings; read-back must compare the joined value.
+
+**Match to QServers signing key:** the value matches what cPanel displays (start/end fragments; the full text came from cPanel). Whether Exim actually signs with the corresponding private key under selector `default` can only be proven by a real message showing `DKIM: PASS` with `d=afnancollectionkn.com; s=default`, which is validation step 1.
+
+**Conflict check:**
+- Cloudflare API read-back: exactly 5 records (A `mail` `6904a51d`, MX `08f6a4e8`, CNAME `send` `2a09e486`, CNAME `rsend` `b36f23a7`, TXT `resend._domainkey` `d17a23a1`); no root TXT, no `_dmarc`, no `default._domainkey`.
+- Google DNS: root TXT has no answer; `_dmarc` and `default._domainkey` are NXDOMAIN with no CNAME; `resend._domainkey` resolves unchanged.
+- Result: no conflicts; all three records are new creations, with no edits or deletions.
+
+**DMARC name:** `_dmarc.afnancollectionkn.com` is fixed by RFC 7489 §6.1 (the `_dmarc` label prepended to the From domain). It does not depend on QServers. The QServers cPanel zone is not authoritative, because the nameservers are Cloudflare, and its contents were not inspected for a DMARC record.
