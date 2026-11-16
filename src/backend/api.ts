@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Product, CategorySlug, AgeGroup } from "../lib/catalog";
 import { authFor } from "./auth";
 import { adminProof, adminSecurity, SecurityError, securityLimit, digest } from "./admin-security";
-import type { CommerceEnv } from "./types";
+import { passwordAdmin, type CommerceEnv } from "./types";
 import {
   orderInput,
   productInput,
@@ -104,7 +104,13 @@ async function actor(request: Request, env: CommerceEnv): Promise<Actor> {
       owner: session.user.id,
       userId: session.user.id,
       email: session.user.email,
-      role: staff && (await adminProof(request, env, session)) ? staff.role : null,
+      role:
+        staff &&
+        (passwordAdmin(env)
+          ? await passwordAdminActive(env, session.user.id)
+          : await adminProof(request, env, session))
+          ? staff.role
+          : null,
     };
   }
   const token = request.headers
@@ -116,6 +122,60 @@ async function actor(request: Request, env: CommerceEnv): Promise<Actor> {
     email: null,
     role: null,
   };
+}
+// Password mode: the staff row (checked on every request by actor()) plus a set password and a
+// security state that is not disabled. Removing the staff row revokes access on the next request.
+async function passwordAdminActive(env: CommerceEnv, userId: string) {
+  return Boolean(
+    await env.DB.prepare(
+      `SELECT 1 FROM account a WHERE a.user_id=? AND a.provider_id='credential' AND a.password IS NOT NULL
+      AND NOT EXISTS(SELECT 1 FROM admin_security s WHERE s.user_id=a.user_id AND s.state='disabled')`,
+    )
+      .bind(userId)
+      .first(),
+  );
+}
+// One-time password setup for an operator-provisioned administrator. The token (32 random bytes,
+// shown once to the operator) is stored only as a SHA-256 digest in `verification`, expires after
+// 30 minutes and is consumed on use. The password is hashed by Better Auth (scrypt) and never logged.
+async function adminPasswordSetup(env: CommerceEnv, input: unknown) {
+  const { token, password } = z
+    .object({
+      token: z.string().regex(/^[a-f0-9]{64}$/),
+      password: z.string().min(12).max(128),
+    })
+    .parse(input);
+  const identifier = `admin-setup:${await digest(token)}`;
+  const row = await env.DB.prepare(
+    `SELECT v.id,v.value AS userId FROM verification v JOIN staff r ON r.user_id=v.value
+    WHERE v.identifier=? AND v.expires_at>?`,
+  )
+    .bind(identifier, Date.now())
+    .first<{ id: string; userId: string }>();
+  if (!row) fail(400, "This setup link is invalid or has expired");
+  const consumed = await env.DB.prepare("DELETE FROM verification WHERE id=? RETURNING id")
+    .bind(row.id)
+    .first();
+  if (!consumed) fail(400, "This setup link is invalid or has expired");
+  const hashed = await (await authFor(env).$context).password.hash(password);
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM account WHERE user_id=? AND provider_id='credential'").bind(
+      row.userId,
+    ),
+    env.DB.prepare(
+      "INSERT INTO account(id,account_id,provider_id,user_id,password,created_at,updated_at) VALUES(?,?,'credential',?,?,?,?)",
+    ).bind(crypto.randomUUID(), row.userId, row.userId, hashed, now, now),
+    env.DB.prepare("UPDATE user SET email_verified=1,updated_at=? WHERE id=?").bind(
+      now,
+      row.userId,
+    ),
+    env.DB.prepare("DELETE FROM session WHERE user_id=?").bind(row.userId),
+    env.DB.prepare(
+      "INSERT INTO audit(actor,action,entity_id) VALUES(?,'admin.password.set',?)",
+    ).bind(row.userId, row.userId),
+  ]);
+  return json({ ok: true });
 }
 function requireRole(a: Actor, roles = ["admin"]) {
   if (!a.userId) fail(401, "Sign in required");
@@ -493,12 +553,22 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       "/api/auth/sign-in/email-otp",
       "/api/auth/sign-out",
       "/api/auth/get-session",
+      ...(passwordAdmin(env) ? ["/api/auth/sign-in/email"] : []),
     ];
     if (!allowed.includes(path)) fail(404, "Not found");
     await limited(request, env, "auth", 15);
     if (method === "POST") {
       const data = await bounded(request);
       let otpEmail: string | undefined;
+      if (path === "/api/auth/sign-in/email") {
+        const parsed = z
+          .object({ email: z.string().email().max(254), password: z.string().min(1).max(128) })
+          .passthrough()
+          .parse(JSON.parse(new TextDecoder().decode(data)));
+        const email = parsed.email.trim().toLowerCase();
+        await securityLimit(env, `password:${email}`, 5);
+        await securityLimit(env, `password-hour:${email}`, 20, 3600);
+      }
       if (path === "/api/auth/email-otp/send-verification-otp") {
         const parsed = z
           .object({ email: z.string().email().max(254), type: z.literal("sign-in") })
@@ -533,6 +603,12 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
         console.error(JSON.stringify({ event: "auth.email.unavailable" }));
         return json({ success: true });
       }
+      if (!response.ok && path === "/api/auth/sign-in/email")
+        // Same message for unknown email and wrong password.
+        return json(
+          { error: "Email or password is incorrect" },
+          response.status === 429 ? 429 : 401,
+        );
       if (!response.ok && path === "/api/auth/sign-in/email-otp")
         return json(
           { error: "Authentication could not be completed" },
@@ -541,6 +617,10 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       return response;
     }
     return authFor(env).handler(request);
+  }
+  if (path === "/api/admin-setup" && method === "POST" && passwordAdmin(env)) {
+    await limited(request, env, "admin-setup", 10);
+    return adminPasswordSetup(env, JSON.parse(new TextDecoder().decode(await bounded(request))));
   }
   if (path.startsWith("/api/admin-security/")) {
     await limited(request, env, "admin-security", 30);
@@ -581,7 +661,12 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
   }
   const a = await actor(request, env);
   if (path === "/api/me" && method === "GET")
-    return json({ userId: a.userId, email: a.email, role: a.role });
+    return json({
+      userId: a.userId,
+      email: a.email,
+      role: a.role,
+      adminAuth: passwordAdmin(env) ? "password" : "webauthn",
+    });
   if (path === "/api/cart" && method === "GET")
     return json(
       a.owner

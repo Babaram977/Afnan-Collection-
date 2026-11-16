@@ -66,3 +66,11 @@
 - The later implementation directive selects an extension of Better Auth email sessions with mandatory WebAuthn, independent of shared account membership. Read docs/engineering/ADMIN-AUTH-ADR.md and ADMIN-RECOVERY-RUNBOOK.md; old email-PIN IdP plans are historical alternatives, not approved remote changes. Preserve pending/active/recovery/disabled state, exact-owner bootstrap and independent human verification.
 - Every privileged operation requires current D1 staff role, verified primary email session and a current WebAuthn proof bound to user/session/epoch/role. Never add a test-mode MFA bypass. Run test:security plus all existing suites for authentication/authorization changes. Fixtures must perform real local signature verification.
 - Production registration, checkout and payments remain disabled. Sender-verification flags and tests do not establish actual Resend/owner/device verification. No remote security/migration/secret/deployment/email/DNS operations until the owner's action-specific gates pass.
+
+## Owner decision 2026-11-16: password administrator login (supersedes parts of the sections above)
+
+- **Acceptance mode:** acceptance runs with `ADMIN_AUTH_MODE=password`. Administrators sign in with email and password (Better Auth, scrypt hashes). Every admin request still requires a session plus a current `staff` row, and `admin_security.state='disabled'` blocks access.
+- **No mandatory email code or passkey:** email OTP and WebAuthn are not required for administrator access in this mode. The WebAuthn implementation remains and is the default when `ADMIN_AUTH_MODE` is unset, which is the production setting until the owner decides otherwise.
+- **Provisioning:** accounts come only from `scripts/admin-provision-password.mjs`, which creates the user and staff role plus a single-use 30-minute setup token stored as a SHA-256 digest. The owner chooses the password on `/admin?setup=<token>`. Public sign-up stays disabled.
+- **Verifier removed:** the independent-verifier (Aisha Idris Muhammad) approval is **removed from administrator onboarding** by the owner. The nomination text above is historical.
+- **Unchanged rules:** never log passwords, setup tokens or session cookies, and never add a test-mode authentication bypass.

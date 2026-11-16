@@ -47,6 +47,7 @@ export interface Me {
   userId: string | null;
   email: string | null;
   role: string | null;
+  adminAuth?: "password" | "webauthn";
 }
 export interface Zone {
   id: string;

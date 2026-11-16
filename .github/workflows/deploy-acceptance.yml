@@ -165,6 +165,7 @@ jobs:
       - run: bun run test:acceptance
       - run: bun run test:security
       - run: bun run test:admin-otp
+      - run: bun run test:admin-password
       - run: bun audit
       - run: bunx playwright install --with-deps chromium
       - run: bun run test:branding
@@ -294,6 +295,7 @@ jobs:
               "CHECKOUT_ENABLED": "false",
               "PAYMENT_MODE": "disabled",
               "EMAIL_FROM": "noreply@afnancollectionkn.com",
+              "ADMIN_AUTH_MODE": "password",
               "EMAIL_SENDER_VERIFIED": "false"
             },
             "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-acceptance", "database_id": "11950c2f-14bb-4a31-9add-356f155dea4e", "migrations_dir": "artifact/migrations" }],
