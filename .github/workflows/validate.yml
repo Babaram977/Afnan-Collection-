@@ -32,6 +32,7 @@ jobs:
       - run: bun run test:integration
       - run: bun run test:acceptance
       - run: bun run test:security
+      - run: bun run test:domain
       - run: bun run test:admin-otp
       - run: bun run test:admin-password
       - run: bun audit

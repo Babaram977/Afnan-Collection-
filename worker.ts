@@ -6,7 +6,18 @@ import storefront from "./.output/server/index.mjs";
 
 export default {
   async fetch(request: Request, env: CommerceEnv, ctx: ExecutionContext): Promise<Response> {
-    const path = new URL(request.url).pathname;
+    const url = new URL(request.url);
+    // www.<primary host> is served only to redirect to the primary storefront domain.
+    const primary = new URL(env.APP_ORIGIN);
+    if (url.hostname === `www.${primary.hostname}`)
+      return new Response(null, {
+        status: 301,
+        headers: {
+          Location: `${primary.origin}${url.pathname}${url.search}`,
+          "Cache-Control": "public,max-age=3600",
+        },
+      });
+    const path = url.pathname;
     if (path.startsWith("/api/")) return api(request, env);
     if (path.startsWith("/media/")) {
       const key = path.slice(7);

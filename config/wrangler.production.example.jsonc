@@ -1,6 +1,6 @@
 // Reference copy of the production configuration. The deploy workflow
 // (.github/workflows/deploy-production.yml) writes its own fixed copy; that copy is authoritative.
-// Secrets are deliberately absent. routes stays empty: the hostname is attached separately.
+// Secrets are deliberately absent. Routes are the owner-approved custom domains only.
 {
   "name": "afnan-collection-production",
   "account_id": "b4e142fe9da84ef204eecda2efe4a730",
@@ -9,7 +9,10 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [],
+  "routes": [
+    { "pattern": "afnancollectionkn.com", "custom_domain": true },
+    { "pattern": "www.afnancollectionkn.com", "custom_domain": true },
+  ],
   "assets": {
     "directory": "../.output/public",
     "binding": "ASSETS",
