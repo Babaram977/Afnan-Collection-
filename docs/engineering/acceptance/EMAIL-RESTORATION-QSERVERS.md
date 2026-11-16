@@ -180,3 +180,23 @@ cPanel → Email → **Forwarders** → Add Forwarder:
 **Not changed:** root website, SPF, DKIM, DMARC (Stage 2, separate approval), Resend, Email Routing, other zones and resources.
 
 **Separate finding (owner):** cPanel shows a self-signed certificate warning. Inbound delivery is unaffected, because sending servers use opportunistic TLS. The mail server's certificate for `14.qservers.net` and `mail.afnancollectionkn.com` should be reviewed separately (cPanel → SSL/TLS Status / AutoSSL), now that `mail` resolves to the server.
+
+## Inbound delivery CONFIRMED — 2026-11-16 03:01 WAT (02:01Z)
+
+- **Real delivery:** a message from `support@dripplex.com` arrived in the `support@afnancollectionkn.com` inbox at 03:01 WAT, visible in iPhone Mail (owner screenshot). That was 8 minutes after Stage 1 went live (01:53Z).
+- **Supporting checks:**
+  - public MX and `mail` A verified through Google DNS (02:06Z);
+  - no DS record, so DNSSEC is not involved;
+  - MXToolbox SMTP test passed at 03:10 WAT: `220 14.qservers.net ESMTP Exim 4.100.1`, STARTTLS, reverse DNS, no open relay.
+- **Still pending:** the owner's earlier iCloud test (sent around the DNS fix) has not arrived. It is consistent with iCloud having cached the earlier "no MX" answer (negative TTL 1800 s) and retrying on its own schedule. One later test from a second outside provider is advisable to confirm reliability.
+
+## Stage 2 read-only baseline (public, Google DNS, 02:13Z)
+| Name | Type | Public answer |
+|---|---|---|
+| `afnancollectionkn.com` | TXT (SPF) | **none** |
+| `_dmarc.afnancollectionkn.com` | TXT | **none** (NXDOMAIN) |
+| `default._domainkey.afnancollectionkn.com` | TXT | **none** (NXDOMAIN) |
+| `resend._domainkey.afnancollectionkn.com` | TXT | present (Resend DKIM) |
+| `send` / `rsend.afnancollectionkn.com` | CNAME | present (Resend) |
+
+**Consequence:** outgoing mail from `support@` (QServers) currently has **no SPF and no DKIM** published, and receivers may mark it as spam. Stage 2 (single SPF, QServers DKIM `default`, DMARC `p=none`) addresses this; Resend is unaffected either way. **Pending owner inputs:** the complete DKIM value as text, and the DMARC record's hostname.
