@@ -54,7 +54,7 @@ on:
           - verified
         default: unverified
 
-run-name: "PRODUCTION deploy ${{ inputs.commit || github.event.workflow_run.head_sha }} (${{ github.event_name == 'workflow_run' && 'automatic' || 'manual' }}) by ${{ github.actor }}"
+run-name: "PRODUCTION deploy ${{ inputs.commit || github.event.workflow_run.display_title }} (${{ github.event_name == 'workflow_run' && 'automatic' || 'manual' }}) by ${{ github.actor }}"
 
 permissions:
   contents: read
@@ -71,10 +71,12 @@ env:
   # Manual runs use the dispatch inputs. Automatic runs use the repository variables
   # AFNAN_PRODUCTION_CHECKOUT / AFNAN_PRODUCTION_EMAIL_SENDER (owner-controlled settings), defaulting to
   # checkout disabled and sender unverified. Card payments stay pinned disabled either way.
-  COMMIT_SHA: ${{ inputs.commit || github.event.workflow_run.head_sha }}
+  # Automatic runs: the exact commit is taken from the acceptance run's name ("Acceptance deploy <sha> ..."),
+  # not from head_sha, which GitHub sets to main's latest commit when the run was triggered.
+  COMMIT_SHA: ${{ inputs.commit }}
   CHECKOUT_MODE: ${{ inputs.checkout || vars.AFNAN_PRODUCTION_CHECKOUT || 'disabled' }}
   SENDER_MODE: ${{ inputs.email_sender || vars.AFNAN_PRODUCTION_EMAIL_SENDER || 'unverified' }}
-  DEPLOY_REASON: ${{ inputs.reason || format('automatic after Deploy Afnan acceptance passed for {0}', github.event.workflow_run.head_sha) }}
+  DEPLOY_REASON: ${{ inputs.reason || format('automatic after: {0}', github.event.workflow_run.display_title) }}
   WRANGLER_VERSION: "4.160.0"
   NODE_VERSION: "24"
   BUN_VERSION: "1.4.4"
@@ -119,7 +121,12 @@ jobs:
         id: commit
         env:
           COMMIT: ${{ env.COMMIT_SHA }}
+          UPSTREAM_TITLE: ${{ github.event.workflow_run.display_title }}
         run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_run" ]; then
+            COMMIT=$(printf '%s' "$UPSTREAM_TITLE" | sed -nE 's/^Acceptance deploy ([0-9a-f]{40}) .*/\1/p')
+            echo "- Commit deployed by the triggering acceptance run: \`${COMMIT:-unparseable}\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
           if ! printf '%s' "$COMMIT" | grep -Eq '^[0-9a-f]{40}$'; then
             echo "::error::commit must be a full lowercase 40-character SHA."
             exit 1
@@ -139,6 +146,11 @@ jobs:
           branches=$(git branch -r --contains "$COMMIT" 2>/dev/null || true)
           if [ -z "$branches" ]; then
             echo "::error::$COMMIT is not contained in any branch of ${GITHUB_REPOSITORY}; refusing."
+            exit 1
+          fi
+          # Production deploys only commits that are on main (reached through a validated PR merge).
+          if ! git merge-base --is-ancestor "$COMMIT" origin/main; then
+            echo "::error::$COMMIT is not on main; production deploys only commits merged to main."
             exit 1
           fi
           git checkout --detach "$COMMIT"
@@ -253,7 +265,7 @@ jobs:
         working-directory: ${{ runner.temp }}/work/artifact
         env:
           COMMIT: ${{ needs.build.outputs.commit }}
-          REQUESTED: ${{ env.COMMIT_SHA }}
+          REQUESTED: ${{ needs.build.outputs.commit }}
         run: |
           test "$COMMIT" = "$REQUESTED"
           test "$(cat COMMIT)" = "$COMMIT"
