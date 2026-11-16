@@ -2,8 +2,9 @@ name: Deploy Afnan production
 
 # Manual, owner-only deployment of an exact commit to the PRODUCTION Worker
 # `afnan-collection-production`, which has its own D1 and R2. Never triggered by push or PR.
-# workers.dev is off and no route or domain is set here: this workflow cannot publish a hostname.
-# Attaching afnancollectionkn.com is a separate, owner-approved action outside this workflow.
+# workers.dev is off. The only hostnames are the owner-approved custom domains (2026-11-16):
+# afnancollectionkn.com (primary storefront) and www.afnancollectionkn.com (redirects to it, in
+# worker.ts). The deploy step refuses any other route.
 #
 # Security model:
 # - Only the repository owner may dispatch, only from `main` (checked in-workflow and by the
@@ -18,8 +19,9 @@ name: Deploy Afnan production
 #   repository and never installs or runs application code: it verifies the artifact against its
 #   manifest and the requested commit, then uploads it with a pinned Wrangler using --no-bundle
 #   from a directory that contains only the artifact and a config written by this workflow.
-# - Target, bindings and variables are fixed here, not read from the commit. This workflow does
-#   not touch Cloudflare Access, DNS, routes or any other Worker.
+# - Target, bindings, variables and the two approved custom domains are fixed here, not read from
+#   the commit. Wrangler creates the custom domains' DNS records; this workflow does not touch
+#   Cloudflare Access, other DNS records, other routes or any other Worker.
 
 on:
   # Automatic: after "Deploy Afnan acceptance" succeeds for a push to main of this repository.
@@ -177,6 +179,7 @@ jobs:
       - run: bun run test:integration
       - run: bun run test:acceptance
       - run: bun run test:security
+      - run: bun run test:domain
       - run: bun run test:admin-otp
       - run: bun run test:admin-password
       - run: bun audit
@@ -206,7 +209,7 @@ jobs:
             "compatibility_flags": ["nodejs_compat"],
             "workers_dev": false,
             "preview_urls": false,
-            "routes": [],
+            "routes": [{ "pattern": "afnancollectionkn.com", "custom_domain": true }, { "pattern": "www.afnancollectionkn.com", "custom_domain": true }],
             "assets": { "directory": "../../.output/public", "binding": "ASSETS", "run_worker_first": true },
             "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-production", "database_id": "73ddfc46-34ba-4733-841d-e4819af0b957" }],
             "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-production" }, { "binding": "RECEIPTS", "bucket_name": "afnan-payment-receipts-production" }]
@@ -303,7 +306,7 @@ jobs:
             "compatibility_flags": ["nodejs_compat"],
             "workers_dev": false,
             "preview_urls": false,
-            "routes": [],
+            "routes": [{ "pattern": "afnancollectionkn.com", "custom_domain": true }, { "pattern": "www.afnancollectionkn.com", "custom_domain": true }],
             "assets": { "directory": "artifact/public", "binding": "ASSETS", "run_worker_first": true },
             "observability": { "enabled": true, "traces": { "enabled": true } },
             "vars": {
@@ -319,10 +322,10 @@ jobs:
           }
           EOF
           # The only variables an operator may choose. Strict mapping; PAYMENT_MODE stays pinned,
-          # workers.dev stays off and no routes may appear.
+          # workers.dev stays off and routes must be exactly the approved custom domains.
           case "$CHECKOUT" in enabled) co=true ;; disabled) co=false ;; *) exit 1 ;; esac
           case "$SENDER" in verified) sv=true ;; unverified) sv=false ;; *) exit 1 ;; esac
-          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];if(c.vars.PAYMENT_MODE!=="disabled"||c.workers_dev!==false||c.routes.length)process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$co" "$sv"
+          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];const approved=JSON.stringify([{pattern:"afnancollectionkn.com",custom_domain:true},{pattern:"www.afnancollectionkn.com",custom_domain:true}]);if(c.vars.PAYMENT_MODE!=="disabled"||c.workers_dev!==false||JSON.stringify(c.routes)!==approved)process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$co" "$sv"
           ls -A
 
       - name: Refuse to deploy while database migrations are pending
@@ -372,7 +375,7 @@ jobs:
           test -n "$version"
           {
             echo "### Deployment"
-            echo "- Worker: \`afnan-collection-production\` (no workers.dev, no routes from this workflow)"
+            echo "- Worker: \`afnan-collection-production\` (afnancollectionkn.com + www redirect; no workers.dev)"
             echo "- Commit: \`$COMMIT\`"
             echo "- Version: \`$version\`"
             echo "- Checkout: $CHECKOUT ($(grep -o '"CHECKOUT_ENABLED": "[a-z]*"' wrangler.jsonc)); payments: disabled"
