@@ -5,6 +5,7 @@ import { OrderManager } from "@/components/admin/OrderManager";
 import { PaymentReview } from "@/components/admin/PaymentReview";
 import { BusinessSettings } from "@/components/admin/BusinessSettings";
 import { AdminSecurity } from "@/components/admin/AdminSecurity";
+import { PasswordSignIn, SetupPassword, SignOutButton } from "@/components/admin/PasswordAuth";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/site/PageHeader";
@@ -173,6 +174,12 @@ function Admin() {
   const [notice, setNotice] = useState("");
   const [edit, setEdit] = useState<Row>({});
   const [loading, setLoading] = useState(true);
+  const [setupToken, setSetupToken] = useState<string | null>(null);
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("setup");
+    if (token && /^[a-f0-9]{64}$/.test(token)) setSetupToken(token);
+  }, []);
+  const passwordMode = me?.adminAuth === "password";
   const tabs = [
     "overview",
     "products",
@@ -235,7 +242,28 @@ function Admin() {
         )}
         {notice && <p role="status">{notice}</p>}
         {loading && !me && <p role="status">Checking access…</p>}
-        {!loading && !me?.userId ? (
+        {passwordMode && setupToken && !me?.userId ? (
+          <SetupPassword
+            token={setupToken}
+            onDone={() => {
+              setSetupToken(null);
+              setNotice("Password saved. Sign in with your email and new password.");
+            }}
+          />
+        ) : passwordMode && !loading && !me?.userId ? (
+          <PasswordSignIn
+            onSignedIn={() => {
+              setNotice("");
+              window.dispatchEvent(new Event("afnan-auth"));
+              void load();
+            }}
+          />
+        ) : passwordMode && me?.userId && !me.role ? (
+          <div className="max-w-md space-y-4 rounded-2xl bg-card p-6 shadow-soft">
+            <p role="alert">This account does not have administrator access.</p>
+            <SignOutButton onSignedOut={() => void load()} />
+          </div>
+        ) : !loading && !me?.userId ? (
           <SignIn
             onSignedIn={() => {
               window.dispatchEvent(new Event("afnan-auth"));
@@ -247,10 +275,14 @@ function Admin() {
         ) : (
           me?.role && (
             <>
-              <details>
-                <summary className="cursor-pointer">Security and sign out</summary>
-                <AdminSecurity settings onVerified={() => void load()} />
-              </details>
+              {passwordMode ? (
+                <SignOutButton onSignedOut={() => void load()} />
+              ) : (
+                <details>
+                  <summary className="cursor-pointer">Security and sign out</summary>
+                  <AdminSecurity settings onVerified={() => void load()} />
+                </details>
+              )}
               <nav aria-label="Administration" className="flex flex-wrap gap-2">
                 {tabs
                   .filter((t) => me.role === "admin" || ["overview", "orders"].includes(t))

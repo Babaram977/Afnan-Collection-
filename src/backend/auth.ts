@@ -3,7 +3,7 @@ import { emailOTP } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./auth-schema";
-import { testMode, type CommerceEnv } from "./types";
+import { passwordAdmin, testMode, type CommerceEnv } from "./types";
 import { sendSignInCode } from "./email";
 
 export function authFor(env: CommerceEnv) {
@@ -25,7 +25,21 @@ export function authFor(env: CommerceEnv) {
       "/email-otp/request-password-reset",
       "/forget-password/email-otp",
       "/email-otp/reset-password",
+      "/forget-password",
+      "/request-password-reset",
+      "/reset-password",
+      "/change-password",
+      "/set-password",
     ],
+    // Administrator password sign-in. Sign-up stays disabled: accounts are created only by the
+    // operator provisioning script, and the owner sets the password through a one-time setup link.
+    emailAndPassword: {
+      enabled: passwordAdmin(env),
+      disableSignUp: true,
+      minPasswordLength: 12,
+      maxPasswordLength: 128,
+      autoSignIn: false,
+    },
     database: drizzleAdapter(drizzle(env.DB, { schema }), { provider: "sqlite", schema }),
     session: {
       expiresIn: 60 * 60 * 24 * 7,

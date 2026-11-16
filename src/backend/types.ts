@@ -12,8 +12,13 @@ export interface CommerceEnv
   EMAIL_FROM?: string;
   EMAIL_SENDER_VERIFIED?: string;
   TEST_FIXTURES?: string;
+  // "password": administrators sign in with email + password (owner decision 2026-11-16).
+  // Unset or anything else: email code + mandatory WebAuthn (original model).
+  ADMIN_AUTH_MODE?: string;
 }
 export const testMode = (env: CommerceEnv) =>
   env.APP_ENV === "test" &&
   env.TEST_FIXTURES === "true" &&
   new URL(env.APP_ORIGIN).hostname === "localhost";
+
+export const passwordAdmin = (env: CommerceEnv) => env.ADMIN_AUTH_MODE === "password";
