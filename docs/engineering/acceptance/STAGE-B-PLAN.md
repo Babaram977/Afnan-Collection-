@@ -301,3 +301,48 @@ Cloudflare-computed records (`GET /zones/…/email/routing/dns`):
 - One SPF record only.
 - Outside test messages to `support@`, `admin@` and `sales@` each arrive once in the `support@` mailbox, not in spam.
 - Resend sending still verifies.
+
+## P1 investigation — did `support@` have working hosted mail before 13 Nov? (2026-11-16T01:30Z, read-only)
+
+**Cloudflare account audit log, zone `afnancollectionkn.com`:**
+
+| Time (UTC) | Event | Actor | Meaning |
+|---|---|---|---|
+| 2026-11-13 01:34:03 | zone created | user | Domain added to Cloudflare |
+| 01:34:06 | `dns_records scan` | user | Cloudflare queries the **previous** DNS host (`ns1/ns2.qservers.net`) to import existing records |
+| 01:45:26–01:47:41 | 4 DNS records created then deleted, interleaved with `certificate_pack` events | system | Cloudflare's own TLS-certificate validation records, not imported records |
+| 01:45 | zone **active** on Cloudflare nameservers | — | Cloudflare becomes authoritative |
+| 2026-11-14 14:28:45 | 3 records created | user | Resend `send`, `rsend`, `resend._domainkey` |
+| (none) | no other record creation or deletion | — | — |
+
+**Conclusion (strong, not certain):** the import scan run against the old DNS at 01:34 on 13 Nov **found no records to import**: no MX, no root A/AAAA, no SPF. It is therefore unlikely that a working inbound mail configuration was dropped by the migration. More likely the domain had **no inbound mail (MX) set up before 13 Nov either**.
+
+**What remains possible:**
+- A mailbox for `support@` may exist at a provider (for example a registrar mail plan or Zoho) that was **never connected** through MX records; it could send but not receive outside mail.
+- The scan could have missed records. That is uncommon for the root MX, which the scan always queries.
+- The registrar panel at Gransy/Subreg may still hold an old zone that is no longer used.
+
+**The owner's answer decides:** did `support@` ever **receive** a message from an outside sender before 13 Nov, and where is it opened (webmail or app)?
+
+### Comparison: restore existing hosting vs new hosted mailbox
+
+| | Restore existing provider (if `support@` already exists somewhere) | New hosted mailbox (e.g. Zoho Mail, Microsoft 365, Google Workspace) |
+|---|---|---|
+| Applies when | You can log in to an existing `support@` mailbox at a provider | No existing mailbox, or the existing one is unsuitable |
+| DNS changes (approval) | Add that provider's MX + DKIM (+ verification) records; one root SPF for it | Same set for the new provider after it verifies domain ownership (usually a TXT record) |
+| `admin@`, `sales@` | Aliases of `support@` inside the provider | Aliases (or extra mailboxes) of `support@` inside the provider |
+| Reply as `support@` | Yes | Yes |
+| Cost | Existing plan | New subscription (free tiers exist with limits) |
+| Data | Keeps any existing mail history | Starts empty |
+| Risk | Low, if records come from the provider's own setup page | Low; new account setup and domain verification |
+| Resend | Unaffected: Resend uses `send`/`rsend`/`resend._domainkey`; no root SPF entry needed | Unaffected (same reason) |
+| Cloudflare Email Routing | **Not used**; it would conflict with the provider's MX | **Not used** |
+
+**Not recommended:** enabling Cloudflare Email Routing for `admin@` and `sales@` while `support@` lives at a provider. Email Routing takes exclusive control of the root MX, so it would cut the provider off.
+
+**Next owner inputs:**
+1. Whether `support@` ever received outside mail before 13 Nov.
+2. Where it is opened (provider).
+3. An inbound test from an outside account today.
+
+The exact DNS records will then be taken from that provider's own setup page and presented for approval. **No DNS, MX, SPF, DKIM, Resend or Access changes until then.**
