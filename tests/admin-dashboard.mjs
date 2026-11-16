@@ -37,6 +37,15 @@ const ok = (value, message) => {
   assert.ok(value, message);
   checks++;
 };
+// Data arrives asynchronously after render: retry a check for up to 5 s before failing.
+async function eventually(check, message) {
+  const deadline = Date.now() + 5000;
+  for (;;) {
+    if (await check()) return ok(true, message);
+    if (Date.now() > deadline) return ok(false, message);
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
 const noOverflow = async (page, where) =>
   ok(
     !(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)),
@@ -60,6 +69,12 @@ try {
     const page = await browser.newPage({
       viewport: { width, height: 844 },
       extraHTTPHeaders: { "CF-Connecting-IP": `198.51.100.${width === 390 ? 10 : 11}` },
+    });
+    // Reproduce a slow network/runner (the cause of a CI failure on 2026-11-16): admin data arrives
+    // 800 ms after the page renders, so every data check must wait for it.
+    await page.route(/\/api\/admin\/(overview|products)$/, async (route) => {
+      await new Promise((r) => setTimeout(r, 800));
+      await route.continue();
     });
 
     // Storefront header keeps its full brand height; the admin header is compact.
@@ -94,11 +109,10 @@ try {
     ok(Math.abs(a.y - b.y) < 2, "First two tiles share a row");
     ok(width === 390 ? c.y > a.y + 10 : Math.abs(c.y - a.y) < 2, `Tile grid layout at ${width}`);
     ok(a.height < 120, "Tiles are compact");
-    const low = await page.locator('section[aria-label="Overview"] li').allInnerTexts();
-    ok(
-      low.length === 1 && low[0].includes("Fixture Alpha"),
-      "Low stock excludes archived products",
-    );
+    await eventually(async () => {
+      const low = await page.locator('section[aria-label="Overview"] li').allInnerTexts();
+      return low.length === 1 && low[0].includes("Fixture Alpha");
+    }, "Low stock excludes archived products");
     await noOverflow(page, `overview ${width}`);
 
     if (width === 390) {
@@ -134,17 +148,29 @@ try {
     await openAdminSection(page, "Products");
     const cards = page.locator("[data-product-list] li h2");
     await cards.first().waitFor();
-    assert.equal(await cards.count(), 4, "Harness romper plus three fixtures");
+    await eventually(async () => (await cards.count()) === 4, "Harness romper plus three fixtures");
     await page.getByLabel("Search products by name or SKU").fill("beta");
-    ok((await cards.allInnerTexts()).join() === "Fixture Beta", "Search by name");
+    await eventually(
+      async () => (await cards.allInnerTexts()).join() === "Fixture Beta",
+      "Search by name",
+    );
     await page.getByLabel("Search products by name or SKU").fill("FX-A");
-    ok((await cards.allInnerTexts()).join() === "Fixture Alpha", "Search by SKU");
+    await eventually(
+      async () => (await cards.allInnerTexts()).join() === "Fixture Alpha",
+      "Search by SKU",
+    );
     await page.getByLabel("Search products by name or SKU").fill("");
     await page.getByLabel("Filter by visibility").selectOption("draft");
-    ok((await cards.allInnerTexts()).join() === "Fixture Beta", "Visibility filter");
+    await eventually(
+      async () => (await cards.allInnerTexts()).join() === "Fixture Beta",
+      "Visibility filter",
+    );
     await page.getByLabel("Filter by visibility").selectOption("all");
     await page.getByLabel("Filter by category").selectOption("toys");
-    ok((await cards.allInnerTexts()).join() === "Fixture Old", "Category filter");
+    await eventually(
+      async () => (await cards.allInnerTexts()).join() === "Fixture Old",
+      "Category filter",
+    );
     await page.getByLabel("Filter by category").selectOption("all");
 
     // Content is not hidden under Safari's bottom bar: the page ends with bottom padding.
