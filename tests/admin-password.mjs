@@ -250,7 +250,67 @@ try {
 
   ok(!logs.some((l) => l.includes(PASSWORD)), "Password never logged");
   ok(!logs.some((l) => l.includes(token)), "Setup token never logged");
-  console.log(`PASS: ${checks} password-mode administrator authentication and security assertions`);
 } finally {
   await mf.dispose();
 }
+
+// The production combination (APP_ENV=production + password mode): setup, sign-in, admin access,
+// sign-up still refused, wrong password generic, non-session refused.
+{
+  const prod = await createTestApp({
+    bindings: {
+      APP_ENV: "production",
+      CHECKOUT_ENABLED: "false",
+      PAYMENT_MODE: "disabled",
+      ADMIN_AUTH_MODE: "password",
+    },
+  });
+  try {
+    const guest = new Client(prod.mf);
+    eq((await guest.request("/me")).body.adminAuth, "password", "Production reports password mode");
+    eq(
+      (
+        await guest.request("/auth/sign-up/email", "POST", {
+          email: "x@example.com",
+          password: PASSWORD,
+          name: "X",
+        })
+      ).status,
+      404,
+      "Production sign-up refused",
+    );
+    const token = await provision(prod.db, OWNER);
+    eq((await guest.request("/admin-setup", "POST", { token, password: PASSWORD })).status, 200);
+    eq((await guest.request("/admin-setup", "POST", { token, password: PASSWORD })).status, 400);
+    eq(
+      (
+        await guest.request("/auth/sign-in/email", "POST", {
+          email: OWNER,
+          password: "wrong one 1234",
+        })
+      ).status,
+      401,
+    );
+    const owner = new Client(prod.mf);
+    eq(
+      (await owner.request("/auth/sign-in/email", "POST", { email: OWNER, password: PASSWORD }))
+        .status,
+      200,
+      "Production owner signs in",
+    );
+    for (const path of [
+      "/admin/products",
+      "/admin/categories",
+      "/admin/inventory",
+      "/admin/orders",
+      "/admin/banners",
+      "/admin/business",
+    ])
+      eq((await owner.request(path)).status, 200, `Production admin ${path}`);
+    eq((await guest.request("/admin/products")).status, 401, "Production: no session 401");
+    eq((await guest.request("/health")).body.checkoutEnabled, false);
+  } finally {
+    await prod.mf.dispose();
+  }
+}
+console.log(`PASS: ${checks} password-mode administrator authentication and security assertions`);

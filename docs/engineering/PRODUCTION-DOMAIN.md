@@ -14,3 +14,9 @@
 - **Deploy path:** `deploy-production.yml`. It refuses any route other than the two approved custom domains, and any change to `PAYMENT_MODE` or `workers_dev`. Wrangler creates the domains' DNS records. The MX, SPF, DKIM, DMARC, `mail` and Resend records are untouched.
 - **Rollback:** each run records the previous live version (`wrangler rollback <id>`). To take the site offline, detach the custom domains (Workers → `afnan-collection-production` → Domains & Routes). The placeholder version answers 503.
 - **Catalogue:** production D1 starts empty apart from the 11 categories. Products entered on acceptance do **not** appear on the public site.
+
+## Production administrator (owner approval 2026-11-16)
+
+- **Mode:** production runs `ADMIN_AUTH_MODE=password`, the same code as acceptance. The deploy guard aborts if it is missing.
+- **Provisioning:** `admin@afnancollectionkn.com` is provisioned in the **production** D1 with `scripts/admin-provision-password.mjs`. The owner chooses a new password through a single-use 30-minute link at `https://afnancollectionkn.com/admin?setup=…`. No acceptance credentials are copied.
+- **Access:** app `c41fff37` still requires the owner's Cloudflare email sign-in for `/admin*` and `/api/admin*`, including `/api/admin-setup`, before the application login.

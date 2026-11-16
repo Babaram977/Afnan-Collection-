@@ -30,6 +30,7 @@
     "CHECKOUT_ENABLED": "false",
     "PAYMENT_MODE": "disabled",
     "EMAIL_FROM": "noreply@afnancollectionkn.com",
+    "ADMIN_AUTH_MODE": "password",
     "EMAIL_SENDER_VERIFIED": "false",
   },
   "d1_databases": [
