@@ -76,7 +76,7 @@ env:
   COMMIT_SHA: ${{ inputs.commit }}
   CHECKOUT_MODE: ${{ inputs.checkout || vars.AFNAN_PRODUCTION_CHECKOUT || 'disabled' }}
   SENDER_MODE: ${{ inputs.email_sender || vars.AFNAN_PRODUCTION_EMAIL_SENDER || 'unverified' }}
-  DEPLOY_REASON: ${{ inputs.reason || format('automatic after: {0}', github.event.workflow_run.display_title) }}
+  DEPLOY_REASON: ${{ inputs.reason || format('automatic after {0}', github.event.workflow_run.display_title) }}
   WRANGLER_VERSION: "4.160.0"
   NODE_VERSION: "24"
   BUN_VERSION: "1.4.4"

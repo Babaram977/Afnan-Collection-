@@ -44,3 +44,10 @@ main push → "Validate Afnan" → success → "Deploy Afnan acceptance" (automa
 
 3. **Settings → Environments → `afnan-acceptance`:** remove _Required reviewers_; keep deployment branches = `main`.
 4. **Settings → Environments → `afnan-production`:** create it if absent; deployment branches = `main`; no reviewers; secret `CLOUDFLARE_API_TOKEN` (needs Workers Scripts Edit plus D1 Read for the migration check).
+
+## Exact-commit chain (follow-up)
+
+- **Acceptance (automatic)** deploys the `head_sha` of the successful _Validate Afnan_ push run, which is the exact validated commit.
+- **Production (automatic)** takes the commit from the triggering acceptance run's name (`Acceptance deploy <sha> …`), not from that run's `head_sha` (main's tip at trigger time). Both environments therefore receive the same commit.
+- **Production (any mode)** refuses commits that are not ancestors of `origin/main`.
+- Every deploy also re-runs the full test suite in its own secret-free build job before anything is uploaded, so no deployment path skips validation.
