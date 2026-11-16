@@ -6,7 +6,7 @@ const env = {
   APP_ENV: "acceptance",
   APP_ORIGIN: "https://afnancollectionkn.com",
   RESEND_API_KEY: "re_fixture_only",
-  EMAIL_FROM: "orders@afnancollectionkn.com",
+  EMAIL_FROM: "noreply@afnancollectionkn.com",
   EMAIL_SENDER_VERIFIED: "true",
 } as CommerceEnv;
 afterEach(() => vi.unstubAllGlobals());
@@ -14,6 +14,9 @@ describe("transactional email configuration (mocked; never sends email)", () => 
   it("requires explicit sender verification and the approved sender", () => {
     expect(() => validateSender({ ...env, EMAIL_SENDER_VERIFIED: "false" })).toThrow();
     expect(() => validateSender({ ...env, EMAIL_FROM: "invented@example.com" })).toThrow();
+    // Owner decision 2026-11-16: the sender is noreply@; the former orders@ address is no longer accepted.
+    expect(() => validateSender({ ...env, EMAIL_FROM: "orders@afnancollectionkn.com" })).toThrow();
+    expect(() => validateSender(env)).not.toThrow();
     expect(() => validateSender({ ...env, RESEND_API_KEY: "" })).toThrow();
   });
   it("fails closed without making a request when configuration is missing", async () => {

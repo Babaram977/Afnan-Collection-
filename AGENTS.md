@@ -47,7 +47,7 @@
 
 ## Protected acceptance review
 
-- Read docs/engineering/acceptance/GATE-2-REVIEW.md before any remote operation. Current scope is owner only; admin@afnancollectionkn.com and orders@afnancollectionkn.com are supplied settings, not verified identities. Gate 3 writes/deployment/email/DNS remain unapproved.
+- Read docs/engineering/acceptance/GATE-2-REVIEW.md before any remote operation. Current scope is owner only; admin@afnancollectionkn.com and noreply@afnancollectionkn.com (transactional sender; replaced orders@ by owner decision 2026-11-16) are supplied settings, not verified identities. Gate 3 writes/deployment/email/DNS remain unapproved.
 - Preserve acceptance-mode signup denial. Pre-provisioning a named identity and assigning staff are separate approved, audited actions after verification. Never enable fixtures remotely. Run test:acceptance alongside integration/browser/branding checks.
 
 ## Owner-provided verifier nomination and launch boundary

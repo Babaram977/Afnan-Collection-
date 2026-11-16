@@ -292,7 +292,7 @@ jobs:
               "APP_ORIGIN": "https://afnan-collection-storefront.danwakili.workers.dev",
               "CHECKOUT_ENABLED": "false",
               "PAYMENT_MODE": "disabled",
-              "EMAIL_FROM": "orders@afnancollectionkn.com",
+              "EMAIL_FROM": "noreply@afnancollectionkn.com",
               "EMAIL_SENDER_VERIFIED": "false"
             },
             "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-acceptance", "database_id": "11950c2f-14bb-4a31-9add-356f155dea4e", "migrations_dir": "artifact/migrations" }],

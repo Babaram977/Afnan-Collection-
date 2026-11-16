@@ -5,7 +5,7 @@ export function validateSender(env: CommerceEnv) {
   if (
     !env.RESEND_API_KEY ||
     !/^re_[A-Za-z0-9_-]+$/.test(env.RESEND_API_KEY) ||
-    env.EMAIL_FROM !== "orders@afnancollectionkn.com" ||
+    env.EMAIL_FROM !== "noreply@afnancollectionkn.com" ||
     env.EMAIL_SENDER_VERIFIED !== "true"
   )
     throw new Error("Email delivery is not configured");
