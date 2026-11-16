@@ -135,3 +135,90 @@ This can be combined with the Stage B window to avoid issuing tokens twice.
 - **Single administrator:** losing the only key leaves recovery codes as the only path. Enrol a backup key and store the codes offline.
 - **Public sign-in surface:** none; sign-up stays disabled and Access still gates everything.
 - **Data protection:** the acceptance D1 holds no real customer data; keep using fictional data until launch approval.
+
+---
+
+# Prepared actions awaiting approval (2026-11-16T01:11Z, read-only preparation)
+
+## P1. Cloudflare Email Routing for `afnancollectionkn.com` (DNS/mail change)
+Read-only status: Email Routing **unconfigured**, 0 destination addresses, 0 active rules. The zone has no MX and no root SPF.
+
+Cloudflare-computed records (`GET /zones/…/email/routing/dns`):
+
+| Type | Name | Value | Priority |
+|---|---|---|---|
+| MX | `afnancollectionkn.com` | `route1.mx.cloudflare.net` | 3 |
+| MX | `afnancollectionkn.com` | `route2.mx.cloudflare.net` | 100 |
+| MX | `afnancollectionkn.com` | `route3.mx.cloudflare.net` | 86 |
+| TXT | `afnancollectionkn.com` | `v=spf1 include:_spf.mx.cloudflare.net ~all` | — |
+| TXT | `cf2024-1._domainkey.afnancollectionkn.com` | Cloudflare DKIM key (2048-bit RSA) | — |
+
+- **Resend compatibility:** there is no existing root SPF or MX to merge or remove. Resend uses `send` and `rsend` (CNAMEs) and `resend._domainkey`, with no overlap. DMARC alignment for Resend mail comes from its DKIM on `afnancollectionkn.com`.
+- **Owner steps** (dashboard → the zone → Email → Email Routing):
+  1. Enable it, which adds the records above.
+  2. Add a destination address (the owner's existing mailbox) and click Cloudflare's verification email.
+  3. Create the rules `admin@afnancollectionkn.com → destination` and `sales@afnancollectionkn.com → destination`.
+- **Verify:**
+  - the five records exist;
+  - routing status `ready`;
+  - the destination is `verified`;
+  - test messages to `admin@` and `sales@` arrive.
+- **Rollback:** disable Email Routing, which removes its records; nothing else in the zone changes.
+
+## P2. Renew hosted test access and close the outstanding retest
+1. **Owner:** create an Access service token, 24 h, named `Afnan acceptance automation`.
+2. **Operator:** `PUT /accounts/b4e142fe…/access/apps/00b0cf57…/policies/d4c4d7c0…` with exactly `{"name":"Afnan acceptance automation only","decision":"non_identity","include":[{"service_token":{"token_id":"<NEW_ID>"}}],"exclude":[],"require":[],"precedence":2,"session_duration":"1h"}`. Read back.
+3. **Owner:** enter the new client secret in the session's secure credential form for host `afnan-collection-storefront.danwakili.workers.dev`, header `CF-Access-Client-Secret`.
+4. **Operator retest:**
+   - health shows `checkoutEnabled:false`;
+   - `POST /api/orders` on the hidden test catalog → **503 "Ordering is not enabled"**;
+   - no token → 401;
+   - logo 200 with the approved checksum.
+5. **Owner:** delete the expired service token (`8ead1dc6…`).
+- **Rollback:** repoint the policy to nothing by deleting the new token; Access then refuses all requests (today's state).
+
+## P3. Least-privilege replacement for the operator Cloudflare token
+**Owner creates** (dashboard → Manage account → Account API tokens → Create → Custom) a token named `afnan-operator-acceptance`, **expiring in 30 days**, with:
+
+| Scope | Permission | Used for |
+|---|---|---|
+| Account `b4e142fe…` | Workers Scripts **Read** | Live version, bindings, deployments |
+| Account | D1 **Read**, D1 **Write** | Migrations, verification queries, test-data scripts |
+| Account | Access: Apps and Policies **Read**, **Write** | P2 repoint, P5 cutover and rollback |
+| Account | Access: Service Tokens **Read** | Token expiry checks (metadata only) |
+| Account | Workers R2 Storage **Read** | Receipt object verification |
+| Account | Audit Logs **Read** | Change evidence |
+| Account | Email Routing Addresses **Read** | P1 verification |
+| Zone `afnancollectionkn.com` only | DNS **Read**, Email Routing Rules **Read** | P1 verification |
+
+**Deliberately excluded:** API token management, billing, account settings write, Access organisation and login-method write, Workers Scripts write (deploys go through GitHub), R2 write, DNS write, every other zone, and every other product.
+
+**Cutover:**
+1. The owner enters the new token in the session's secure credential form for `api.cloudflare.com`, replacing the saved one. The old token stays valid until revoked.
+2. The operator verifies each row above with a read-only call. It also confirms a **forbidden** call fails: listing account API tokens must return 403.
+3. Only then does the owner revoke `Afnan-Collection-Claude-Acceptance`.
+4. If any needed call fails, the owner adds only that permission; the old token is not revoked until all pass.
+
+## P4. Owner Access policy (application `00b0cf57`; change only after P1 is verified)
+**Current:** precedence 1 deny-everyone (`4ef44160`); precedence 2 Service Auth (`d4c4d7c0`); `allowed_idps: []`.
+
+1. `PUT …/policies/4ef44160…`: same body, precedence **3**.
+2. `POST …/apps/00b0cf57…/policies`: `{"name":"Afnan owner (PIN login, WebAuthn in app)","decision":"allow","include":[{"email":{"email":"admin@afnancollectionkn.com"}}],"require":[{"login_method":{"id":"382280d1-e52c-49f9-8f11-f1a7936da206"}}],"exclude":[],"precedence":1,"session_duration":"4h"}`.
+3. `PUT …/apps/00b0cf57…`: **full current application body**, read back first, because this call replaces the whole configuration. Change only `allowed_idps: ["382280d1-…"]` and `auto_redirect_to_identity: true`.
+
+- **Evaluation after the change:** Service Auth (token) first → Allow owner (1) → deny everyone (3); anything else is denied by default.
+- **Service token:** unaffected; Service Auth is evaluated before Allow and Block.
+- **No exposure window:** after step 1 there is no Allow policy, so Access denies by default.
+- **Rollback (reverse):** delete the Allow → deny-everyone back to precedence 1 → application body restored from the read-back (`allowed_idps: []`).
+- **Verify:**
+  - no credentials → Access login page;
+  - service token → 200;
+  - an operator-controlled non-owner PIN login → refused (separate approval, because it sends a PIN email);
+  - owner → reaches the app sign-in, which still needs the app email OTP and WebAuthn.
+
+## P5. Owner administration protection (unchanged requirements)
+- Email verification: Access PIN plus the app email OTP to `admin@`. No public sign-up.
+- **WebAuthn mandatory** for every admin action; payment approval and receipt access need an active admin proof.
+- **Backup key:** the owner enrols a second key during the provisioning session.
+- **Recovery codes:** shown once at first enrolment; the owner stores them offline (paper or password manager), never in chat or email.
+- Any admin who loses all keys uses a recovery code, which resets keys and sessions and requires fresh email sign-in plus a new key.
