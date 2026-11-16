@@ -315,6 +315,7 @@ jobs:
               "CHECKOUT_ENABLED": "false",
               "PAYMENT_MODE": "disabled",
               "EMAIL_FROM": "noreply@afnancollectionkn.com",
+              "ADMIN_AUTH_MODE": "password",
               "EMAIL_SENDER_VERIFIED": "false"
             },
             "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-production", "database_id": "73ddfc46-34ba-4733-841d-e4819af0b957", "migrations_dir": "artifact/migrations" }],
@@ -325,7 +326,7 @@ jobs:
           # workers.dev stays off and routes must be exactly the approved custom domains.
           case "$CHECKOUT" in enabled) co=true ;; disabled) co=false ;; *) exit 1 ;; esac
           case "$SENDER" in verified) sv=true ;; unverified) sv=false ;; *) exit 1 ;; esac
-          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];const approved=JSON.stringify([{pattern:"afnancollectionkn.com",custom_domain:true},{pattern:"www.afnancollectionkn.com",custom_domain:true}]);if(c.vars.PAYMENT_MODE!=="disabled"||c.workers_dev!==false||JSON.stringify(c.routes)!==approved)process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$co" "$sv"
+          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];const approved=JSON.stringify([{pattern:"afnancollectionkn.com",custom_domain:true},{pattern:"www.afnancollectionkn.com",custom_domain:true}]);if(c.vars.PAYMENT_MODE!=="disabled"||c.vars.ADMIN_AUTH_MODE!=="password"||c.workers_dev!==false||JSON.stringify(c.routes)!==approved)process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$co" "$sv"
           ls -A
 
       - name: Refuse to deploy while database migrations are pending

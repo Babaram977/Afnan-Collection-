@@ -70,7 +70,7 @@
 ## Owner decision 2026-11-16: password administrator login (supersedes parts of the sections above)
 
 - **Acceptance mode:** acceptance runs with `ADMIN_AUTH_MODE=password`. Administrators sign in with email and password (Better Auth, scrypt hashes). Every admin request still requires a session plus a current `staff` row, and `admin_security.state='disabled'` blocks access.
-- **No mandatory email code or passkey:** email OTP and WebAuthn are not required for administrator access in this mode. The WebAuthn implementation remains and is the default when `ADMIN_AUTH_MODE` is unset, which is the production setting until the owner decides otherwise.
+- **No mandatory email code or passkey:** email OTP and WebAuthn are not required for administrator access in this mode. The WebAuthn implementation remains and is the default when `ADMIN_AUTH_MODE` is unset. On 2026-11-16 the owner also approved password mode for production (`deploy-production.yml` sets it and its guard requires it).
 - **Provisioning:** accounts come only from `scripts/admin-provision-password.mjs`, which creates the user and staff role plus a single-use 30-minute setup token stored as a SHA-256 digest. The owner chooses the password on `/admin?setup=<token>`. Public sign-up stays disabled.
 - **Verifier removed:** the independent-verifier (Aisha Idris Muhammad) approval is **removed from administrator onboarding** by the owner. The nomination text above is historical.
 - **Unchanged rules:** never log passwords, setup tokens or session cookies, and never add a test-mode authentication bypass.
