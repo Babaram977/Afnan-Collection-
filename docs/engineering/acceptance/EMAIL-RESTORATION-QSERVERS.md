@@ -250,3 +250,54 @@ cPanel → Email → **Forwarders** → Add Forwarder:
 **Rollback:** delete the 3 TXT record IDs created. That returns the zone to today's Stage 1 state, with inbound mail unaffected.
 
 **Caveat:** authentication improves trust and DMARC results; it does not guarantee inbox placement.
+
+## Stage 2 — FINAL change set (owner decisions 2026-11-16; awaiting DKIM value and publication approval)
+
+**Owner decisions:** SPF `v=spf1 mx ip4:192.154.254.25 ~all`; DMARC at `_dmarc`, `v=DMARC1; p=none;`; preserve the Resend, MX and `mail` A records; DKIM pending the complete QServers key.
+
+| # | Type | Name (Cloudflare) | Content | TTL | Status |
+|---|---|---|---|---|---|
+| 3 | TXT | `afnancollectionkn.com` | `v=spf1 mx ip4:192.154.254.25 ~all` | Auto | Final |
+| 4 | TXT | `default._domainkey.afnancollectionkn.com` | `v=DKIM1; k=rsa; p=<complete key>` | Auto | **Awaiting the complete value** |
+| 5 | TXT | `_dmarc.afnancollectionkn.com` | `v=DMARC1; p=none;` | Auto | Final |
+
+**Unchanged (verified in read-back before and after):**
+- MX `afnancollectionkn.com` → `mail.afnancollectionkn.com` (0), ID `08f6a4e8…`;
+- A `mail.afnancollectionkn.com` → `192.154.254.25` (DNS only), ID `6904a51d…`;
+- Resend `send` CNAME, `rsend` CNAME, `resend._domainkey` TXT.
+
+**SPF check:**
+- The zone has no root TXT today, so there is no duplicate.
+- `mx` resolves `mail.afnancollectionkn.com` → `192.154.254.25`, and `ip4:` explicitly authorizes the same address.
+- 2 DNS lookups, well under the limit of 10.
+- Resend is unaffected, because it uses the `send` and `rsend` return paths.
+
+### Item 5 — QServers outbound envelope sender and SPF alignment
+**Expected** (standard cPanel/Exim): for mail from `support@afnancollectionkn.com`, `Return-Path: <support@afnancollectionkn.com>`, and the sending host is `14.qservers.net [192.154.254.25]`. SPF is then evaluated for `afnancollectionkn.com`, which is record 3, and is **aligned** with the `From:` domain for DMARC.
+
+**Verification source:** the headers of a real message sent from `support@` through `14.qservers.net`. Either:
+- **(a) before publication:** the owner opens an existing message already sent from `support@` to an outside mailbox (Gmail "Show original" or iCloud "View source") and reads `Return-Path:` and the first `Received: from 14.qservers.net (…[IP])` line, if such a message exists; or
+- **(b) as the first post-publication test** (item 6).
+
+**Pass criteria:** the Return-Path domain is `afnancollectionkn.com` and the sending IP is `192.154.254.25`. If the Return-Path is a different domain (for example a QServers bounce domain), SPF will not align, DMARC must rely on DKIM `s=default`, and this is reported before any DMARC tightening.
+
+### Execution (operator, only after publication approval)
+1. Re-read the zone: exactly 5 records (Stage 1 + Resend), no root TXT, no `_dmarc`, no `default._domainkey`.
+2. Validate the DKIM value locally:
+   - `p=` decodes as base64 to an RSA public key, expected 2048-bit;
+   - start and end match the cPanel screenshot;
+   - split strings are joined without spaces.
+3. Create records 3, 4 and 5 one at a time, recording each ID.
+4. Read back: 8 records in total; the 3 new ones exactly as above; MX, `mail` and Resend byte-identical.
+5. Public check (Google DNS): the root TXT shows exactly one `v=spf1…`; `_dmarc` and `default._domainkey` resolve.
+
+### Validation with real outgoing mail (item 6)
+1. The owner sends **one** message from `support@` (iPhone, SMTP `14.qservers.net`) to a Gmail address. "Show original" should show:
+   - `SPF: PASS` with IP `192.154.254.25`;
+   - `DKIM: PASS` with `d=afnancollectionkn.com` and `s=default`;
+   - `DMARC: PASS`;
+   - `Return-Path` on `afnancollectionkn.com` (item 5).
+2. cPanel → Email Deliverability: SPF and DKIM **valid**.
+3. **Resend:** the dashboard is still **Verified**. If a Resend message is ever sent, its headers show DKIM pass for `s=resend` and SPF on `send.afnancollectionkn.com`.
+
+**Rollback:** delete the 3 created TXT IDs. Inbound mail (MX, `mail`) and Resend are untouched.
