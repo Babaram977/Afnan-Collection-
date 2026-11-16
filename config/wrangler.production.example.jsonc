@@ -1,26 +1,25 @@
-// REVIEW TEMPLATE ONLY: no deployment/hostname authorization. Secrets are deliberately absent.
-// Confirm public hostname and all readiness gates before copying/using. routes stays empty.
+// Reference copy of the production configuration. The deploy workflow
+// (.github/workflows/deploy-production.yml) writes its own fixed copy; that copy is authoritative.
+// Secrets are deliberately absent. routes stays empty: the hostname is attached separately.
 {
-  "name": "afnan-collection-storefront",
+  "name": "afnan-collection-production",
   "account_id": "b4e142fe9da84ef204eecda2efe4a730",
   "main": "../worker.ts",
   "compatibility_date": "2026-11-13",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
   "routes": [],
   "assets": {
     "directory": "../.output/public",
     "binding": "ASSETS",
-    "run_worker_first": true
+    "run_worker_first": true,
   },
   "observability": {
     "enabled": true,
     "traces": {
-      "enabled": true
-    }
+      "enabled": true,
+    },
   },
   "vars": {
     "APP_ENV": "production",
@@ -28,20 +27,24 @@
     "CHECKOUT_ENABLED": "false",
     "PAYMENT_MODE": "disabled",
     "EMAIL_FROM": "orders@afnancollectionkn.com",
-    "EMAIL_SENDER_VERIFIED": "false"
+    "EMAIL_SENDER_VERIFIED": "false",
   },
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "afnan-collection-acceptance",
-      "database_id": "11950c2f-14bb-4a31-9add-356f155dea4e",
-      "migrations_dir": "../migrations"
-    }
+      "database_name": "afnan-collection-production",
+      "database_id": "73ddfc46-34ba-4733-841d-e4819af0b957",
+      "migrations_dir": "../migrations",
+    },
   ],
   "r2_buckets": [
     {
       "binding": "MEDIA",
-      "bucket_name": "afnan-product-media-acceptance"
-    }
-  ]
+      "bucket_name": "afnan-product-media-production",
+    },
+    {
+      "binding": "RECEIPTS",
+      "bucket_name": "afnan-payment-receipts-production",
+    },
+  ],
 }
