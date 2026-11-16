@@ -296,7 +296,7 @@ jobs:
               "APP_ORIGIN": "https://afnancollectionkn.com",
               "CHECKOUT_ENABLED": "false",
               "PAYMENT_MODE": "disabled",
-              "EMAIL_FROM": "orders@afnancollectionkn.com",
+              "EMAIL_FROM": "noreply@afnancollectionkn.com",
               "EMAIL_SENDER_VERIFIED": "false"
             },
             "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-production", "database_id": "73ddfc46-34ba-4733-841d-e4819af0b957", "migrations_dir": "artifact/migrations" }],
