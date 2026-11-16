@@ -249,6 +249,7 @@ function Admin() {
               setSetupToken(null);
               setNotice("Password saved. Sign in with your email and new password.");
             }}
+            onSignInInstead={() => setSetupToken(null)}
           />
         ) : passwordMode && !loading && !me?.userId ? (
           <PasswordSignIn
