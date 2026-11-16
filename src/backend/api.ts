@@ -498,12 +498,14 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
     await limited(request, env, "auth", 15);
     if (method === "POST") {
       const data = await bounded(request);
+      let otpEmail: string | undefined;
       if (path === "/api/auth/email-otp/send-verification-otp") {
         const parsed = z
           .object({ email: z.string().email().max(254), type: z.literal("sign-in") })
           .parse(JSON.parse(new TextDecoder().decode(data)));
         if (typeof parsed.email === "string") {
           const email = parsed.email.trim().toLowerCase();
+          otpEmail = email;
           await securityLimit(env, `email:${email}`, 5);
           await securityLimit(env, `email-hour:${email}`, 20, 3600);
           const cooldown = await env.DB.prepare(
@@ -517,6 +519,15 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       const response = await authFor(env).handler(
         new Request(request.url, { method, headers: request.headers, body: data }),
       );
+      if (otpEmail !== undefined) {
+        // Operator-only diagnostic. With sign-up disabled, Better Auth acknowledges a code request
+        // for an address with no account without generating or sending a code (non-enumerating).
+        // The client response stays identical; the log carries no address or code.
+        const known = await env.DB.prepare("SELECT 1 FROM user WHERE lower(email)=?")
+          .bind(otpEmail)
+          .first();
+        if (!known) console.log(JSON.stringify({ event: "auth.otp.no_account" }));
+      }
       if (!response.ok && path === "/api/auth/email-otp/send-verification-otp") {
         // Do not expose account existence via provider failures. Delivery monitoring is separate.
         console.error(JSON.stringify({ event: "auth.email.unavailable" }));

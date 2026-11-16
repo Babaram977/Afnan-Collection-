@@ -32,6 +32,7 @@ jobs:
       - run: bun run test:integration
       - run: bun run test:acceptance
       - run: bun run test:security
+      - run: bun run test:admin-otp
       - run: bun audit
       - run: bunx playwright install --with-deps chromium
       # Includes browser checks of the bank-transfer confirmation, so it runs after the browser install.
