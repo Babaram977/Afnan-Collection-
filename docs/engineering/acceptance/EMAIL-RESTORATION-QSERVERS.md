@@ -200,3 +200,53 @@ cPanel → Email → **Forwarders** → Add Forwarder:
 | `send` / `rsend.afnancollectionkn.com` | CNAME | present (Resend) |
 
 **Consequence:** outgoing mail from `support@` (QServers) currently has **no SPF and no DKIM** published, and receivers may mark it as spam. Stage 2 (single SPF, QServers DKIM `default`, DMARC `p=none`) addresses this; Resend is unaffected either way. **Pending owner inputs:** the complete DKIM value as text, and the DMARC record's hostname.
+
+## Stage 2 preparation — authentication (2026-11-16T02:15Z, read-only; for approval)
+
+### Resend (verified in public DNS through Google DNS)
+| Record | Resolves to | SPF / MX published there |
+|---|---|---|
+| `send.afnancollectionkn.com` CNAME | `send.forge.rmta.net` | `v=spf1 ip4:52.3.252.119 ip4:44.222.39.36 ip4:199.249.231.0/24 ~all`; MX `10 feedback.forge.rmta.net` |
+| `rsend.afnancollectionkn.com` CNAME | `rsend-euw1.forge.rmta.net` | `v=spf1 include:amazonses.com ~all`; MX `10 feedback-smtp.eu-west-1.amazonses.com` |
+| `resend._domainkey.afnancollectionkn.com` TXT | — | DKIM public key, `p=MIGf…` (1024-bit) |
+
+- **Resend uses dedicated return-path subdomains** (`send`, with `rsend` as fallback), never the root, for the envelope sender that SPF evaluates. **A root SPF record does not affect Resend and must not include it.**
+- DMARC alignment for Resend mail (`From: orders@afnancollectionkn.com`): DKIM `d=afnancollectionkn.com` (selector `resend`) is aligned, and the SPF domain `send.afnancollectionkn.com` is relaxed-aligned with `afnancollectionkn.com`.
+- **Not verifiable here:** whether the Resend dashboard shows the domain **Verified**. The owner checks; no Resend credentials are used.
+
+### QServers (verified)
+- `192.154.254.25` PTR → `14.qservers.net`, and `14.qservers.net` A → `192.154.254.25`: forward-confirmed reverse DNS. Also confirmed by the MXToolbox SMTP banner `220 14.qservers.net ESMTP Exim 4.100.1`.
+
+### Proposed records (Stage 2)
+| # | Type | Name | Content | Notes |
+|---|---|---|---|---|
+| 3 | TXT | `afnancollectionkn.com` | **Recommended:** `v=spf1 +mx +ip4:192.154.254.25 ~all` · **or exact original:** `v=spf1 +a +mx +ip4:192.154.254.25 ~all` | The **only** root SPF; the zone has none today |
+| 4 | TXT | `default._domainkey.afnancollectionkn.com` | `v=DKIM1; k=rsa; p=<complete key>` | **Pending** the complete value from cPanel |
+| 5 | TXT | `_dmarc.afnancollectionkn.com` (name to be confirmed in cPanel) | `v=DMARC1; p=none;` | Monitoring only; same as the original. Optional later: add `rua=mailto:<reports address>` |
+
+**SPF recommendation: drop `+a`.**
+- The root has no A record today, so `+a` matches nothing, which is a tolerated void lookup.
+- When the website later moves to Cloudflare, a **proxied** root A would make `+a` authorize **Cloudflare's shared edge addresses** to send mail as the domain, which is unintended.
+- `+mx` (resolves to `192.154.254.25`) plus the explicit `ip4:192.154.254.25` fully cover QServers.
+- Both variants use at most 2 DNS lookups, well under the limit of 10. cPanel Email Deliverability checks that the server IP is authorized, which either variant satisfies.
+
+### Conflict checks
+- **No duplicate SPF:** the zone has no root TXT today.
+- **No collisions:** `default._domainkey` and `_dmarc` do not exist yet, and `resend._domainkey` is a different selector.
+- **Preserved unchanged:** MX `@` → `mail` (0); A `mail` → `192.154.254.25` (DNS only); Resend `send`, `rsend`, `resend._domainkey`.
+
+### DKIM validation (when the owner supplies the complete record)
+1. The text starts `v=DKIM1; k=rsa; p=` and the `p=` value is continuous base64. Line breaks or quotes from copying are removed; cPanel may split it into 255-character strings, which are joined without spaces.
+2. The `p=` value decodes to a valid RSA public key, expected 2048-bit (`MIIBIjAN…IDAQAB`). It is checked locally, without sending it anywhere.
+3. Its start and end match the cPanel screenshot (`MIIBIjANBgkqhkiG9w0BAQEFAA…`, `…LaXPL2frVOo6nRxwRQIDAQAB;`).
+
+### Validation after publishing (approval required first)
+1. Cloudflare read-back: exactly 3 new TXT records; MX, `mail` and Resend unchanged; a single root SPF.
+2. Public view (Google DNS / MXToolbox): SPF, DKIM `default` and DMARC resolve; MXToolbox SPF and DMARC checks show no syntax errors.
+3. cPanel → Email Deliverability: SPF and DKIM shown as **valid**.
+4. The owner sends **one** message from `support@` (iPhone, through `14.qservers.net`) to a Gmail address. "Show original" should show **SPF: PASS (IP 192.154.254.25)**, **DKIM: PASS (d=afnancollectionkn.com, s=default)** and **DMARC: PASS**.
+5. Resend: the dashboard is still **Verified**. If a Resend send is ever tested, Gmail should show DKIM pass for `s=resend`.
+
+**Rollback:** delete the 3 TXT record IDs created. That returns the zone to today's Stage 1 state, with inbound mail unaffected.
+
+**Caveat:** authentication improves trust and DMARC results; it does not guarantee inbox placement.
