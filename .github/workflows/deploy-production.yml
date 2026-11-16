@@ -22,6 +22,11 @@ name: Deploy Afnan production
 #   not touch Cloudflare Access, DNS, routes or any other Worker.
 
 on:
+  # Automatic: after "Deploy Afnan acceptance" succeeds for a push to main of this repository.
+  workflow_run:
+    workflows: ["Deploy Afnan acceptance"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       commit:
@@ -49,7 +54,7 @@ on:
           - verified
         default: unverified
 
-run-name: "PRODUCTION deploy ${{ inputs.commit }} (checkout ${{ inputs.checkout }}, sender ${{ inputs.email_sender }}) by ${{ github.actor }}"
+run-name: "PRODUCTION deploy ${{ inputs.commit || github.event.workflow_run.head_sha }} (${{ github.event_name == 'workflow_run' && 'automatic' || 'manual' }}) by ${{ github.actor }}"
 
 permissions:
   contents: read
@@ -63,6 +68,13 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # Manual runs use the dispatch inputs. Automatic runs use the repository variables
+  # AFNAN_PRODUCTION_CHECKOUT / AFNAN_PRODUCTION_EMAIL_SENDER (owner-controlled settings), defaulting to
+  # checkout disabled and sender unverified. Card payments stay pinned disabled either way.
+  COMMIT_SHA: ${{ inputs.commit || github.event.workflow_run.head_sha }}
+  CHECKOUT_MODE: ${{ inputs.checkout || vars.AFNAN_PRODUCTION_CHECKOUT || 'disabled' }}
+  SENDER_MODE: ${{ inputs.email_sender || vars.AFNAN_PRODUCTION_EMAIL_SENDER || 'unverified' }}
+  DEPLOY_REASON: ${{ inputs.reason || format('automatic after Deploy Afnan acceptance passed for {0}', github.event.workflow_run.head_sha) }}
   WRANGLER_VERSION: "4.160.0"
   NODE_VERSION: "24"
   BUN_VERSION: "1.4.4"
@@ -70,7 +82,13 @@ env:
 jobs:
   build:
     name: Verify commit, test and build artifact (no secrets)
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' && (
+          github.event_name == 'workflow_dispatch' || (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'workflow_run' &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     outputs:
@@ -81,15 +99,17 @@ jobs:
           ACTOR: ${{ github.actor }}
           OWNER: ${{ github.repository_owner }}
         run: |
-          if [ "$ACTOR" != "$OWNER" ]; then
+          # Manual dispatch: repository owner only. Automatic runs are gated by the job condition
+          # (a successful run for a push to main of this repository).
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$ACTOR" != "$OWNER" ]; then
             echo "::error::Only the repository owner may deploy to Afnan production (actor: $ACTOR)."
             exit 1
           fi
 
       - name: Validate inputs
         env:
-          CHECKOUT: ${{ inputs.checkout }}
-          SENDER: ${{ inputs.email_sender }}
+          CHECKOUT: ${{ env.CHECKOUT_MODE }}
+          SENDER: ${{ env.SENDER_MODE }}
         run: |
           case "$CHECKOUT" in disabled|enabled) ;; *) echo "::error::checkout must be 'disabled' or 'enabled'."; exit 1 ;; esac
           case "$SENDER" in unverified|verified) ;; *) echo "::error::email_sender must be 'unverified' or 'verified'."; exit 1 ;; esac
@@ -98,7 +118,7 @@ jobs:
       - name: Validate commit input
         id: commit
         env:
-          COMMIT: ${{ inputs.commit }}
+          COMMIT: ${{ env.COMMIT_SHA }}
         run: |
           if ! printf '%s' "$COMMIT" | grep -Eq '^[0-9a-f]{40}$'; then
             echo "::error::commit must be a full lowercase 40-character SHA."
@@ -191,6 +211,7 @@ jobs:
           if [ -n "$extra" ]; then echo "::error::Unexpected bundle outputs: $extra"; exit 1; fi
           cp "$RUNNER_TEMP/bundle/worker.js" "$A/bundle/worker.js"
           cp -R .output/public/. "$A/public/"
+          cp -R migrations "$A/migrations"
           logo=$(node -e 'console.log(JSON.parse(require("fs").readFileSync("docs/design/AFNAN-BRAND-ASSET.json","utf8")).original.repositoryPath)')
           expected=$(node -e 'console.log(JSON.parse(require("fs").readFileSync("docs/design/AFNAN-BRAND-ASSET.json","utf8")).original.expectedSha256)')
           sum=$(sha256sum "$A/public/${logo#public/}" | cut -d' ' -f1)
@@ -232,7 +253,7 @@ jobs:
         working-directory: ${{ runner.temp }}/work/artifact
         env:
           COMMIT: ${{ needs.build.outputs.commit }}
-          REQUESTED: ${{ inputs.commit }}
+          REQUESTED: ${{ env.COMMIT_SHA }}
         run: |
           test "$COMMIT" = "$REQUESTED"
           test "$(cat COMMIT)" = "$COMMIT"
@@ -254,8 +275,8 @@ jobs:
       - name: Write fixed production configuration
         working-directory: ${{ runner.temp }}/work
         env:
-          CHECKOUT: ${{ inputs.checkout }}
-          SENDER: ${{ inputs.email_sender }}
+          CHECKOUT: ${{ env.CHECKOUT_MODE }}
+          SENDER: ${{ env.SENDER_MODE }}
         run: |
           cat > wrangler.jsonc <<'EOF'
           {
@@ -278,7 +299,7 @@ jobs:
               "EMAIL_FROM": "orders@afnancollectionkn.com",
               "EMAIL_SENDER_VERIFIED": "false"
             },
-            "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-production", "database_id": "73ddfc46-34ba-4733-841d-e4819af0b957" }],
+            "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-production", "database_id": "73ddfc46-34ba-4733-841d-e4819af0b957", "migrations_dir": "artifact/migrations" }],
             "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-production" }, { "binding": "RECEIPTS", "bucket_name": "afnan-payment-receipts-production" }]
           }
           EOF
@@ -289,6 +310,32 @@ jobs:
           node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];if(c.vars.PAYMENT_MODE!=="disabled"||c.workers_dev!==false||c.routes.length)process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$co" "$sv"
           ls -A
 
+      - name: Refuse to deploy while database migrations are pending
+        # Migrations are never applied by this workflow; they stay a separately approved step.
+        working-directory: ${{ runner.temp }}/work
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: b4e142fe9da84ef204eecda2efe4a730
+          WRANGLER_SEND_METRICS: "false"
+        run: |
+          out=$("$RUNNER_TEMP/tool/node_modules/.bin/wrangler" d1 migrations list DB --remote --config wrangler.jsonc 2>&1) || { echo "$out"; exit 1; }
+          if ! printf '%s' "$out" | grep -q "No migrations to apply"; then
+            echo "$out"
+            echo "::error::This commit has database migrations that are not applied to the target D1. Apply them under a separate approval first."
+            exit 1
+          fi
+          echo "- D1 migrations: none pending" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record the live version for rollback
+        working-directory: ${{ runner.temp }}/work
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: b4e142fe9da84ef204eecda2efe4a730
+          WRANGLER_SEND_METRICS: "false"
+        run: |
+          prev=$("$RUNNER_TEMP/tool/node_modules/.bin/wrangler" deployments status --config wrangler.jsonc 2>&1 | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1 || true)
+          echo "- Version live before this deploy (rollback target): \`${prev:-none (first deployment)}\`" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Deploy
         working-directory: ${{ runner.temp }}/work
         env:
@@ -296,8 +343,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: b4e142fe9da84ef204eecda2efe4a730
           WRANGLER_SEND_METRICS: "false"
           COMMIT: ${{ needs.build.outputs.commit }}
-          REASON: ${{ inputs.reason }}
-          CHECKOUT: ${{ inputs.checkout }}
+          REASON: ${{ env.DEPLOY_REASON }}
+          CHECKOUT: ${{ env.CHECKOUT_MODE }}
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::error::CLOUDFLARE_API_TOKEN is not set on the afnan-production environment."
