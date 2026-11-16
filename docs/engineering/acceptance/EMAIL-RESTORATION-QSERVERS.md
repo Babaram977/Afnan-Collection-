@@ -122,3 +122,40 @@ cPanel → Email → **Forwarders** → Add Forwarder:
 3. **iPhone server names** (incoming and outgoing) for the support account.
 4. **cPanel Email → Email Routing**: confirm "Local Mail Exchanger".
 5. Optional: the **CNAME** tab of Zone Editor, to see whether cPanel had a `mail` CNAME, and cPanel → Email Accounts → Connect Devices for `support@` (the recommended client server names).
+
+## Finalised plan (2026-11-16) — awaiting the remaining checks and owner approval
+
+**iPhone (owner-verified):** incoming IMAP `14.qservers.net`, outgoing SMTP `14.qservers.net`. The phone connects to the QServers server name directly and **does not depend on any `afnancollectionkn.com` hostname**, so these DNS changes cannot affect it. The Option 2 condition is satisfied.
+
+### Stage 1 — restore inbound delivery (urgent)
+| # | Type | Name | Content | Priority | Proxy | TTL |
+|---|---|---|---|---|---|---|
+| 1 | A | `mail.afnancollectionkn.com` | `192.154.254.25` | — | **false (DNS only)** | 1 (Auto) |
+| 2 | MX | `afnancollectionkn.com` | `mail.afnancollectionkn.com` | `0` | — | 1 (Auto) |
+
+### Stage 2 — outgoing authentication (preserves the existing QServers configuration)
+| # | Type | Name | Content | TTL |
+|---|---|---|---|---|
+| 3 | TXT | `afnancollectionkn.com` | `v=spf1 +a +mx +ip4:192.154.254.25 ~all` (exact cPanel value; the zone's only SPF) | 1 |
+| 4 | TXT | `default._domainkey.afnancollectionkn.com` | `v=DKIM1; k=rsa; p=<complete key, pending>` | 1 |
+| 5 | TXT | `<DMARC hostname, pending; expected _dmarc>.afnancollectionkn.com` | `v=DMARC1; p=none;` | 1 |
+
+**Preserved unchanged:** `send` CNAME, `rsend` CNAME, `resend._domainkey` TXT (Resend). No other zone changes, and no Cloudflare Email Routing.
+
+**Execution** (operator, after approval; Cloudflare DNS API on zone `a3c18f29…`):
+1. Re-read the zone and confirm it still contains exactly the 3 Resend records and none of the names above.
+2. Create the records **one at a time**, recording each record ID.
+3. Read back each record (type, name, content, priority, `proxied:false` for `mail`).
+4. Confirm the Resend records are byte-identical to before.
+
+**Verification:**
+- Owner: a public DNS view (for example MXToolbox) shows MX → `mail.afnancollectionkn.com` → `192.154.254.25`.
+- Owner: an **iCloud test message to `support@` arrives** in the iPhone inbox (it previously bounced with "unable to look up host").
+- After Stage 2: a reply from `support@` shows **SPF = pass and DKIM = pass** in the recipient's "Show original"; cPanel Email Deliverability shows valid; Resend still **Verified**.
+
+**Rollback:** delete exactly the recorded IDs. Stage 1 and Stage 2 roll back independently, and the result is today's state.
+
+### Remaining checks before approval (owner)
+1. **cPanel → Email → Email Routing** for `afnancollectionkn.com`: confirm **Local Mail Exchanger**. If it shows Remote or Automatic, set it to Local *before* Stage 1, or delivery will be refused at the server.
+2. **The complete DKIM record** as text (Zone Editor → `default._domainkey` → Edit → copy the Record field, or Email Deliverability). It should begin `v=DKIM1; k=rsa; p=MIIBIjAN` and end `IDAQAB;`.
+3. **The DMARC record's hostname** (Zone Editor → TXT filter → the `v=DMARC1; p=none;` row → Name).
