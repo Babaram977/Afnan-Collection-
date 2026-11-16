@@ -321,3 +321,25 @@ Local validation:
 - Result: no conflicts; all three records are new creations, with no edits or deletions.
 
 **DMARC name:** `_dmarc.afnancollectionkn.com` is fixed by RFC 7489 §6.1 (the `_dmarc` label prepended to the From domain). It does not depend on QServers. The QServers cPanel zone is not authoritative, because the nameservers are Cloudflare, and its contents were not inspected for a DMARC record.
+
+## Stage 2 — PUBLISHED (2026-11-16, owner approval referencing bd9bd5a)
+
+- **Pre-check:** the live zone had exactly 5 records with the expected IDs, unchanged.
+- **Created** (TXT, TTL Auto):
+
+| Record | ID |
+|---|---|
+| SPF `afnancollectionkn.com` | `c5529f865052e9aa234759abd8c62bc0` |
+| DKIM `default._domainkey.afnancollectionkn.com` | `cbb8792b61fb8fb72d556973f13ff345` |
+| DMARC `_dmarc.afnancollectionkn.com` | `e2afcb7f91c6d72a9a4537ad5338c632` |
+
+- **Read-back:** 8 records. The 5 originals are identical in type, name, content, TTL, proxy status and priority. The 3 new records match the approved values exactly (DKIM compared as the joined 411-character value).
+- **Public DNS (Google):**
+  - the root TXT has exactly one record, `v=spf1 mx ip4:192.154.254.25 ~all`;
+  - DKIM is byte-identical to the approved value;
+  - `_dmarc` returns `v=DMARC1; p=none;`. It briefly returned NXDOMAIN, which was negative caching from the pre-check query, and resolved on recheck;
+  - MX is unchanged.
+- Cloudflare's public resolver could not be queried from the session (host not allowed). Authoritative data is confirmed via the API.
+- **Not done:** no other configuration was changed; storefront checkout and payments remain disabled.
+- **Stage 2 is NOT complete** until the real outgoing-mail test (support@ → Gmail: SPF/DKIM/DMARC pass, Return-Path alignment) and the Resend Verified check are done.
+- **Rollback:** delete the 3 IDs above.
