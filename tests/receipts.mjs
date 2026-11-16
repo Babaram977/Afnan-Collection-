@@ -2,7 +2,7 @@
 import { enrollStaff } from "./authenticator.mjs";
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
-import { createTestApp, Client, ORIGIN } from "./harness.mjs";
+import { createTestApp, Client, ORIGIN, openAdminSection } from "./harness.mjs";
 import { chromium } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -730,7 +730,7 @@ try {
     await adminPage.getByRole("button", { name: "Enroll passkey or security key" }).click();
     await adminPage.getByRole("button", { name: "I saved my recovery codes" }).click();
     await adminPage.getByRole("navigation", { name: "Administration", exact: true }).waitFor();
-    await adminPage.getByRole("button", { name: "Payments", exact: true }).click();
+    await openAdminSection(adminPage, "Payments");
     await adminPage.getByRole("heading", { name: /Bank-transfer payments/ }).waitFor();
     const activeSection = adminPage.getByRole("region", { name: /^Active — receipt submitted/ });
     const expiredSection = adminPage.getByRole("region", { name: /^Expired — manual review only/ });

@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,8 @@ const NAV = [
 
 export function SiteHeader() {
   const { count } = useCart();
+  // Administrator pages use a compact header; the storefront keeps the full brand header.
+  const admin = useRouterState({ select: (s) => s.location.pathname.startsWith("/admin") });
   return (
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
       <a
@@ -30,8 +32,10 @@ export function SiteHeader() {
       >
         Skip to content
       </a>
-      <div className="container-page flex h-36 items-center justify-between gap-4">
-        <Wordmark />
+      <div
+        className={`container-page flex items-center justify-between gap-4 ${admin ? "h-16" : "h-36"}`}
+      >
+        <Wordmark placement={admin ? "compact" : "header"} />
         <nav aria-label="Main" className="hidden lg:block">
           <ul className="flex items-center gap-1">
             {NAV.map((n) => (

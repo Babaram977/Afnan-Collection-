@@ -182,6 +182,7 @@ jobs:
       - run: bun audit
       - run: bunx playwright install --with-deps chromium
       - run: bun run test:branding
+      - run: bun run test:admin-dashboard
       - run: bun run test:storefront
       - run: bun run test:bank-transfer
       - run: bun run test:receipts

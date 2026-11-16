@@ -136,11 +136,18 @@ export function SetupPassword({ token, onDone }: { token: string; onDone: () => 
   );
 }
 
-export function SignOutButton({ onSignedOut }: { onSignedOut: () => void }) {
+export function SignOutButton({
+  onSignedOut,
+  compact = false,
+}: {
+  onSignedOut: () => void;
+  compact?: boolean;
+}) {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant={compact ? "ghost" : "outline"}
+      size={compact ? "sm" : "default"}
       onClick={async () => {
         await apiCall("/auth/sign-out", { method: "POST", body: "{}" }).catch(() => undefined);
         window.dispatchEvent(new Event("afnan-auth"));

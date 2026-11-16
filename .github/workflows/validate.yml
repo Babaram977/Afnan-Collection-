@@ -42,3 +42,4 @@ jobs:
       - run: bun run test:browser
       - run: bun run test:branding
       - run: bun run test:storefront
+      - run: bun run test:admin-dashboard
