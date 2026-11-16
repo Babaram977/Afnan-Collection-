@@ -267,3 +267,37 @@ Cloudflare-computed records (`GET /zones/…/email/routing/dns`):
 **Rollback:** disable the rules, or disable Email Routing (which removes its records).
 
 **Owner decision needed:** Option A or B, and the destination mailbox address(es). The address is entered in the Cloudflare dashboard by the owner; it is not needed in chat.
+
+## P1 revision — `support@` reported active by the owner; hosting check (2026-11-16T01:15Z, read-only)
+
+**Findings:**
+- The zone `afnancollectionkn.com` is **active, type full, on Cloudflare nameservers** (`jake.ns.cloudflare.com`, `molly.ns.cloudflare.com`) since **2026-11-13T01:45Z**. **Cloudflare is therefore the authoritative DNS**: what is in this zone is what the internet sees.
+- **Previous nameservers:** `ns1.qservers.net`, `ns2.qservers.net` (registrar: Gransy).
+- The Cloudflare zone has only 3 records, all Resend sending (`send`, `rsend`, `resend._domainkey`, added 2026-11-14). **There is no MX record, no root SPF and no root A/AAAA record.**
+- **Consequence:** with no MX, and no root address record to fall back to, outside senders cannot deliver to any `@afnancollectionkn.com` address. If `support@` is hosted with a provider whose MX records lived at `qservers.net`, **those records were not carried over at the 13 Nov nameserver change, and inbound mail from outside has probably failed since then.** Logging in and sending can still work, which can make the mailbox look healthy.
+- **Limit of this check:** the operator sandbox has no public DNS resolver, and public DNS-over-HTTPS is blocked, so the public view could not be queried independently. The Cloudflare zone being authoritative and active makes the conclusion strong but not tested end to end.
+
+**Owner checks (no changes):**
+1. **Inbound test:** from a personal account on another domain (for example Gmail), send a message to `support@afnancollectionkn.com`. Does it arrive? Does the sender get a bounce ("domain not found" or "no MX")?
+2. **Provider:** where do you log in to read `support@`? The webmail address or app tells us the provider: registrar mail at Gransy/Subreg, Zoho, Google Workspace, Microsoft 365, Hostinger or another.
+3. **Old records:** if available, the DNS records previously set at `qservers.net` / the registrar panel, especially MX, SPF (TXT `v=spf1 …`), DKIM and any autodiscover records.
+
+### Compatibility decision
+- **If `support@` is hosted by a mail provider (expected):** **Cloudflare Email Routing is not compatible** with it. Email Routing requires exclusive control of the root MX, and enabling it would route all domain mail away from that provider. **Do not enable Email Routing.**
+- **Recommended instead: restore the provider's records in Cloudflare DNS and use the provider's own aliases.**
+  1. Add the provider's **MX** records exactly as the provider publishes them, plus its **DKIM** and any required verification or autodiscover records, all **DNS-only** (not proxied).
+  2. **SPF (root TXT):** a single record for the provider, `v=spf1 include:<provider> ~all`. Resend needs no root SPF entry: it sends from `send.afnancollectionkn.com` and signs with `resend._domainkey`. If Resend is later added at the root, it must be **merged** into the same record, never added as a second SPF record.
+  3. In the provider's admin panel, create **`admin@` and `sales@` as aliases (or forwarders) of the `support@` mailbox**. Delivery stays inside one provider, so there is no external hop.
+  4. **Loop check:** `support@` must not forward back to `admin@` or `sales@`. If `support@` forwards to another mailbox, that destination must be outside `afnancollectionkn.com`.
+  5. Optional later: DMARC at `_dmarc`, starting at `p=none`.
+- **Only if `support@` turns out to have no provider** (it cannot actually receive): Email Routing Option A from P1 applies, with `support@` forwarding to an existing external mailbox and `admin@`/`sales@` forwarding **directly** to that same external mailbox, not through `support@`.
+
+### Preserved and out of scope
+- **Preserved:** the Resend records (`send`, `rsend`, `resend._domainkey`); no root SPF conflict exists today.
+- **Out of scope:** Heroine Collection's domain and mail.
+
+### Verification after any change (approval required first)
+- The MX records match the provider.
+- One SPF record only.
+- Outside test messages to `support@`, `admin@` and `sales@` each arrive once in the `support@` mailbox, not in spam.
+- Resend sending still verifies.
