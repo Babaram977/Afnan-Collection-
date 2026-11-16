@@ -1,5 +1,8 @@
 # Implementation spec v1.0 — repository audit
 
+> **Historical record (audit dated 2026-11-15 against `main` `fff7295`).** Since then: the 24-hour bank-transfer reservation and admin-only approval (#8), receipt upload, private storage and payment review (#9), the logo fix (#5), the hardened deploy workflow (#7) and the `acceptance_checkout` switch (#10) were merged; migrations 0004 and 0005 were applied to acceptance; Stage A acceptance passed 53/53. Items below marked missing for §8, §9 and §12 (bank transfer, receipts, payment review, separate payment status) are therefore **implemented**; see `docs/engineering/acceptance/` for current status. Unchanged gaps include taxonomy and age bands, product fields, media tools, inventory reports and imports, LGA delivery and the sales email (sender not yet verified).
+
+
 Audit of the owner's "Storefront, Catalog, Inventory & Payment System — Implementation Specification v1.0" (15 Nov 2026) against `main` at `fff7295` (application = approved `2942789`; deployed acceptance version `0a2bfc57`). Read-only audit: **no code, migration or deployment was changed.** Evidence is file:line on `main`.
 
 Legend: ✅ implemented · 🟡 partial · ❌ missing · ⚠️ conflicts with spec
