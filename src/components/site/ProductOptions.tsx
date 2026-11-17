@@ -7,12 +7,14 @@ function Chips({
   selected,
   onSelect,
   disabled = () => false,
+  soldOut = () => false,
 }: {
   legend: string;
   options: string[];
   selected: string | undefined;
   onSelect: (value: string) => void;
   disabled?: (value: string) => boolean;
+  soldOut?: (value: string) => boolean;
 }) {
   return (
     <fieldset className="mt-5">
@@ -27,8 +29,9 @@ function Chips({
             type="button"
             onClick={() => onSelect(o)}
             aria-pressed={o === selected}
+            aria-label={soldOut(o) ? `${o} (sold out)` : undefined}
             disabled={disabled(o)}
-            className="min-h-11 rounded-full border bg-card px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+            className={`min-h-11 rounded-full border bg-card px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground ${soldOut(o) ? "text-muted-foreground line-through decoration-1" : ""}`}
           >
             {o}
           </button>
@@ -68,6 +71,17 @@ export function ProductOptions({
     if (match) onVariant(match.id);
     onChoice({});
   };
+  // Identical variant labels (e.g. two options both entered as "4-8 · Blue, Red") are numbered so
+  // customers can tell them apart; selection is by variant id, never by label.
+  const base = variants.map((x) => [x.size, x.color].filter(Boolean).join(" · ") || x.sku);
+  const optionLabels = variants.map((x, i) => ({
+    id: x.id,
+    stock: x.stock,
+    label:
+      base.filter((b) => b === base[i]).length > 1
+        ? `${base[i]} (option ${base.slice(0, i + 1).filter((b) => b === base[i]).length})`
+        : base[i]!,
+  }));
   const sizeChoices = choicesOf(v?.size);
   const colorChoices = choicesOf(v?.color);
   return (
@@ -78,6 +92,10 @@ export function ProductOptions({
           options={sizes}
           selected={v?.size}
           onSelect={(s) => pick(s, colors.length > 1 ? v?.color : undefined)}
+          soldOut={(s) => {
+            const matching = variants.filter((x) => x.size === s);
+            return matching.length > 0 && matching.every((x) => x.stock === 0);
+          }}
         />
       )}
       {variants.length > 1 && colors.length > 1 && (
@@ -89,20 +107,26 @@ export function ProductOptions({
           disabled={(c) =>
             sizes.length > 1 && !variants.some((x) => x.color === c && x.size === v?.size)
           }
+          soldOut={(c) => {
+            // A combination that does not exist is disabled, not "sold out".
+            const matching = variants.filter(
+              (x) => x.color === c && (sizes.length <= 1 || x.size === v?.size),
+            );
+            return matching.length > 0 && matching.every((x) => x.stock === 0);
+          }}
         />
       )}
       {variants.length > 1 && sizes.length <= 1 && colors.length <= 1 && (
         <Chips
           legend="Option"
-          options={variants.map((x) => [x.size, x.color].filter(Boolean).join(" · ") || x.sku)}
-          selected={v ? [v.size, v.color].filter(Boolean).join(" · ") || v.sku : undefined}
+          options={optionLabels.map((o) => o.label)}
+          selected={optionLabels.find((o) => o.id === variantId)?.label}
           onSelect={(label) => {
-            const match = variants.find(
-              (x) => ([x.size, x.color].filter(Boolean).join(" · ") || x.sku) === label,
-            );
+            const match = optionLabels.find((o) => o.label === label);
             if (match) onVariant(match.id);
             onChoice({});
           }}
+          soldOut={(label) => optionLabels.find((o) => o.label === label)?.stock === 0}
         />
       )}
       {variants.length === 1 && v?.size && !sizeChoices.length && (

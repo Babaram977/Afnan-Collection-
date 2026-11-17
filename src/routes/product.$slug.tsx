@@ -52,7 +52,10 @@ function ProductPage() {
   const p = Route.useLoaderData();
   const { add, ready, error: cartError } = useCart();
   const [img, setImg] = useState(0);
-  const [vid, setVid] = useState(p.variants[0]?.id);
+  // Open on the first option that can be bought, not simply the first one entered.
+  const [vid, setVid] = useState(
+    (p.variants.find((x) => x.stock == null || x.stock > 0) ?? p.variants[0])?.id,
+  );
   const [choice, setChoice] = useState<{ size?: string; color?: string }>({});
   const [note, setNote] = useState("");
   const [added, setAdded] = useState<string | null>(null);
@@ -112,9 +115,19 @@ function ProductPage() {
           }}
         />
         {v && <p className="mt-2 text-xs text-muted-foreground">SKU: {v.sku}</p>}
-        {v?.stock != null && (
-          <p className="mt-3 text-sm text-muted-foreground">
-            {out ? "Out of stock" : `${v.stock} in stock`}
+        {v && (
+          <p className="mt-3 flex items-center gap-2 text-sm" data-stock-status>
+            <span
+              aria-hidden
+              className={`size-2 rounded-full ${out ? "bg-destructive" : v.stock != null && v.stock <= 3 ? "bg-warning-foreground" : "bg-primary"}`}
+            />
+            {out
+              ? "Sold out"
+              : v.stock == null
+                ? "Available"
+                : v.stock <= 3
+                  ? `Only ${v.stock} left`
+                  : `In stock (${v.stock} available)`}
           </p>
         )}
         {v && !out && (
@@ -152,7 +165,13 @@ function ProductPage() {
             setAdded(lineText ? `${p.name} (${lineText})` : p.name);
           }}
         >
-          {needsSize ? "Choose a size" : needsColor ? "Choose a colour" : "Add to cart"}
+          {out
+            ? "Sold out"
+            : needsSize
+              ? "Choose a size"
+              : needsColor
+                ? "Choose a colour"
+                : "Add to cart"}
         </Button>
         {added && (
           <div

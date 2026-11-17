@@ -47,3 +47,4 @@ jobs:
       - run: bun run test:admin-overview
       - run: bun run test:admin-images
       - run: bun run test:cart-flow
+      - run: bun run test:shopping

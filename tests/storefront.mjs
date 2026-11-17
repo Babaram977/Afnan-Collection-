@@ -79,6 +79,14 @@ try {
       await expect(page).toHaveURL(ORIGIN + "/shop");
       await expect(cards()).toHaveCount(3);
     };
+    // On phones and tablets the filters sit behind a "Filters" button (2026-11-17).
+    const openFilters = async () => {
+      const toggle = page.getByRole("button", { name: /^Filters/ });
+      if (await toggle.isVisible()) {
+        await toggle.click();
+        await expect(page.locator("#shop-filters")).toBeVisible();
+      }
+    };
     await page.goto(ORIGIN + "/shop");
     await expect(cards()).toHaveCount(3);
     checks++;
@@ -88,6 +96,7 @@ try {
     await page.getByRole("link", { name: "Test outfits", exact: true }).click();
     await expect(cards()).toHaveText(["Test fixture options"]);
     checks++;
+    await openFilters();
     equal(await page.getByLabel("Category", { exact: true }).inputValue(), "test-outfits");
     await clearFilters();
     await page.getByLabel("Category", { exact: true }).selectOption("test-outfits");
@@ -143,15 +152,17 @@ try {
     await expect(page.locator("del")).toHaveText("₦1,250");
     checks++;
     // Variants with distinct sizes/colours are chosen through separate Size and Colour groups.
-    await page.getByRole("button", { name: "L", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Blue", exact: true })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    // Sold-out options stay selectable to view, are announced as sold out, and cannot be added.
+    await page.getByRole("button", { name: "L (sold out)", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Blue (sold out)", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
     checks++;
     await expect(page.getByText("₦3,500", { exact: true })).toBeVisible();
     checks++;
-    await expect(page.getByRole("button", { name: "Add to cart", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Sold out", exact: true })).toBeDisabled();
+    checks++;
+    await expect(page.locator("[data-stock-status]")).toHaveText("Sold out");
     checks++;
     await page.getByRole("button", { name: "S", exact: true }).click();
     await page.getByRole("button", { name: "Add to cart", exact: true }).click();

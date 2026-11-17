@@ -193,6 +193,7 @@ jobs:
       - run: bun run test:admin-overview
       - run: bun run test:admin-images
       - run: bun run test:cart-flow
+      - run: bun run test:shopping
       - run: bun run test:storefront
       - run: bun run test:bank-transfer
       - run: bun run test:receipts
