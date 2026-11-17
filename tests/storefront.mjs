@@ -122,7 +122,8 @@ try {
     checks++;
 
     await page.goto(ORIGIN + "/product/fixture-romper");
-    await expect(page.getByText("Option: M", { exact: true })).toBeVisible();
+    // Single-variant products label the option by type (2026-11-17 cart/options change).
+    await expect(page.getByText("Size: M", { exact: true })).toBeVisible();
     checks++;
     await page.getByRole("button", { name: "Show image 8", exact: true }).click();
     const mainImage = page.locator('#main img[alt="Test fixture photo 8"]');
@@ -141,12 +142,18 @@ try {
     checks++;
     await expect(page.locator("del")).toHaveText("₦1,250");
     checks++;
-    await page.getByRole("button", { name: "L · Blue", exact: true }).click();
+    // Variants with distinct sizes/colours are chosen through separate Size and Colour groups.
+    await page.getByRole("button", { name: "L", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Blue", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    checks++;
     await expect(page.getByText("₦3,500", { exact: true })).toBeVisible();
     checks++;
     await expect(page.getByRole("button", { name: "Add to cart", exact: true })).toBeDisabled();
     checks++;
-    await page.getByRole("button", { name: "S · Red", exact: true }).click();
+    await page.getByRole("button", { name: "S", exact: true }).click();
     await page.getByRole("button", { name: "Add to cart", exact: true }).click();
     await page.goto(ORIGIN + "/product/fixture-long-name");
     await noOverflow("Product long name");
@@ -171,7 +178,17 @@ try {
     await page.getByRole("button", { name: "Decrease Test fixture options", exact: true }).click();
     await expect(page.getByText("₦3,500.5", { exact: true })).toBeVisible();
     checks++;
-    await page.getByRole("link", { name: "Continue to checkout", exact: true }).click();
+    // With checkout disabled the cart explains it and offers no checkout link (2026-11-17).
+    await expect(page.getByText(/Checkout is temporarily unavailable/)).toBeVisible();
+    checks++;
+    await expect(
+      page.getByRole("button", { name: "Checkout coming soon", exact: true }),
+    ).toBeDisabled();
+    checks++;
+    await expect(page.getByRole("link", { name: "Continue to checkout" })).toHaveCount(0);
+    checks++;
+    // The checkout page itself still refuses orders if opened directly.
+    await page.goto(ORIGIN + "/checkout");
     await expect(
       page.getByText("Ordering is not enabled. No real orders or payments can be submitted."),
     ).toBeVisible();
