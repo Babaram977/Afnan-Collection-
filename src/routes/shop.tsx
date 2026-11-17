@@ -1,7 +1,7 @@
 import { loadCategories } from "@/lib/store";
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Search, X } from "lucide-react";
+import { Search, X, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -84,12 +84,19 @@ function Shop() {
   );
   const sizes = allSizes(PRODUCTS);
   const active = Object.values(f).some((v) => v !== undefined);
+  // Filters other than search, for the phone "Filters" button badge.
+  const panelActive = [f.age, f.category, f.size, f.minNaira, f.maxNaira].filter(
+    (v) => v !== undefined,
+  ).length;
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Category chips list only categories that currently have products.
+  const stocked = CATEGORIES.filter((c) => PRODUCTS.some((p) => p.category === c.slug));
 
   return (
     <>
       <PageHeader title="Shop" intro="Search and filter by age, category, size and price." />
-      <div className="container-page grid gap-8 py-8 lg:grid-cols-[260px_1fr]">
-        <aside aria-label="Filters" className="space-y-5">
+      <div className="container-page grid gap-6 py-6 lg:grid-cols-[260px_1fr] lg:gap-8 lg:py-8">
+        <aside aria-label="Filters" className="min-w-0 space-y-4 lg:space-y-5">
           <div>
             <Label htmlFor="q">Search</Label>
             <div className="relative mt-1.5">
@@ -107,7 +114,47 @@ function Shop() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+          {stocked.length > 1 && (
+            <div
+              role="group"
+              aria-label="Shop by category"
+              className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden"
+            >
+              {[{ slug: undefined, label: "All" }, ...stocked].map((c) => (
+                <button
+                  key={c.slug ?? "all"}
+                  type="button"
+                  aria-pressed={f.category === c.slug}
+                  onClick={() => set({ category: c.slug as CategorySlug | undefined })}
+                  className="min-h-10 shrink-0 rounded-full border bg-card px-4 text-sm font-semibold aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-between lg:hidden"
+            aria-expanded={filtersOpen}
+            aria-controls="shop-filters"
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <span className="flex items-center gap-2">
+              <SlidersHorizontal className="size-4" aria-hidden />
+              {filtersOpen ? "Hide filters" : "Filters"}
+            </span>
+            {panelActive > 0 && (
+              <span className="rounded-full bg-primary px-2 text-xs text-primary-foreground">
+                {panelActive}
+              </span>
+            )}
+          </Button>
+          <div
+            id="shop-filters"
+            className={`grid-cols-2 gap-3 lg:grid lg:grid-cols-1 ${filtersOpen ? "grid" : "hidden"}`}
+          >
             <div>
               <Label htmlFor="age">Age</Label>
               <select
@@ -194,21 +241,27 @@ function Shop() {
           )}
         </aside>
         <section aria-live="polite" aria-label="Results">
-          <Label htmlFor="sort">Sort by</Label>
-          <select
-            id="sort"
-            className={selectCls}
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-          >
-            <option value="newest">Recently updated</option>
-            <option value="name">Name</option>
-            <option value="low">Price: low to high</option>
-            <option value="high">Price: high to low</option>
-          </select>
-          <p className="mb-4 text-sm text-muted-foreground">
-            {results.length} product{results.length === 1 ? "" : "s"}
-          </p>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <p className="pb-2.5 text-sm text-muted-foreground">
+              {results.length} product{results.length === 1 ? "" : "s"}
+            </p>
+            <div className="w-44 sm:w-52">
+              <Label htmlFor="sort" className="text-xs">
+                Sort by
+              </Label>
+              <select
+                id="sort"
+                className={`${selectCls} mt-1`}
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+              >
+                <option value="newest">Recently updated</option>
+                <option value="name">Name</option>
+                <option value="low">Price: low to high</option>
+                <option value="high">Price: high to low</option>
+              </select>
+            </div>
+          </div>
           {results.length ? (
             <ProductGrid products={results} />
           ) : PRODUCTS.length === 0 ? (
