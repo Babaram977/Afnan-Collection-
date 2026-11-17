@@ -10,6 +10,7 @@ import {
 } from "react";
 import { z } from "zod";
 import { apiCall } from "./store";
+import { lineKey } from "./options";
 import type { Product } from "./catalog";
 export interface CartLine {
   productId: string;
@@ -19,6 +20,8 @@ export interface CartLine {
   priceKobo: number;
   qty: number;
   imageUrl?: string | undefined;
+  // Customer's choices for this line (e.g. "Colour: Black · Note: age 6"); part of the line's identity.
+  note?: string | undefined;
 }
 interface CartCtx {
   ready: boolean;
@@ -27,14 +30,20 @@ interface CartCtx {
   count: number;
   subtotalKobo: number;
   add: (l: CartLine) => void;
-  setQty: (variantId: string, qty: number) => void;
-  remove: (variantId: string) => void;
+  setQty: (key: string, qty: number) => void;
+  remove: (key: string) => void;
   clear: () => void;
 }
 const Ctx = createContext<CartCtx | null>(null);
 const KEY = "afnan-cart-v1";
 const persisted = z
-  .array(z.object({ variantId: z.string().uuid(), qty: z.number().int().min(1).max(99) }))
+  .array(
+    z.object({
+      variantId: z.string().uuid(),
+      qty: z.number().int().min(1).max(99),
+      note: z.string().max(200).optional(),
+    }),
+  )
   .max(50);
 export function cartReducerAdd(lines: CartLine[], l: CartLine): CartLine[] {
   if (
@@ -44,11 +53,9 @@ export function cartReducerAdd(lines: CartLine[], l: CartLine): CartLine[] {
     l.priceKobo < 0
   )
     return lines;
-  const ex = lines.find((x) => x.variantId === l.variantId);
+  const ex = lines.find((x) => lineKey(x) === lineKey(l));
   return ex
-    ? lines.map((x) =>
-        x.variantId === l.variantId ? { ...x, qty: Math.min(99, x.qty + l.qty) } : x,
-      )
+    ? lines.map((x) => (lineKey(x) === lineKey(l) ? { ...x, qty: Math.min(99, x.qty + l.qty) } : x))
     : lines.length < 50
       ? [...lines, { ...l, qty: Math.min(99, l.qty) }]
       : lines;
@@ -69,8 +76,9 @@ export function restoreCart(raw: unknown, products: Product[]): CartLine[] {
       priceKobo: v.priceKobo,
       qty: Math.min(l.qty, v.stock, 99),
       imageUrl: p.images[0]?.url,
+      ...(l.note ? { note: l.note } : {}),
     };
-    if (!result.some((x) => x.variantId === line.variantId)) result.push(line);
+    if (!result.some((x) => lineKey(x) === lineKey(line))) result.push(line);
   }
   return result;
 }
@@ -128,7 +136,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           : event
             ? [
                 ...restored,
-                ...saved.filter((l) => !restored.some((x) => x.variantId === l.variantId)),
+                ...saved.filter((l) => !restored.some((x) => lineKey(x) === lineKey(l))),
               ]
             : restored;
         if (active && attempt === generation) {
@@ -157,7 +165,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => {
       void apiCall("/cart", {
         method: "PUT",
-        body: JSON.stringify(lines.map(({ variantId, qty }) => ({ variantId, qty }))),
+        body: JSON.stringify(
+          lines.map(({ variantId, qty, note }) => ({ variantId, qty, ...(note ? { note } : {}) })),
+        ),
       }).catch(() => {
         /* Local edits remain saved; checkout always revalidates authoritative data. */
       });
@@ -176,11 +186,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (!Number.isInteger(qty)) return;
         commit((previous) =>
           qty <= 0
-            ? previous.filter((l) => l.variantId !== id)
-            : previous.map((l) => (l.variantId === id ? { ...l, qty: Math.min(qty, 99) } : l)),
+            ? previous.filter((l) => lineKey(l) !== id)
+            : previous.map((l) => (lineKey(l) === id ? { ...l, qty: Math.min(qty, 99) } : l)),
         );
       },
-      remove: (id) => commit((previous) => previous.filter((l) => l.variantId !== id)),
+      remove: (id) => commit((previous) => previous.filter((l) => lineKey(l) !== id)),
       clear: () => commit(() => []),
     }),
     [lines, ready, error, commit],

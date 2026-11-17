@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/lib/cart";
+import { lineKey } from "@/lib/options";
 import { formatNaira } from "@/lib/catalog";
 import { apiCall, type Zone, type Order, type Me } from "@/lib/store";
 import { PageHeader } from "@/components/site/PageHeader";
@@ -278,7 +279,7 @@ function Checkout() {
           ) : (
             <>
               {lines.map((l) => (
-                <p key={l.variantId} className="mt-2 text-sm">
+                <p key={lineKey(l)} className="mt-2 text-sm">
                   {l.qty} × {l.name} — {formatNaira(l.qty * l.priceKobo)}
                 </p>
               ))}

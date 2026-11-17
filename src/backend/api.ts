@@ -682,11 +682,18 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
   if (path === "/api/cart" && method === "PUT") {
     if (!a.owner) fail(400, "Session required");
     const lines = z
-      .array(z.object({ variantId: z.string().uuid(), qty: z.number().int().min(1).max(99) }))
+      .array(
+        z.object({
+          variantId: z.string().uuid(),
+          qty: z.number().int().min(1).max(99),
+          // Customer's option choices/note for the line (plain text, shown back to the customer).
+          note: z.string().trim().max(200).optional(),
+        }),
+      )
       .max(50)
       .parse(await body(request));
-    if (new Set(lines.map((l) => l.variantId)).size !== lines.length)
-      fail(400, "Duplicate variants");
+    if (new Set(lines.map((l) => `${l.variantId}|${l.note ?? ""}`)).size !== lines.length)
+      fail(400, "Duplicate cart lines");
     await env.DB.prepare(
       "INSERT INTO carts(owner,lines) VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET lines=excluded.lines,updated_at=unixepoch()",
     )

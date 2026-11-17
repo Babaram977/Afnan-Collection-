@@ -2,6 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
+import { chosenLabel, lineKey } from "@/lib/options";
+import { useEffect, useState } from "react";
+import { apiCall } from "@/lib/store";
 import { formatNaira } from "@/lib/catalog";
 import { PageHeader } from "@/components/site/PageHeader";
 import { EmptyState } from "@/components/site/EmptyState";
@@ -22,6 +25,13 @@ export const Route = createFileRoute("/cart")({
 
 function Cart() {
   const { lines, setQty, remove, subtotalKobo, ready, error } = useCart();
+  // null while loading; checkout stays unavailable until the server says it is enabled.
+  const [checkoutEnabled, setCheckoutEnabled] = useState<boolean | null>(null);
+  useEffect(() => {
+    apiCall<{ checkoutEnabled: boolean }>("/health")
+      .then((h) => setCheckoutEnabled(h.checkoutEnabled))
+      .catch(() => setCheckoutEnabled(false));
+  }, []);
   if (!ready)
     return (
       <>
@@ -51,14 +61,21 @@ function Cart() {
           <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
             <ul className="min-w-0 divide-y rounded-2xl bg-card shadow-soft">
               {lines.map((l) => (
-                <li key={l.variantId} className="flex gap-4 p-4">
+                <li key={lineKey(l)} className="flex gap-4 p-4">
                   <div className="size-20 shrink-0 overflow-hidden rounded-xl">
                     <ProductImageOrPlaceholder src={l.imageUrl} alt={l.name} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="break-words font-semibold">{l.name}</p>
-                    {l.variantLabel && (
-                      <p className="break-words text-sm text-muted-foreground">{l.variantLabel}</p>
+                    {chosenLabel(l.variantLabel) && (
+                      <p className="break-words text-sm text-muted-foreground">
+                        {chosenLabel(l.variantLabel)}
+                      </p>
+                    )}
+                    {l.note && (
+                      <p className="break-words text-sm" data-cart-note>
+                        {l.note}
+                      </p>
                     )}
                     <p className="mt-1 text-sm font-bold">{formatNaira(l.priceKobo)}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -66,7 +83,7 @@ function Cart() {
                         size="icon"
                         variant="outline"
                         aria-label={`Decrease ${l.name}`}
-                        onClick={() => setQty(l.variantId, l.qty - 1)}
+                        onClick={() => setQty(lineKey(l), l.qty - 1)}
                       >
                         <Minus />
                       </Button>
@@ -77,7 +94,7 @@ function Cart() {
                         size="icon"
                         variant="outline"
                         aria-label={`Increase ${l.name}`}
-                        onClick={() => setQty(l.variantId, l.qty + 1)}
+                        onClick={() => setQty(lineKey(l), l.qty + 1)}
                       >
                         <Plus />
                       </Button>
@@ -85,7 +102,7 @@ function Cart() {
                         size="icon"
                         variant="ghost"
                         aria-label={`Remove ${l.name}`}
-                        onClick={() => remove(l.variantId)}
+                        onClick={() => remove(lineKey(l))}
                       >
                         <Trash2 />
                       </Button>
@@ -102,8 +119,30 @@ function Cart() {
               <p className="mt-2 text-xs text-muted-foreground">
                 Delivery fees are not yet configured.
               </p>
-              <Button asChild className="mt-6 w-full rounded-full">
-                <Link to="/checkout">Continue to checkout</Link>
+              {checkoutEnabled ? (
+                <Button asChild className="mt-6 w-full rounded-full">
+                  <Link to="/checkout">Continue to checkout</Link>
+                </Button>
+              ) : (
+                <>
+                  <p
+                    role="status"
+                    data-checkout-unavailable
+                    className="mt-6 rounded-xl bg-secondary p-3 text-sm"
+                  >
+                    {checkoutEnabled === null
+                      ? "Checking checkout availability…"
+                      : "Checkout is temporarily unavailable while we prepare the store. Your cart is saved on this device."}
+                  </p>
+                  <Button className="mt-3 w-full rounded-full" disabled>
+                    Checkout coming soon
+                  </Button>
+                </>
+              )}
+              <Button asChild variant="outline" className="mt-3 w-full rounded-full">
+                <Link to="/shop" search={{}}>
+                  Continue shopping
+                </Link>
               </Button>
             </aside>
           </div>

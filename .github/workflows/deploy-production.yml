@@ -187,6 +187,7 @@ jobs:
       - run: bun run test:branding
       - run: bun run test:admin-dashboard
       - run: bun run test:admin-images
+      - run: bun run test:cart-flow
       - run: bun run test:storefront
       - run: bun run test:bank-transfer
       - run: bun run test:receipts

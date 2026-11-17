@@ -57,3 +57,13 @@ Controlled fixtures keep provider transaction state separate from the app paymen
 The latest owner instruction adds guided management rather than requiring technical identifiers. Products now support generated/assigned SKUs, regular/promotional prices entered in naira, opening stock, private multi-photo previews, main-image ordering, photo unlink/replacement, and soft deletion preserving orders. Existing variants are adjusted through the stock movement workflow. Admin publication requires a priced option and appears in the storefront directly from D1. Contact settings are validated overrides of the shared official business module, resolved for public UI/SEO. The same generic optimized photo field supports optional homepage banner photos. See ADMIN-GUIDE.md.
 
 Afnan has no connection to Heroine's database, customers, auth roles, secrets or media. Local resources are isolated; dedicated remote resources still require ownership review and activation authorization.
+
+## Cart options and item notes (2026-11-17)
+
+- **Product page options:**
+  - variants with distinct sizes/colours are chosen through separate **Size** and **Colour** chip groups, and missing combinations are disabled;
+  - a variant whose size or colour field lists values ("Blue, Black, Ash") requires the customer to pick one;
+  - an optional note (120 characters) can be added.
+- **Cart storage:** the choice and note are stored on the cart line as `note` (local + owner-scoped server cart; `PUT /api/cart` accepts `note` ≤ 200 characters). Line identity is variant + note, so "Black" and "Blue" of one variant are separate lines.
+- **Cart page:** shows the choice and note, a **Continue shopping** link, and, while `CHECKOUT_ENABLED` is not `true`, a "Checkout is temporarily unavailable" notice with no checkout link.
+- **Before enabling checkout:** orders do not yet carry notes. `order_items` has no note column, and its primary key `(order_id, variant_id)` cannot hold two lines of one variant. A migration (`order_items.note`, key including the note or a line id) plus `createOrder` support are required, so that customers' choices are never dropped silently.

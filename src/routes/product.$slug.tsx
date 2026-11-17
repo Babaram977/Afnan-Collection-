@@ -1,9 +1,12 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { CATEGORIES, formatNaira, getProduct } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
+import { choicesOf, lineNote } from "@/lib/options";
+import { ProductOptions } from "@/components/site/ProductOptions";
 import { ProductImageOrPlaceholder } from "@/components/site/ProductCard";
 import { EmptyState } from "@/components/site/EmptyState";
 
@@ -50,8 +53,13 @@ function ProductPage() {
   const { add, ready, error: cartError } = useCart();
   const [img, setImg] = useState(0);
   const [vid, setVid] = useState(p.variants[0]?.id);
+  const [choice, setChoice] = useState<{ size?: string; color?: string }>({});
+  const [note, setNote] = useState("");
+  const [added, setAdded] = useState<string | null>(null);
   const v = p.variants.find((x) => x.id === vid);
   const out = v?.stock == null || v.stock <= 0;
+  const needsSize = choicesOf(v?.size).length > 0 && !choice.size;
+  const needsColor = choicesOf(v?.color).length > 0 && !choice.color;
   return (
     <div className="container-page grid gap-8 py-8 md:grid-cols-2 md:py-12">
       <div className="min-w-0">
@@ -90,40 +98,47 @@ function ProductPage() {
             <p className="text-2xl font-bold">{formatNaira(v.priceKobo)}</p>
           </div>
         )}
-        {p.variants.length === 1 && (v?.size || v?.color) && (
-          <p className="mt-6 text-sm font-semibold">
-            Option: {[v.size, v.color].filter(Boolean).join(" · ")}
-          </p>
-        )}
-        {p.variants.length > 1 && (
-          <fieldset className="mt-6">
-            <legend className="mb-2 text-sm font-semibold">Option</legend>
-            <div className="flex flex-wrap gap-2">
-              {p.variants.map((x) => (
-                <button
-                  key={x.id}
-                  onClick={() => setVid(x.id)}
-                  aria-pressed={x.id === vid}
-                  className="min-h-11 rounded-full border bg-card px-4 text-sm font-semibold aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
-                >
-                  {[x.size, x.color].filter(Boolean).join(" · ") || x.sku}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        )}
+        <ProductOptions
+          variants={p.variants}
+          variantId={vid}
+          onVariant={(id) => {
+            setVid(id);
+            setAdded(null);
+          }}
+          choice={choice}
+          onChoice={(c) => {
+            setChoice(c);
+            setAdded(null);
+          }}
+        />
         {v && <p className="mt-2 text-xs text-muted-foreground">SKU: {v.sku}</p>}
         {v?.stock != null && (
           <p className="mt-3 text-sm text-muted-foreground">
             {out ? "Out of stock" : `${v.stock} in stock`}
           </p>
         )}
+        {v && !out && (
+          <div className="mt-5">
+            <Label htmlFor="item-note">Note for this item (optional)</Label>
+            <Input
+              id="item-note"
+              value={note}
+              maxLength={120}
+              placeholder="e.g. age 6, or a second colour choice"
+              onChange={(e) => {
+                setNote(e.target.value);
+                setAdded(null);
+              }}
+            />
+          </div>
+        )}
         <Button
           size="lg"
           className="mt-6 w-full rounded-full md:w-auto"
-          disabled={!ready || !v || out}
+          disabled={!ready || !v || out || needsSize || needsColor}
           onClick={() => {
-            if (!ready || !v) return;
+            if (!ready || !v || needsSize || needsColor) return;
+            const lineText = lineNote(choice, note);
             add({
               productId: p.id,
               variantId: v.id,
@@ -132,12 +147,34 @@ function ProductPage() {
               priceKobo: v.priceKobo,
               qty: 1,
               imageUrl: p.images[0]?.url,
+              ...(lineText ? { note: lineText } : {}),
             });
-            toast.success("Added to cart");
+            setAdded(lineText ? `${p.name} (${lineText})` : p.name);
           }}
         >
-          Add to cart
+          {needsSize ? "Choose a size" : needsColor ? "Choose a colour" : "Add to cart"}
         </Button>
+        {added && (
+          <div
+            role="status"
+            data-added-to-cart
+            className="mt-4 rounded-2xl border border-primary/30 bg-card p-4"
+          >
+            <p className="text-sm">
+              <span className="font-semibold">Added to your cart:</span> {added}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button asChild size="sm" className="rounded-full">
+                <Link to="/cart">View cart</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="rounded-full">
+                <Link to="/shop" search={{}}>
+                  Continue shopping
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
         {!ready && (
           <p role={cartError ? "alert" : "status"} className="mt-3 text-sm text-muted-foreground">
             {cartError ?? "Loading your saved cart…"}

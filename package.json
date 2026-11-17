@@ -33,7 +33,8 @@
     "admin:provision": "node scripts/admin-provision-password.mjs",
     "test:domain": "node tests/domain.mjs",
     "test:admin-dashboard": "node tests/admin-dashboard.mjs",
-    "test:admin-images": "node tests/admin-images.mjs"
+    "test:admin-images": "node tests/admin-images.mjs",
+    "test:cart-flow": "node tests/cart-flow.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1",
