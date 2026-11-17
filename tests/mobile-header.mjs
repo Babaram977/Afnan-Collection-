@@ -100,6 +100,7 @@ try {
       await page.getByRole("button", { name: "Open menu" }).click();
       await nav.getByRole("link", { name: "About", exact: true }).click();
       await page.waitForURL("**/about");
+      await page.getByRole("heading", { name: "About us", exact: true }).waitFor();
       await page.getByRole("dialog").waitFor({ state: "hidden" });
       check(
         (await page.getByRole("dialog").count()) === 0,
@@ -113,6 +114,7 @@ try {
       );
     await page.getByRole("link", { name: /^Cart, / }).click();
     await page.waitForURL("**/cart");
+    await page.getByRole("heading", { name: "Your cart", exact: true }).waitFor();
     check(new URL(page.url()).pathname === "/cart", `Cart navigation at ${width}`);
     await page.goto(`${ORIGIN}/shop`);
     const axe = await new AxeBuilder({ page })

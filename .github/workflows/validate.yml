@@ -58,6 +58,7 @@ jobs:
           HEADER_BROWSER: webkit
           HEADER_REVIEW_DIR: /tmp/afnan-header-review/webkit
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: mobile-header-review
           path: /tmp/afnan-header-review
