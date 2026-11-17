@@ -103,7 +103,7 @@ try {
     ok(await page.getByRole("button", { name: "Sign out" }).isVisible(), "Sign out reachable");
 
     // Statistics: four tiles, two per row on phones, one row on desktop.
-    const tiles = page.locator('section[aria-label="Overview"] .grid > div');
+    const tiles = page.locator('section[aria-label="Sales"] .grid > div');
     assert.equal(await tiles.count(), 4);
     const [a, b, c] = await Promise.all([0, 1, 2].map((i) => tiles.nth(i).boundingBox()));
     ok(Math.abs(a.y - b.y) < 2, "First two tiles share a row");

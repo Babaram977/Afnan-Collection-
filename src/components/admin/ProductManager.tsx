@@ -436,10 +436,20 @@ function ProductEditor({
     </section>
   );
 }
-export function ProductManager() {
+export function ProductManager({
+  startNew = false,
+  onStarted,
+}: {
+  // Open the "New product" editor immediately (dashboard "Add product" shortcut).
+  startNew?: boolean;
+  onStarted?: () => void;
+} = {}) {
   const [products, setProducts] = useState<Managed[]>([]);
   const [categories, setCategories] = useState<{ slug: CategorySlug; label: string }[]>([]);
-  const [selected, setSelected] = useState<Managed | null | undefined>(undefined);
+  const [selected, setSelected] = useState<Managed | null | undefined>(startNew ? null : undefined);
+  useEffect(() => {
+    if (startNew) onStarted?.();
+  }, [startNew, onStarted]);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");

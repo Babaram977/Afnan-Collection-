@@ -821,22 +821,58 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
     requireRole(a, ["admin", "fulfilment"]);
     if (path === "/api/admin/overview" && method === "GET") {
       await expire(env);
-      return json({
-        products: (await catalog(env, true)).length,
-        lowStock: (
-          await env.DB.prepare(
-            // Archived products are out of the catalogue, so their options are not "low stock".
-            "SELECT v.id,v.sku,v.stock,v.low_stock,p.name FROM variants v JOIN products p ON p.id=v.product_id WHERE p.status<>'archived' AND v.stock<=v.low_stock ORDER BY v.stock,p.name LIMIT 100",
-          ).all()
-        ).results,
-        sales: await env.DB.prepare(
+      // One batched round trip. Catalogue and inventory figures exclude deleted products; stock
+      // figures also exclude archived products (no longer for sale). variants.stock is AVAILABLE
+      // stock: the reserve_stock trigger deducts units when an order is created and restore_stock
+      // returns them on cancel/expiry, so reserved = units held by pending orders.
+      const live = "p.deleted_at IS NULL AND p.status<>'archived'";
+      const [catalogue, inventory, reserved, low, fulfilment, sales, review] = await env.DB.batch([
+        env.DB.prepare(
+          "SELECT COUNT(*) AS total,COALESCE(SUM(status='active'),0) AS published,COALESCE(SUM(status='draft'),0) AS drafts,COALESCE(SUM(status='archived'),0) AS archived FROM products p WHERE p.deleted_at IS NULL",
+        ),
+        env.DB.prepare(
+          `SELECT COALESCE(SUM(v.stock),0) AS available,COALESCE(SUM(v.stock>0 AND v.stock<=v.low_stock),0) AS lowStock,COALESCE(SUM(v.stock=0),0) AS outOfStock,COUNT(*) AS variants FROM variants v JOIN products p ON p.id=v.product_id WHERE ${live}`,
+        ),
+        env.DB.prepare(
+          "SELECT COALESCE(SUM(i.qty),0) AS reserved,COUNT(DISTINCT o.id) AS orders FROM order_items i JOIN orders o ON o.id=i.order_id WHERE o.status='pending'",
+        ),
+        env.DB.prepare(
+          `SELECT v.id,v.sku,v.stock,v.low_stock,p.name FROM variants v JOIN products p ON p.id=v.product_id WHERE ${live} AND v.stock<=v.low_stock ORDER BY v.stock,p.name LIMIT 100`,
+        ),
+        env.DB.prepare("SELECT COUNT(*) AS n FROM orders WHERE status IN ('paid','processing')"),
+        env.DB.prepare(
           "SELECT COUNT(*) AS orders,COALESCE(SUM(total_kobo),0) AS revenueKobo FROM orders WHERE status IN ('paid','processing','shipped','delivered')",
-        ).first(),
-        paymentsAwaitingReview: (
-          await env.DB.prepare(
-            "SELECT COUNT(DISTINCT order_id) AS n FROM payment_receipts WHERE status='submitted'",
-          ).first<{ n: number }>()
-        )?.n,
+        ),
+        env.DB.prepare(
+          "SELECT COUNT(DISTINCT order_id) AS n FROM payment_receipts WHERE status='submitted'",
+        ),
+      ]);
+      const one = (r: D1Result) => (r.results[0] ?? {}) as Record<string, number>;
+      const c = one(catalogue!);
+      const inv = one(inventory!);
+      const res = one(reserved!);
+      return json({
+        // Existing keys, kept for compatibility.
+        products: c["total"] ?? 0,
+        lowStock: low!.results,
+        sales: one(sales!),
+        paymentsAwaitingReview: one(review!)["n"] ?? 0,
+        // Business overview (2026-11-17).
+        catalogue: {
+          total: c["total"] ?? 0,
+          published: c["published"] ?? 0,
+          drafts: c["drafts"] ?? 0,
+          archived: c["archived"] ?? 0,
+        },
+        inventory: {
+          available: inv["available"] ?? 0,
+          reserved: res["reserved"] ?? 0,
+          reservedOrders: res["orders"] ?? 0,
+          lowStockVariants: inv["lowStock"] ?? 0,
+          outOfStockVariants: inv["outOfStock"] ?? 0,
+          variants: inv["variants"] ?? 0,
+        },
+        ordersAwaitingFulfilment: one(fulfilment!)["n"] ?? 0,
       });
     }
     if (path === "/api/admin/orders" && method === "GET")
