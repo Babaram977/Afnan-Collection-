@@ -32,6 +32,7 @@ The first product moves 57 px upward on mobile. The full fixture card is visible
 - Existing branding: 88; administrator dashboard: 87; shopping: 44; cart flow: 59 checks passed.
 - Security audit passed with the existing owner-approved build-only picomatch advisory exception `GHSA-fc5q-39xc-vjpf`, expiring 2026-12-01. Registry latest confirmed 4.0.7; no affected code found in the 28 deployed artifact files. No exception was added or expanded.
 - Before/after PNGs and JSON measurements are in `/workspace/work/afnan-header-review`, named `before-shop-390.png`, `after-shop-390.png`, etc.; screenshots use local fixtures. PR CI uploads after screenshots and runs Chromium plus WebKit. Local WebKit could not launch because host GTK/Graphene and related libraries are absent; real iPhone Safari has not been tested.
+- Browser regression waits now require destination page content after navigation and wait for the existing shopping Add to cart enabled state after a colour selection. These address observed asynchronous test races without changing application or commerce behavior.
 - Exact commit CI and acceptance deployment results will be recorded in the PR after pushing. This review does not claim hosted authenticated rendering.
 
 ## Acceptance and rollback
