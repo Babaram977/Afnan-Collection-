@@ -6,6 +6,7 @@ import { nairaToKobo, optimizeProductPhoto } from "@/lib/images";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdminImage } from "./AdminImage";
 type Variant = ProductVariant & { lowStock: number };
 type Managed = Omit<Product, "variants"> & {
   status: "draft" | "active" | "archived";
@@ -353,10 +354,8 @@ function ProductEditor({
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {images.map((image, index) => (
               <li key={image.url} className="space-y-3 rounded-xl border p-3">
-                <img
-                  src={image.url.replace("/media/", "/api/admin/media/")}
-                  width={160}
-                  height={160}
+                <AdminImage
+                  url={image.url}
                   alt={image.alt}
                   className="aspect-square w-full rounded-lg object-contain"
                 />
@@ -531,11 +530,9 @@ export function ProductManager() {
               <li key={p.id} className="space-y-2 rounded-xl border bg-card p-4">
                 <div className="flex items-start gap-3">
                   {p.images[0] && (
-                    <img
-                      src={p.images[0].url}
-                      alt=""
+                    <AdminImage
+                      url={p.images[0].url}
                       className="size-14 shrink-0 rounded-md object-cover"
-                      loading="lazy"
                     />
                   )}
                   <div className="min-w-0">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AdminImage } from "./AdminImage";
 import { optimizeProductPhoto } from "@/lib/images";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -44,11 +45,9 @@ export function BannerPhoto({
       />
       {url && (
         <>
-          <img
-            src={url.replace("/media/", "/api/admin/media/")}
+          <AdminImage
+            url={url}
             alt="Banner photograph preview"
-            width={320}
-            height={180}
             className="max-h-48 max-w-full rounded-xl object-contain"
           />
           <Button type="button" variant="outline" onClick={() => setUrl("")}>
