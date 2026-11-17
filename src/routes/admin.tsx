@@ -6,7 +6,8 @@ import { PaymentReview } from "@/components/admin/PaymentReview";
 import { BusinessSettings } from "@/components/admin/BusinessSettings";
 import { AdminSecurity } from "@/components/admin/AdminSecurity";
 import { PasswordSignIn, SetupPassword, SignOutButton } from "@/components/admin/PasswordAuth";
-import { AdminNav, StatTile } from "@/components/admin/AdminShell";
+import { AdminNav } from "@/components/admin/AdminShell";
+import { OverviewPanel } from "@/components/admin/OverviewPanel";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { SignIn } from "@/components/site/SignIn";
@@ -170,6 +171,8 @@ function Admin() {
   const [tab, setTab] = useState("overview");
   const [rows, setRows] = useState<Row[]>([]);
   const [overview, setOverview] = useState<Row>({});
+  const [overviewLoaded, setOverviewLoaded] = useState(false);
+  const [newProduct, setNewProduct] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [edit, setEdit] = useState<Row>({});
@@ -203,8 +206,10 @@ function Admin() {
       if (m.role) {
         if (["products", "inventory", "orders", "business"].includes(tab)) {
           setRows([]);
-        } else if (tab === "overview") setOverview(await apiCall("/admin/overview"));
-        else if (tab === "variants") {
+        } else if (tab === "overview") {
+          setOverview(await apiCall("/admin/overview"));
+          setOverviewLoaded(true);
+        } else if (tab === "variants") {
           const products = await apiCall<(Row & { variants: Row[] })[]>("/admin/products");
           setRows(products.flatMap((p) => p.variants.map((v) => ({ ...v, productId: p["id"] }))));
         } else setRows(await apiCall(`/admin/${tab}`));
@@ -310,7 +315,7 @@ function Admin() {
                 }}
               />
               {tab === "products" ? (
-                <ProductManager />
+                <ProductManager startNew={newProduct} onStarted={() => setNewProduct(false)} />
               ) : tab === "inventory" ? (
                 <InventoryManager />
               ) : tab === "orders" ? (
@@ -318,43 +323,17 @@ function Admin() {
               ) : tab === "business" ? (
                 <BusinessSettings />
               ) : tab === "overview" ? (
-                <section aria-label="Overview" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    <StatTile label="Products" value={String(overview["products"] ?? 0)} />
-                    <StatTile
-                      label="Awaiting review"
-                      value={String(overview["paymentsAwaitingReview"] ?? 0)}
-                      hint="Bank-transfer receipts"
-                    />
-                    <StatTile
-                      label="Paid orders"
-                      value={String((overview["sales"] as Row | undefined)?.["orders"] ?? 0)}
-                    />
-                    <StatTile
-                      label="Paid sales"
-                      value={formatNaira(
-                        Number((overview["sales"] as Row | undefined)?.["revenueKobo"] ?? 0),
-                      )}
-                    />
-                  </div>
-                  <div className="rounded-xl border bg-card px-4 py-3">
-                    <h2 className="font-sans text-sm font-medium">Low stock</h2>
-                    {((overview["lowStock"] ?? []) as Row[]).length ? (
-                      <ul className="mt-2 divide-y text-sm">
-                        {((overview["lowStock"] ?? []) as Row[]).map((v) => (
-                          <li key={String(v["id"])} className="flex justify-between gap-3 py-1.5">
-                            <span className="min-w-0 truncate">
-                              {String(v["name"] ?? "")} · {String(v["sku"])}
-                            </span>
-                            <span className="tabular-nums">{String(v["stock"])} left</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-1 text-sm text-muted-foreground">Nothing is running low.</p>
-                    )}
-                  </div>
-                </section>
+                <OverviewPanel
+                  overview={overview}
+                  loaded={overviewLoaded}
+                  onAction={(t, startNew) => {
+                    setNewProduct(startNew);
+                    setTab(t);
+                    setEdit({});
+                    setNotice("");
+                    window.scrollTo({ top: 0 });
+                  }}
+                />
               ) : (
                 <>
                   {tab === "payments" && <PaymentReview />}
