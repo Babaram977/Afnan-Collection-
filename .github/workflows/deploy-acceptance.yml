@@ -167,7 +167,10 @@ jobs:
       - run: bun run test:domain
       - run: bun run test:admin-otp
       - run: bun run test:admin-password
-      - run: bun audit
+      # bun audit with narrow, expiring, owner-approved exceptions (security/audit-exceptions.json).
+      # Fails on any other advisory, an expired or stale exception, a published patch, or excepted
+      # package code in the built Worker/browser assets.
+      - run: bun run security:audit
       - run: bunx playwright install --with-deps chromium
       - run: bun run test:branding
       - run: bun run test:admin-dashboard
