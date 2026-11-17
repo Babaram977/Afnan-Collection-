@@ -2,6 +2,9 @@ name: Deploy Afnan production
 
 # Manual, owner-only deployment of an exact commit to the PRODUCTION Worker
 # `afnan-collection-production`, which has its own D1 and R2. Never triggered by push or PR.
+# Release gate (owner decision 2026-11-17): automatic runs after acceptance are skipped unless the
+# repository variable AFNAN_PRODUCTION_AUTO_DEPLOY is 'enabled'. Owner-approved releases are deployed
+# with a manual run (workflow_dispatch, repository owner only) naming the exact validated commit.
 # workers.dev is off. The only hostnames are the owner-approved custom domains (2026-11-16):
 # afnancollectionkn.com (primary storefront) and www.afnancollectionkn.com (redirects to it, in
 # worker.ts). The deploy step refuses any other route.
@@ -89,6 +92,7 @@ jobs:
     if: >-
       github.ref == 'refs/heads/main' && (
           github.event_name == 'workflow_dispatch' || (
+          vars.AFNAN_PRODUCTION_AUTO_DEPLOY == 'enabled' &&
           github.event.workflow_run.conclusion == 'success' &&
           github.event.workflow_run.event == 'workflow_run' &&
           github.event.workflow_run.head_branch == 'main' &&

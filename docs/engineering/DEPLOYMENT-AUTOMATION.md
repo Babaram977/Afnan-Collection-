@@ -51,3 +51,9 @@ main push → "Validate Afnan" → success → "Deploy Afnan acceptance" (automa
 - **Production (automatic)** takes the commit from the triggering acceptance run's name (`Acceptance deploy <sha> …`), not from that run's `head_sha` (main's tip at trigger time). Both environments therefore receive the same commit.
 - **Production (any mode)** refuses commits that are not ancestors of `origin/main`.
 - Every deploy also re-runs the full test suite in its own secret-free build job before anything is uploaded, so no deployment path skips validation.
+
+## Production release gate (owner decision 2026-11-17)
+
+- **Release gate:** production no longer deploys automatically after acceptance. The automatic run is skipped unless the repository variable `AFNAN_PRODUCTION_AUTO_DEPLOY` is `enabled` (it is unset).
+- **Acceptance:** still deploys automatically after every merge to `main`.
+- **Releasing to production:** after the owner approves an exact commit validated on acceptance, run **Deploy Afnan production** manually (repository owner only) with that commit. The workflow still requires the commit to be on `main`, runs every test suite, refuses pending migrations and records the rollback version.
