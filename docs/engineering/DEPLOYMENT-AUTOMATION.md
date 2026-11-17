@@ -57,3 +57,14 @@ main push → "Validate Afnan" → success → "Deploy Afnan acceptance" (automa
 - **Release gate:** production no longer deploys automatically after acceptance. The automatic run is skipped unless the repository variable `AFNAN_PRODUCTION_AUTO_DEPLOY` is `enabled` (it is unset).
 - **Acceptance:** still deploys automatically after every merge to `main`.
 - **Releasing to production:** after the owner approves an exact commit validated on acceptance, run **Deploy Afnan production** manually (repository owner only) with that commit. The workflow still requires the commit to be on `main`, runs every test suite, refuses pending migrations and records the rollback version.
+
+## Security audit exceptions (owner decision 2026-11-17)
+
+- **The gate:** CI and both deploy workflows run `bun run security:audit` (`scripts/security-audit.mjs`) instead of plain `bun audit`. It runs `bun audit --json` and fails on **any** advisory unless `security/audit-exceptions.json` holds a matching exception (same advisory **and** package).
+- **When an exception stops working**, the gate fails on any of these:
+  - the exception has expired;
+  - the advisory is no longer reported (remove the stale exception);
+  - a newer release of the package than `maxVersion` is published (upgrade via `overrides`, then remove the exception);
+  - the package's code appears in `.worker-build/worker.js` or `.output/public`.
+- **Current exception:** **GHSA-fc5q-39xc-vjpf (picomatch ≤ 4.0.7)**, which has no patched release (advisory published 2026-10-19). Exposure is build and test tooling only (vite/vitest/tinyglobby/fdir, TanStack build plugins, typescript-eslint): no customer input reaches it, and it is verified absent from deployed artifacts on every run. Approved by the owner on 2026-11-17, **expires 2026-12-01**.
+- **Unit tests:** in `src/test/security-audit.test.ts`.
