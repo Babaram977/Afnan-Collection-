@@ -1,5 +1,9 @@
 # Development history
 
+## 2026-11-17 — compact mobile header
+
+Reviewed remote main, branches and PRs; Claude’s merged administrator-only header was preserved. Implemented responsive storefront header and blank-canvas-only logo viewport, with navigation/accessibility/geometry regression coverage. No commerce configuration or other business changes. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.
+
 ## 2026-11-14 — requested main deployment: Worker created, application blocked
 
 PR #2 is now externally merged; source origin/main cef6e6e has passing CI. This task built that exact main commit and verified actual acceptance bindings through local dry-run. Owner's later task authorized dedicated Worker provisioning/deployment but prohibited other-Worker, DNS, IdP and payment changes. See docs/engineering/WORKER-PROVISIONING-STATUS.md for exact evidence and limits.

@@ -39,7 +39,7 @@ jobs:
       # Fails on any other advisory, an expired or stale exception, a published patch, or excepted
       # package code in the built Worker/browser assets.
       - run: bun run security:audit
-      - run: bunx playwright install --with-deps chromium
+      - run: bunx playwright install --with-deps chromium webkit
       # Includes browser checks of the bank-transfer confirmation, so it runs after the browser install.
       - run: bun run test:bank-transfer
       - run: bun run test:receipts
@@ -51,3 +51,14 @@ jobs:
       - run: bun run test:admin-images
       - run: bun run test:cart-flow
       - run: bun run test:shopping
+      - run: bun run test:mobile-header
+      - name: Mobile header in WebKit
+        run: bun run test:mobile-header
+        env:
+          HEADER_BROWSER: webkit
+          HEADER_REVIEW_DIR: /tmp/afnan-header-review/webkit
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-header-review
+          path: /tmp/afnan-header-review
+          retention-days: 14

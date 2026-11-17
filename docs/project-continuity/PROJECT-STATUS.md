@@ -1,5 +1,9 @@
 # Project status
 
+## 2026-11-17 — compact mobile header
+
+Mobile storefront header reduced from 145 to 88 px below 1024 px; desktop 145 px and admin 65 px unchanged. Original PNG bytes and all artwork preserved. Branch fix/compact-mobile-header from main a645ba7; local validation passed. PR/acceptance exact-SHA results pending execution, not production. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.
+
 ## 2026-11-14 — requested main deployment: Worker created, application blocked
 
 PR #2 is now externally merged; source origin/main cef6e6e has passing CI. This task built that exact main commit and verified actual acceptance bindings through local dry-run. Owner's later task authorized dedicated Worker provisioning/deployment but prohibited other-Worker, DNS, IdP and payment changes. See docs/engineering/WORKER-PROVISIONING-STATUS.md for exact evidence and limits.

@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-11-17 — compact mobile header
+
+Keep the original logo at 112 px wide, hide only blank vertical canvas below 1024 px and use an 88 px mobile header. Preserve desktop and administrator layouts. Reuse main’s acceptance workflow for the validated branch SHA; no production deployment or merge. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.
+
 ## 2026-11-14 — requested main deployment: Worker created, application blocked
 
 PR #2 is now externally merged; source origin/main cef6e6e has passing CI. This task built that exact main commit and verified actual acceptance bindings through local dry-run. Owner's later task authorized dedicated Worker provisioning/deployment but prohibited other-Worker, DNS, IdP and payment changes. See docs/engineering/WORKER-PROVISIONING-STATUS.md for exact evidence and limits.
