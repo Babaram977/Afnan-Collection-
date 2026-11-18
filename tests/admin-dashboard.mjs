@@ -77,10 +77,13 @@ try {
       await route.continue();
     });
 
-    // Storefront header keeps its full brand height; the admin header is compact.
+    // Phone storefront is 88px; desktop retains full branding; admin stays compact.
     await page.goto(`${ORIGIN}/`);
     const storeHeader = await page.locator("header").first().boundingBox();
-    ok(storeHeader.height >= 140, `Storefront header unchanged at ${width}`);
+    ok(
+      width < 1024 ? storeHeader.height === 88 : storeHeader.height === 145,
+      `Responsive storefront header at ${width}`,
+    );
 
     await page.goto(`${ORIGIN}/admin?setup=${token}`);
     await page.getByLabel("New password").fill(PASSWORD);

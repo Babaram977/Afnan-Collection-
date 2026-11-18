@@ -22,7 +22,7 @@ const NAV = [
 
 export function SiteHeader() {
   const { count } = useCart();
-  // Administrator pages use a compact header; the storefront keeps the full brand header.
+  // Keep the existing administrator and desktop layouts; compact the phone/tablet storefront.
   const admin = useRouterState({ select: (s) => s.location.pathname.startsWith("/admin") });
   return (
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
@@ -33,7 +33,7 @@ export function SiteHeader() {
         Skip to content
       </a>
       <div
-        className={`container-page flex items-center justify-between gap-4 ${admin ? "h-16" : "h-36"}`}
+        className={`container-page flex items-center justify-between gap-4 ${admin ? "h-16" : "min-h-[87px] lg:h-36"}`}
       >
         <Wordmark placement={admin ? "compact" : "header"} />
         <nav aria-label="Main" className="hidden lg:block">

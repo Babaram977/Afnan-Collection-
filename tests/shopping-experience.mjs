@@ -2,7 +2,7 @@
 // options, sold-out/low-stock/sale signals on cards and product pages, and a phone shop page where
 // products appear on the first screen with filters behind a "Filters" button.
 import assert from "node:assert/strict";
-import { chromium } from "@playwright/test";
+import { chromium, expect } from "@playwright/test";
 import { createTestApp, ORIGIN } from "./harness.mjs";
 
 const { mf, db } = await createTestApp({
@@ -69,6 +69,8 @@ try {
     "Listed colours still required",
   );
   await page.getByRole("button", { name: "Red", exact: true }).click();
+  // React may commit the selection after click resolves; wait for the user-visible state.
+  await expect(page.getByRole("button", { name: "Add to cart" })).toBeEnabled();
   ok(await page.getByRole("button", { name: "Add to cart" }).isEnabled(), "Can add after choosing");
   // A missing size/colour combination is disabled but not announced as sold out.
   await page.goto(`${ORIGIN}/product/fx-grid`);

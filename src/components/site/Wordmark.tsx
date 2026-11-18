@@ -15,15 +15,23 @@ export function Wordmark({
       aria-label={`${business.name} — home`}
     >
       {business.logoUrl ? (
-        <img
-          src={business.logoUrl}
-          alt={business.name}
-          className={`${placement === "footer" ? "w-44" : placement === "compact" ? "w-11" : "w-28"} h-auto max-w-full rounded-md bg-white object-contain`}
-          data-brand-logo="original"
-          width={460}
-          height={546}
-          decoding="async"
-        />
+        <span
+          className={
+            placement === "header"
+              ? "relative block h-20 w-28 overflow-hidden rounded-md lg:h-auto lg:overflow-visible"
+              : "contents"
+          }
+        >
+          <img
+            src={business.logoUrl}
+            alt={business.name}
+            className={`${placement === "footer" ? "w-44" : placement === "compact" ? "w-11" : "relative -top-[1.625rem] w-28 lg:top-0"} h-auto max-w-full rounded-md bg-white object-contain`}
+            data-brand-logo="original"
+            width={460}
+            height={546}
+            decoding="async"
+          />
+        </span>
       ) : (
         <>
           <span className="font-display text-xl font-semibold text-foreground md:text-2xl">

@@ -4,7 +4,7 @@ Owner instruction received 2026-11-13. `src/lib/business.ts` is the authoritativ
 
 The supplied official raster logo shows a gold AC monogram with a black ornamental flourish and the AFNAN COLLECTION wordmark on white. The owner confirmed this raster format is the only available version. That format is acceptable; a vector asset is not required.
 
-The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` was installed at `public/brand/IMG_8842(1).png` and, on 2026-11-15, renamed byte-for-byte to `public/brand/afnan-collection-logo.png` (owner-approved; the parenthesised name returned 404 on Cloudflare's hosted asset service). SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused.
+The original PNG uploaded in commit `3ef6de5` as `public/brand/IMG_8842(2).png` was installed at `public/brand/IMG_8842(1).png` and, on 2026-11-15, renamed byte-for-byte to `public/brand/afnan-collection-logo.png` (owner-approved; the parenthesised name returned 404 on Cloudflare's hosted asset service). SHA-256 verified: `d40111efc2f469b37ee871500202ab33da1e4c128593a1f8a6757ac82f96cdc1`. The 145,165-byte, 460 × 546 image is used unchanged in the shared header/footer, PNG website icon, Store structured data and homepage social metadata. No source crop, recolouring, redrawing or derivative was made; the traced SVG remains reference-only and unused.
 
 Owner-supplied public contacts:
 
@@ -31,3 +31,7 @@ The owner's request to remember the brand is implemented through versioned AFNAN
 ## Reference trace and provenance
 
 The earlier `public/brand/afnan-collection-traced.svg` is an approximation retained only as a historical reference. It is not the approved original and is not rendered by the storefront. Earlier missing-file reports predate the owner's successful PNG upload at `3ef6de5` and are superseded by the verified integration above. No merge or deployment is authorized.
+
+## Compact mobile header — 2026-11-17
+
+Below 1024 px, Wordmark displays the original at the same 112 px width inside an 80 px-high viewport, offset upward by 26 px. Only blank white vertical margins are hidden; the source artwork bounds (y=120–426 of 546) remain fully visible. The source bytes, aspect ratio, colours and desktop/footer rendering are unchanged. Header geometry, artwork visibility and navigation are covered by `test:mobile-header`. See `MOBILE-HEADER-REVIEW.md`.

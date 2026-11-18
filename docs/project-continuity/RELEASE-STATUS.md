@@ -1,5 +1,9 @@
 # Release status
 
+## 2026-11-17 — compact mobile header
+
+Local compact-header validation passed: typecheck, lint (10 pre-existing warnings), 27 unit tests, build/dry-run, 169 new browser checks, branding 88, admin dashboard 87, shopping 44 and cart 59. Audit passes under the existing expiring picomatch exception. PR CI and protected acceptance release remain to be verified; no production authorization. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.
+
 ## 2026-11-14 — requested main deployment: Worker created, application blocked
 
 PR #2 is now externally merged; source origin/main cef6e6e has passing CI. This task built that exact main commit and verified actual acceptance bindings through local dry-run. Owner's later task authorized dedicated Worker provisioning/deployment but prohibited other-Worker, DNS, IdP and payment changes. See docs/engineering/WORKER-PROVISIONING-STATUS.md for exact evidence and limits.
