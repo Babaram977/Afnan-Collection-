@@ -32,6 +32,7 @@
     "test:admin-password": "node tests/admin-password.mjs",
     "admin:provision": "node scripts/admin-provision-password.mjs",
     "test:domain": "node tests/domain.mjs",
+    "test:admin-navigation": "node tests/admin-navigation.mjs",
     "test:admin-dashboard": "node tests/admin-dashboard.mjs",
     "test:admin-images": "node tests/admin-images.mjs",
     "test:cart-flow": "node tests/cart-flow.mjs",

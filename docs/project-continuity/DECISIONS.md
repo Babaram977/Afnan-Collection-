@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-11-18 — administrator navigation
+
+Separate admin and shopping headers. Reuse the existing /api/me role and afnan-auth notifications instead of changing authentication/session code. Role visibility fails closed; backend permissions and session revocation remain unchanged. Preserve the compact logo and 65/88/145 px admin/mobile/desktop header geometry. See `docs/engineering/ADMIN-NAVIGATION-REVIEW.md`.
+
 ## 2026-11-17 — compact mobile header
 
 Keep the original logo at 112 px wide, hide only blank vertical canvas below 1024 px and use an 88 px mobile header. Preserve desktop and administrator layouts. Reuse main’s acceptance workflow for the validated branch SHA; no production deployment or merge. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.

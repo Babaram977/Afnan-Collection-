@@ -1,5 +1,9 @@
 # Project status
 
+## 2026-11-18 — administrator navigation
+
+Implemented dedicated management navigation on fix/admin-store-navigation from main da22391 (PR #30 merged). Admin pages retain the Sections panel and gain Back to Store; the storefront adds Store Management only for a current server-confirmed administrator. No deployment or production data changes. See `docs/engineering/ADMIN-NAVIGATION-REVIEW.md`.
+
 ## 2026-11-17 — compact mobile header
 
 Mobile storefront header reduced from 145 to 88 px below 1024 px; desktop 145 px and admin 65 px unchanged. Original PNG bytes and all artwork preserved. Branch fix/compact-mobile-header from main a645ba7; local validation passed. PR/acceptance exact-SHA results pending execution, not production. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.

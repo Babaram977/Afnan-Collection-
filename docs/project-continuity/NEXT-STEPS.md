@@ -1,5 +1,9 @@
 # Resume development
 
+## 2026-11-18 — administrator navigation
+
+Review the dedicated administrator-navigation PR and its normal CI result. Obtain explicit production release authorization before deploying. Do not repeat unrelated local suites or create another environment. Continue daily operations at https://afnancollectionkn.com/admin with the existing owner login. See `docs/engineering/ADMIN-NAVIGATION-REVIEW.md`.
+
 ## 2026-11-17 — compact mobile header
 
 Verify exact-head PR CI including WebKit, then deploy only the validated branch SHA to protected acceptance with existing checkout disabled and email sender verified. Verify Worker version and Access denial; use an existing authorized session for hosted visuals. Real iPhone testing remains distinct from automated WebKit. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.

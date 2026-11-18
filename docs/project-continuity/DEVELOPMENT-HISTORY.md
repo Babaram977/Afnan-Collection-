@@ -1,5 +1,9 @@
 # Development history
 
+## 2026-11-18 — administrator navigation
+
+Replaced customer menu/cart on admin routes with Store Management and Back to Store. Existing AdminNav sections are unchanged. Added real local-session browser checks for navigation, mobile layouts, sign-out, staff revocation, authenticated non-staff/fulfilment denial and unchanged server authorization. See `docs/engineering/ADMIN-NAVIGATION-REVIEW.md`.
+
 ## 2026-11-17 — compact mobile header
 
 Reviewed remote main, branches and PRs; Claude’s merged administrator-only header was preserved. Implemented responsive storefront header and blank-canvas-only logo viewport, with navigation/accessibility/geometry regression coverage. No commerce configuration or other business changes. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.

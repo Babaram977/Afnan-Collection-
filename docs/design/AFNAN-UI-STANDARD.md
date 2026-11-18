@@ -76,3 +76,7 @@ No fabricated products, prices, stock, photos, reviews, discounts, contact detai
 ### Administrator security flow
 
 The /admin route reuses existing cards, buttons, labels and responsive spacing for email sign-in followed by mandatory verified passkey/security-key enrollment or challenge. Approved storefront layout, branding, colours and original-logo proportions are unchanged. Recovery codes appear once in wrapping text and are never placed in localStorage. Login does not show staff tools until the server confirms the privileged session. Security controls use labels/status/error messages and keyboard-operable native controls.
+
+## Administrator navigation — 2026-11-18
+
+On `/admin` and nested admin routes, retain the 65 px header and compact original logo. Replace customer navigation/cart with a Store Management link and Back to Store action. Keep the existing AdminNav Sections panel and its role-filtered management sections. Storefront headers remain 88 px below 1024 px and 145 px on desktop. Only a current server `/api/me` role of `admin` adds Store Management to customer menus; guests, customers and other staff do not receive this link. Refresh on route changes, existing `afnan-auth` events, focus and page restoration; failed or cancelled lookups cannot grant visibility. Same-origin links preserve sessions; server-side staff checks remain authoritative.

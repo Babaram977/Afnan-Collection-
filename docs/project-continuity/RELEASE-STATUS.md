@@ -1,5 +1,9 @@
 # Release status
 
+## 2026-11-18 — administrator navigation
+
+Administrator navigation targeted local validation passed on fix/admin-store-navigation: 67 new navigation assertions, 87 existing admin dashboard, 169 compact-header, 55 password and 77 security assertions; typecheck/lint/build passed. No merge or production deployment is performed. Existing production catalogue (seven products/114 units), checkout/payment settings, storage bindings and other businesses remain untouched. Exact commit/PR and CI outcomes will be reported in the PR. See `docs/engineering/ADMIN-NAVIGATION-REVIEW.md`.
+
 ## 2026-11-17 — compact mobile header
 
 Local compact-header validation passed: typecheck, lint (10 pre-existing warnings), 27 unit tests, build/dry-run, 169 new browser checks, branding 88, admin dashboard 87, shopping 44 and cart 59. Audit passes under the existing expiring picomatch exception. PR CI and protected acceptance release remain to be verified; no production authorization. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.
