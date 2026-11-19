@@ -5,10 +5,11 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { evaluate } from "./security-audit-lib.mjs";
+import { evaluate, parseAuditReport } from "./security-audit-lib.mjs";
 
 const { exceptions } = JSON.parse(readFileSync("security/audit-exceptions.json", "utf8"));
 let raw;
+let exitCode = 0;
 try {
   raw = execFileSync("bun", ["audit", "--json"], {
     encoding: "utf8",
@@ -16,8 +17,15 @@ try {
   });
 } catch (error) {
   raw = error.stdout ?? "";
+  exitCode = error.status ?? null;
 }
-const report = raw.trim() ? JSON.parse(raw) : {};
+let report;
+try {
+  report = parseAuditReport(raw, exitCode);
+} catch (error) {
+  console.error(`security-audit: FAIL: ${error.message}`);
+  process.exit(1);
+}
 
 const latest = {};
 for (const ex of exceptions) {

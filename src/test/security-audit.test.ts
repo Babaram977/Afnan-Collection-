@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error plain ESM script without type declarations
-import { evaluate, newer } from "../../scripts/security-audit-lib.mjs";
+import { evaluate, newer, parseAuditReport } from "../../scripts/security-audit-lib.mjs";
 
 const exception = {
   advisory: "GHSA-fc5q-39xc-vjpf",
@@ -77,5 +77,25 @@ describe("security audit gate with expiring exceptions", () => {
     expect(newer("4.0.10", "4.0.7")).toBe(true);
     expect(newer("4.0.7", "4.0.7")).toBe(false);
     expect(newer("3.9.9", "4.0.7")).toBe(false);
+  });
+});
+
+// Regression: registry/network/spawn failures must not become an empty clean report.
+describe("audit report transport failures", () => {
+  it("accepts a successful empty report", () => expect(parseAuditReport("{}", 0)).toEqual({}));
+  it("retains findings from an advisory exit code", () =>
+    expect(parseAuditReport(JSON.stringify(picomatch), 1)).toEqual(picomatch));
+  it.each([
+    ["", 0],
+    ["", 1],
+    ["{}", 1],
+    ["{}", null],
+    ["{}", 2],
+    ["bad json", 0],
+    ["[]", 0],
+    ["null", 0],
+    ['{"error":"unavailable"}', 1],
+  ])("rejects missing, failed or malformed reports (%s, %s)", (raw, code) => {
+    expect(() => parseAuditReport(raw, code)).toThrow();
   });
 });

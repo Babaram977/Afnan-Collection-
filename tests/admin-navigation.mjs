@@ -156,7 +156,7 @@ try {
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page
-    .getByText("This account does not have administrator access.", { exact: true })
+    .getByText("Sign in with an authorized administrator account to continue.", { exact: true })
     .waitFor();
   await page.getByRole("link", { name: "Back to Store", exact: true }).click();
   await page.waitForLoadState("networkidle");

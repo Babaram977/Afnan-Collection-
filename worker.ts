@@ -17,6 +17,25 @@ export default {
           "Cache-Control": "public,max-age=3600",
         },
       });
+    // Routes and Access are additional controls, not substitutes for an origin boundary.
+    if (url.hostname !== primary.hostname || url.port !== primary.port)
+      return new Response("Unrecognized application host", {
+        status: 421,
+        headers: { "Cache-Control": "no-store" },
+      });
+    if (url.protocol === "http:" && primary.protocol === "https:")
+      return new Response(null, {
+        status: 308,
+        headers: {
+          Location: `${primary.origin}${url.pathname}${url.search}`,
+          "Cache-Control": "no-store",
+        },
+      });
+    if (url.origin !== primary.origin)
+      return new Response("Unrecognized application origin", {
+        status: 421,
+        headers: { "Cache-Control": "no-store" },
+      });
     const path = url.pathname;
     if (path.startsWith("/api/")) return api(request, env);
     if (path.startsWith("/media/")) {

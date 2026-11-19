@@ -45,6 +45,48 @@ export function authFor(env: CommerceEnv) {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
       cookieCache: { enabled: false },
+      additionalFields: {
+        authMethod: {
+          type: "string",
+          required: true,
+          input: false,
+          defaultValue: "legacy",
+        },
+      },
+    },
+    databaseHooks: {
+      session: {
+        create: {
+          before: async (session, context) => ({
+            data: {
+              ...session,
+              authMethod:
+                context?.path === "/sign-in/email"
+                  ? "password"
+                  : context?.path === "/sign-in/email-otp"
+                    ? "email_otp"
+                    : "legacy",
+            },
+          }),
+          after: async (session) => {
+            // Audit references are not authentication tokens. Never serialize the session object.
+            await env.DB.prepare(
+              "INSERT INTO audit(actor,action,entity_id,detail) VALUES(?,'auth.session.created',?,?)",
+            )
+              .bind(session.userId, session.id, JSON.stringify({ method: session["authMethod"] }))
+              .run();
+          },
+        },
+        delete: {
+          after: async (session) => {
+            await env.DB.prepare(
+              "INSERT INTO audit(actor,action,entity_id) VALUES(?,'auth.session.ended',?)",
+            )
+              .bind(session.userId, session.id)
+              .run();
+          },
+        },
+      },
     },
     advanced: {
       defaultCookieAttributes: { httpOnly: true, sameSite: "lax" },

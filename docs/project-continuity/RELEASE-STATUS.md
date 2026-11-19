@@ -1,5 +1,9 @@
 # Release status
 
+## 2026-11-20 — website-only administrator authentication proposal
+
+Local review passed: 40 unit tests; 96 new independent-auth checks; 12 new browser checks; existing integration 85, password 55, OTP 25, security 77, domain 10, navigation 67, dashboard 87, browser 111, branding 88 and acceptance 12 checks. Typecheck/lint/build, no-exception audit and local migration/replay passed. Proposed security release is not merged/deployed; production Access remains active. Remote migration and exact production release require explicit owner approval. See `docs/engineering/WEBSITE-ADMIN-AUTH-REVIEW.md`.
+
 ## 2026-11-18 — administrator navigation
 
 Administrator navigation targeted local validation passed on fix/admin-store-navigation: 67 new navigation assertions, 87 existing admin dashboard, 169 compact-header, 55 password and 77 security assertions; typecheck/lint/build passed. No merge or production deployment is performed. Existing production catalogue (seven products/114 units), checkout/payment settings, storage bindings and other businesses remain untouched. Exact commit/PR and CI outcomes will be reported in the PR. See `docs/engineering/ADMIN-NAVIGATION-REVIEW.md`.

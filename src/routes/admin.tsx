@@ -283,7 +283,16 @@ function Admin() {
           />
         ) : passwordMode && me?.userId && !me.role ? (
           <div className="max-w-md space-y-4 rounded-xl border bg-card p-4 md:p-6">
-            <p role="alert">This account does not have administrator access.</p>
+            <p role="alert">Sign in with an authorized administrator account to continue.</p>
+            <p className="text-sm text-muted-foreground">
+              Sign in with your store administrator password to continue.
+            </p>
+            <PasswordSignIn
+              onSignedIn={() => {
+                window.dispatchEvent(new Event("afnan-auth"));
+                void load();
+              }}
+            />
             <SignOutButton onSignedOut={() => void load()} />
           </div>
         ) : !loading && !me?.userId ? (

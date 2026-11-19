@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-11-20 — website-only administrator authentication proposal
+
+Reuse Better Auth; do not introduce another login provider. Require a server-recorded password method for password-mode staff permissions; reject email-code/legacy sessions as admin proof. Migration 0006 adds session metadata only. Enforce canonical host/HTTPS and metadata-only authentication auditing. Keep Access until the approved exact release is validated, then seek separate Afnan-only removal approval. See `docs/engineering/WEBSITE-ADMIN-AUTH-REVIEW.md`.
+
 ## 2026-11-18 — administrator navigation
 
 Separate admin and shopping headers. Reuse the existing /api/me role and afnan-auth notifications instead of changing authentication/session code. Role visibility fails closed; backend permissions and session revocation remain unchanged. Preserve the compact logo and 65/88/145 px admin/mobile/desktop header geometry. See `docs/engineering/ADMIN-NAVIGATION-REVIEW.md`.

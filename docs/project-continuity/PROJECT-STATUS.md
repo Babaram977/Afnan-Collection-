@@ -1,5 +1,9 @@
 # Project status
 
+## 2026-11-20 — website-only administrator authentication proposal
+
+Prepared website-only administrator password login on fix/website-admin-authentication, retaining the existing owner account and both navigation/header improvements. Production Access, deployment, data, credentials, DNS and payment settings are unchanged. This combined proposal includes PR #31, whose original exact head remains unmerged because the audit gate requires removal of an obsolete exception. See `docs/engineering/WEBSITE-ADMIN-AUTH-REVIEW.md`.
+
 ## 2026-11-18 — administrator navigation
 
 Implemented dedicated management navigation on fix/admin-store-navigation from main da22391 (PR #30 merged). Admin pages retain the Sections panel and gain Back to Store; the storefront adds Store Management only for a current server-confirmed administrator. No deployment or production data changes. See `docs/engineering/ADMIN-NAVIGATION-REVIEW.md`.
