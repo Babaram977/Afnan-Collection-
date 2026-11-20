@@ -1,3 +1,28 @@
+// A failed or unavailable audit is never evidence of a clean dependency tree.
+export function parseAuditReport(raw, exitCode) {
+  if (exitCode !== 0 && exitCode !== 1) throw new Error("Audit command did not complete normally");
+  if (typeof raw !== "string" || !raw.trim()) throw new Error("Audit report is missing");
+  let report;
+  try {
+    report = JSON.parse(raw);
+  } catch {
+    throw new Error("Audit report is invalid JSON");
+  }
+  if (!report || typeof report !== "object" || Array.isArray(report))
+    throw new Error("Audit report has an unexpected format");
+  let count = 0;
+  for (const advisories of Object.values(report)) {
+    if (!Array.isArray(advisories)) throw new Error("Audit report has an unexpected format");
+    for (const advisory of advisories) {
+      if (!advisory || typeof advisory.title !== "string" || typeof advisory.severity !== "string")
+        throw new Error("Audit advisory has an unexpected format");
+      count++;
+    }
+  }
+  if (exitCode !== 0 && !count) throw new Error("Audit failed without an advisory report");
+  return report;
+}
+
 // Pure evaluation for scripts/security-audit.mjs (unit-tested in src/test/security-audit.test.ts).
 const ghsa = (advisory) => advisory.url?.match(/GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}/)?.[0];
 const parts = (v) => v.split(".").map((n) => Number.parseInt(n, 10) || 0);

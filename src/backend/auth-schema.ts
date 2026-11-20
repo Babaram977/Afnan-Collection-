@@ -9,6 +9,7 @@ export const user = sqliteTable("user", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
 export const session = sqliteTable("session", {
+  authMethod: text("auth_method").notNull().default("legacy"),
   id: text("id").primaryKey(),
   expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
   token: text("token").notNull().unique(),

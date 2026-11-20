@@ -76,3 +76,11 @@ No fabricated products, prices, stock, photos, reviews, discounts, contact detai
 ### Administrator security flow
 
 The /admin route reuses existing cards, buttons, labels and responsive spacing for email sign-in followed by mandatory verified passkey/security-key enrollment or challenge. Approved storefront layout, branding, colours and original-logo proportions are unchanged. Recovery codes appear once in wrapping text and are never placed in localStorage. Login does not show staff tools until the server confirms the privileged session. Security controls use labels/status/error messages and keyboard-operable native controls.
+
+## Administrator navigation — 2026-11-18
+
+On `/admin` and nested admin routes, retain the 65 px header and compact original logo. Replace customer navigation/cart with a Store Management link and Back to Store action. Keep the existing AdminNav Sections panel and its role-filtered management sections. Storefront headers remain 88 px below 1024 px and 145 px on desktop. Only a current server `/api/me` role of `admin` adds Store Management to customer menus; guests, customers and other staff do not receive this link. Refresh on route changes, existing `afnan-auth` events, focus and page restoration; failed or cancelled lookups cannot grant visibility. Same-origin links preserve sessions; server-side staff checks remain authoritative.
+
+## Website-only administrator login candidate — 2026-11-20
+
+Keep the original branded password form at `/admin`. When an existing non-password/legacy session lacks current admin rights, offer the same administrator password form in place; successful password authentication opens Store Management without an extra website challenge. Retain the management header, Sections and Back to Store from PR #31, the compact storefront header from PR #30, and existing customer navigation. This UI is not an authorization boundary: server-verified sessions, authentication method and current D1 roles enforce access. Production Access remains active pending the reviewed transition and explicit owner approvals.

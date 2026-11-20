@@ -1,5 +1,17 @@
 # Project status
 
+## 2026-11-20 — consolidated release final preparation
+
+Final preparation revalidated migration 0006 against the actual production user/session schema using read-only metadata and a fresh local replay. No production row values or credentials were exported; no remote writes occurred. The final PR #32 preparation is documentation-only over application commit 386b1bcd541bea4ea788ba5a7abd2fa58c808623 and preserves PR #31/#30 by ancestry. See `docs/engineering/PR32-RELEASE-READINESS.md`.
+
+## 2026-11-20 — website-only administrator authentication proposal
+
+Prepared website-only administrator password login on fix/website-admin-authentication, retaining the existing owner account and both navigation/header improvements. Production Access, deployment, data, credentials, DNS and payment settings are unchanged. This combined proposal includes PR #31, whose original exact head remains unmerged because the audit gate requires removal of an obsolete exception. See `docs/engineering/WEBSITE-ADMIN-AUTH-REVIEW.md`.
+
+## 2026-11-18 — administrator navigation
+
+Implemented dedicated management navigation on fix/admin-store-navigation from main da22391 (PR #30 merged). Admin pages retain the Sections panel and gain Back to Store; the storefront adds Store Management only for a current server-confirmed administrator. No deployment or production data changes. See `docs/engineering/ADMIN-NAVIGATION-REVIEW.md`.
+
 ## 2026-11-17 — compact mobile header
 
 Mobile storefront header reduced from 145 to 88 px below 1024 px; desktop 145 px and admin 65 px unchanged. Original PNG bytes and all artwork preserved. Branch fix/compact-mobile-header from main a645ba7; local validation passed. PR/acceptance exact-SHA results pending execution, not production. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.

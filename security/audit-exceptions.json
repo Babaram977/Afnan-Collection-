@@ -1,15 +1,4 @@
 {
   "$comment": "Each exception is narrow (one advisory, one package, a maximum version) and expires. scripts/security-audit.mjs fails the build when an exception expires, when a patched release of the package exists, when the advisory is no longer reported (remove the exception), or when the package appears in deployed artifacts.",
-  "exceptions": [
-    {
-      "advisory": "GHSA-fc5q-39xc-vjpf",
-      "package": "picomatch",
-      "maxVersion": "4.0.7",
-      "expires": "2026-12-01",
-      "approvedBy": "Owner, 2026-11-17 (Option B, recommended by Nora)",
-      "reason": "No patched release exists (advisory published 2026-10-19 lists affected <=4.0.7, patched: none; npm latest is 4.0.7).",
-      "exposure": "Build and test tooling only: vite/vitest/tinyglobby/fdir, @tanstack/start-plugin-core, @tanstack/router-utils, @tanstack/devtools-bundler-core, typescript-eslint. picomatch matches file-path globs from those tools' own configuration; no customer input reaches it. It is not imported by application code and is absent from the deployed Worker bundle and browser assets (verified on every run).",
-      "artifactMarkers": ["picomatch", "POSIX_REGEX_SOURCE", "extglobChars"]
-    }
-  ]
+  "exceptions": []
 }

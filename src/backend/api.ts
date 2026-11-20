@@ -107,7 +107,8 @@ async function actor(request: Request, env: CommerceEnv): Promise<Actor> {
       role:
         staff &&
         (passwordAdmin(env)
-          ? await passwordAdminActive(env, session.user.id)
+          ? session.session.authMethod === "password" &&
+            (await passwordAdminActive(env, session.user.id))
           : await adminProof(request, env, session))
           ? staff.role
           : null,
@@ -603,12 +604,16 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
         console.error(JSON.stringify({ event: "auth.email.unavailable" }));
         return json({ success: true });
       }
-      if (!response.ok && path === "/api/auth/sign-in/email")
+      if (!response.ok && path === "/api/auth/sign-in/email") {
+        await env.DB.prepare(
+          "INSERT INTO audit(actor,action,entity_id) VALUES('anonymous','auth.password.failed','password-sign-in')",
+        ).run();
         // Same message for unknown email and wrong password.
         return json(
           { error: "Email or password is incorrect" },
           response.status === 429 ? 429 : 401,
         );
+      }
       if (!response.ok && path === "/api/auth/sign-in/email-otp")
         return json(
           { error: "Authentication could not be completed" },
@@ -623,6 +628,8 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
     return adminPasswordSetup(env, JSON.parse(new TextDecoder().decode(await bounded(request))));
   }
   if (path.startsWith("/api/admin-security/")) {
+    // Legacy MFA-management paths must not become an alternate password-mode entry point.
+    if (passwordAdmin(env)) requireRole(await actor(request, env));
     await limited(request, env, "admin-security", 30);
     return adminSecurity(request, env, method === "POST" ? await body(request) : {});
   }

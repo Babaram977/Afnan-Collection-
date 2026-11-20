@@ -11,7 +11,8 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # Allow required browser installation to finish; two earlier 20-minute jobs timed out.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,6 +36,7 @@ jobs:
       - run: bun run test:domain
       - run: bun run test:admin-otp
       - run: bun run test:admin-password
+      - run: bun run test:single-admin-login
       # bun audit with narrow, expiring, owner-approved exceptions (security/audit-exceptions.json).
       # Fails on any other advisory, an expired or stale exception, a published patch, or excepted
       # package code in the built Worker/browser assets.
@@ -53,6 +55,20 @@ jobs:
       - run: bun run test:branding
       - run: bun run test:storefront
       - run: bun run test:admin-dashboard
+      - run: bun run test:single-admin-login-browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: single-admin-login-review
+          path: /tmp/afnan-single-login
+          retention-days: 14
+      - run: bun run test:admin-navigation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: admin-navigation-review
+          path: /tmp/afnan-admin-navigation
+          retention-days: 14
       - run: bun run test:admin-overview
       - run: bun run test:admin-images
       - run: bun run test:cart-flow

@@ -1,5 +1,17 @@
 # Development history
 
+## 2026-11-20 — consolidated release final preparation
+
+Production-schema replay with two synthetic sessions preserved existing columns, backfilled legacy values, supported old-code inserts, enforced the method constraint and passed integrity/FK checks. This was schema-only local validation, not a production-data export or remote migration. Restricted preflight and Access rollback metadata remain outside Git. See `docs/engineering/PR32-RELEASE-READINESS.md`.
+
+## 2026-11-20 — website-only administrator authentication proposal
+
+Closed the password-mode gap where another primary session could inherit staff rights when the account had a password. Added migration/backward-compatibility tests, independent-auth API/browser checks, host guards and credential-free auth audit events. Removed the no-longer-reported picomatch exception and made audit-report failures fail closed. No dependency/lockfile update or remote write occurred. See `docs/engineering/WEBSITE-ADMIN-AUTH-REVIEW.md`.
+
+## 2026-11-18 — administrator navigation
+
+Replaced customer menu/cart on admin routes with Store Management and Back to Store. Existing AdminNav sections are unchanged. Added real local-session browser checks for navigation, mobile layouts, sign-out, staff revocation, authenticated non-staff/fulfilment denial and unchanged server authorization. See `docs/engineering/ADMIN-NAVIGATION-REVIEW.md`.
+
 ## 2026-11-17 — compact mobile header
 
 Reviewed remote main, branches and PRs; Claude’s merged administrator-only header was preserved. Implemented responsive storefront header and blank-canvas-only logo viewport, with navigation/accessibility/geometry regression coverage. No commerce configuration or other business changes. See `docs/engineering/MOBILE-HEADER-REVIEW.md`.

@@ -1,5 +1,16 @@
 # Administrator enrollment and recovery runbook
 
+## Current password-mode recovery (owner decision; website-only candidate)
+
+Production uses the existing `admin@afnancollectionkn.com` account and password mode. The WebAuthn procedures below apply to the retained default MFA mode, not mandatory daily password-mode login. The website-only transition is governed by `WEBSITE-ADMIN-AUTH-REVIEW.md`; do not remove Access or reset a real account while merely reviewing code.
+
+1. The existing authorized recovery operator verifies the owner and the specific recovery request through the approved private process, and verifies the exact existing owner account and target database. Do not invent a second owner/acceptance account. Stop if identity or target cannot be established.
+2. Obtain explicit approval for production recovery SQL. Generate the existing `scripts/admin-provision-password.mjs` material only in restricted staging; its one-time setup material is private and must never appear in chat, CI logs, source control or public storage. Apply reviewed account-scoped statements only to the approved database.
+3. Deliver the 30-minute one-time setup link through an approved private channel on the permanent `/admin` origin. Sign out of any existing primary session first if needed to open the setup form. The server requires the existing staff row, stores only the setup-token digest, consumes it once, hashes the new password with Better Auth, revokes primary sessions and records the reset.
+4. Owner signs in with the newly chosen website password; only that verified password session may regain the existing role. A disabled staff security state is not reactivated by password reset and requires separate approved incident handling. Verify old sessions, expired/reused setup links, logout and unauthorized APIs remain denied. Never collect the owner's password or paste setup material into continuity records.
+5. Record only operator, approval/evidence references and outcome in restricted audit storage. No inventory, order, photo or payment record should be changed for recovery.
+
+
 No steps here authorize a remote write, real email, enrollment on behalf of the owner or deployment. Use owner-controlled restricted audit storage, not Git, for completed evidence. Its location and retention remain owner decisions.
 
 ## Initial enrollment

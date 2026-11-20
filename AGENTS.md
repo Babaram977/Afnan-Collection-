@@ -74,3 +74,11 @@
 - **Provisioning:** accounts come only from `scripts/admin-provision-password.mjs`, which creates the user and staff role plus a single-use 30-minute setup token stored as a SHA-256 digest. The owner chooses the password on `/admin?setup=<token>`. Public sign-up stays disabled.
 - **Verifier removed:** the independent-verifier (Aisha Idris Muhammad) approval is **removed from administrator onboarding** by the owner. The nomination text above is historical.
 - **Unchanged rules:** never log passwords, setup tokens or session cookies, and never add a test-mode authentication bypass.
+
+## Website-only administrator authentication candidate — 2026-11-20
+
+- Read `docs/engineering/WEBSITE-ADMIN-AUTH-REVIEW.md` before release or Access changes. This candidate prepares one website password login at the existing production `/admin`; production Access removal is not executed or approved by implementation alone.
+- In password mode, admin access additionally requires a server-recorded `session.auth_method='password'`. Email-code and migrated/legacy sessions never inherit staff privileges merely because the account has a password. Only the verified Better Auth session-creation endpoint sets this field; never accept client/Access headers as proof.
+- Migration 0006 is additive session metadata. Keep existing accounts, credentials, catalogue, inventory, photographs and audit history. It is locally validated only; apply remote migrations and deploy only after the owner approves the exact release and target.
+- Preserve PR #31's management navigation and PR #30's compact header. PR #31's old exact head is blocked by a stale audit exception; do not override its red check. The combined security proposal removes the obsolete exception and retains strict audit/CI gates.
+- Keep Afnan production Access active until approved application deployment, independent-auth checks and owner verification pass, then obtain the separate scoped removal approval. Never alter shared identity providers, other businesses, DNS, payment settings or production merchandise to perform this transition.
