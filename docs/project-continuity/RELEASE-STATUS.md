@@ -1,5 +1,13 @@
 # Release status
 
+## 2026-11-20 — production execution authorized
+
+Owner approved production migration 0006 and protected deployment of exact application release 38374f8. Production-only operator workflow reuses the existing GitHub production credential and Wrangler ledger; it does not introduce another application release. Production preflight confirms 8 products/164 units, integrity OK, no FK violations and 0006 pending. Access must remain until owner-confirmed native password login; checkout/payments remain disabled. See `docs/engineering/acceptance/PRODUCTION-0006-EXECUTION.md` for execution/recovery scope; do not infer completion from this authorization record.
+
+## 2026-11-20 — approved acceptance migration and deployment completed
+
+Completed: main CI 44689968521, acceptance migration 44693509688, acceptance deployment 44691155030 attempt 2 all succeeded for release 38374f8. Live acceptance bindings are dedicated D1/MEDIA/RECEIPTS, password mode, checkout=false and payments=disabled. Production automatic workflow 44693785138 was skipped. Production remains version 0c65154b-73b1-4903-9118-d55b26a57965, 8 products/164 units; production migration 0006 is still absent. Access application timestamps/destinations are unchanged. Hosted native owner login remains unverified, distinct from passing local/CI authentication tests. Restricted operational receipt: `/workspace/work/afnan-acceptance-release-38374f8/receipt.json`.
+
 ## 2026-11-20 — acceptance migration credential path
 
 Main c99b317 CI run 44647111044 passed. Acceptance workflow 44649854105 built its artifact successfully, then stopped at the pending-migration guard: its existing credential listed 0006, and the actual deploy step was skipped. Migration 0006 and any new acceptance version are not claimed complete. Proposed migration workflow cannot run without the missing owner-review protection and main merge. Production remains unauthorized and unchanged. See `docs/engineering/acceptance/MIGRATION-0006-GITHUB-JOB.md`.

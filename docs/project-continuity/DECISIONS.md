@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-11-20 — production execution authorized
+
+Owner approved production migration 0006 and protected deployment of exact application release 38374f8. Production-only operator workflow reuses the existing GitHub production credential and Wrangler ledger; it does not introduce another application release. Production preflight confirms 8 products/164 units, integrity OK, no FK violations and 0006 pending. Access must remain until owner-confirmed native password login; checkout/payments remain disabled. See `docs/engineering/acceptance/PRODUCTION-0006-EXECUTION.md` for execution/recovery scope; do not infer completion from this authorization record.
+
+## 2026-11-20 — approved acceptance migration and deployment completed
+
+Owner explicitly superseded the additional-reviewer proposal: green CI plus owner dispatch are the acceptance gates. The externally merged workflow on 38374f8 already reflects that decision; no reviewer configuration was changed. Owner also conditionally approved Afnan-only Access removal AFTER separately authorized production deployment and successful native password verification. Do not ask again for that same conditional removal approval; do not remove it before its conditions pass. Restricted operational receipt: `/workspace/work/afnan-acceptance-release-38374f8/receipt.json`.
+
 ## 2026-11-20 — acceptance migration credential path
 
 Use the existing afnan-acceptance environment credential only inside a separately approved migration job; never extract it, request it in chat, substitute raw SQL writes or bypass main-only/owner-review controls. Preserve the earlier recovery bookmark; normal Wrangler ledger applies 0006 once. Adding the missing owner reviewer and merging the proposed workflow remain owner actions. See `docs/engineering/acceptance/MIGRATION-0006-GITHUB-JOB.md`.

@@ -1,5 +1,13 @@
 # Development history
 
+## 2026-11-20 — production execution authorized
+
+Owner approved production migration 0006 and protected deployment of exact application release 38374f8. Production-only operator workflow reuses the existing GitHub production credential and Wrangler ledger; it does not introduce another application release. Production preflight confirms 8 products/164 units, integrity OK, no FK violations and 0006 pending. Access must remain until owner-confirmed native password login; checkout/payments remain disabled. See `docs/engineering/acceptance/PRODUCTION-0006-EXECUTION.md` for execution/recovery scope; do not infer completion from this authorization record.
+
+## 2026-11-20 — approved acceptance migration and deployment completed
+
+Completed approved acceptance migration via run 44693509688, retaining the prior restricted bookmark and recording a fresh recovery bookmark in its job summary. Reran only failed acceptance deploy job of 44691155030; no duplicate deployment or application rebuild. Live Worker metadata links version d22ae9d1-331c-4c53-bfb3-8b3237c39603 to release 38374f8. Exact-head CI and acceptance build authentication/navigation/mobile checks passed. Native hosted owner password verification is not claimed: automated HTTP got Cloudflare 1010, and browser probing hit the workspace proxy CA trust limitation; no TLS/Access bypass or new credential was used. Restricted operational receipt: `/workspace/work/afnan-acceptance-release-38374f8/receipt.json`.
+
 ## 2026-11-20 — acceptance migration credential path
 
 Prepared an acceptance-only, manual, owner-gated Wrangler migration workflow pinned to application release c99b317 and D1 11950c2f-14bb-4a31-9add-356f155dea4e. Actionlint, YAML/shell/JavaScript syntax and 19 local guard cases passed. Existing application code and credentials are unchanged; no remote migration is executed. See `docs/engineering/acceptance/MIGRATION-0006-GITHUB-JOB.md`.
