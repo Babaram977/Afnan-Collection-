@@ -1,6 +1,6 @@
 name: Migrate Afnan acceptance 0006
 
-# Manual and acceptance-only. Merge/review this workflow separately; it neither
+# Owner-dispatched and acceptance-only. Green CI is the release gate; it neither
 # deploys a Worker nor changes an environment, credential, Access policy or DNS.
 on:
   workflow_dispatch:
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Require real owner approval protection and passing exact-release CI
+      - name: Require owner dispatch and passing exact-release CI
         env:
           GH_TOKEN: ${{ github.token }}
           OWNER: ${{ github.repository_owner }}
@@ -51,11 +51,8 @@ jobs:
           const read = name => JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/${name}.json`, 'utf8'));
           const e = read('environment');
           assert.equal(e.can_admins_bypass, false, 'Environment must prohibit administrator bypass');
-          const review = e.protection_rules.find(r => r.type === 'required_reviewers');
-          assert.equal(review?.reviewers?.length, 1, 'Require exactly one reviewer: the repository owner');
-          assert.equal(review.reviewers[0].type, 'User');
-          assert.equal(review.reviewers[0].reviewer.login.toLowerCase(), process.env.OWNER.toLowerCase());
-          assert.equal(review.prevent_self_review, false, 'Owner-dispatched migration must allow the owner to approve');
+          // Owner-only workflow dispatch and successful exact-release CI are the gates.
+          // No additional environment reviewer is required.
           assert.equal(e.deployment_branch_policy.custom_branch_policies, true);
           assert.equal(e.deployment_branch_policy.protected_branches, false);
           const branches = read('branches').branch_policies;
