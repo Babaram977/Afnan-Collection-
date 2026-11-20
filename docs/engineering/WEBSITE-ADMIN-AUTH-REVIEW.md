@@ -49,3 +49,7 @@ Read-only checks also confirm production workers.dev/previews are disabled and t
 Keep the session column and all business data; do not restore an older database or drop authentication/audit records for a code rollback. If removal has occurred, restore the saved **Afnan-only** Access protection before reverting to any pre-hardening Worker, then investigate/roll forward. The shared identity provider is retained, so edge protection can be recreated without modifying other businesses. Record the resulting Access application identity if recreation is required. Owner-approved recovery/session revocation remains available through the existing operator, not a public reset bypass.
 
 No production Access removal or production deployment is permitted until the owner approves the exact release and transition operations. The proposed cutover intentionally removes the separate Cloudflare step for normal daily login only after the application protection has been proved.
+
+## Final production compatibility record
+
+See `PR32-RELEASE-READINESS.md` for the actual production-schema preflight, non-sensitive current counts, local replay evidence and exact release/Access approval requirements. No production data was changed or exported during that validation.

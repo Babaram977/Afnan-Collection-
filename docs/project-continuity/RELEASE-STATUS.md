@@ -1,5 +1,9 @@
 # Release status
 
+## 2026-11-20 — consolidated release final preparation
+
+The final consolidated proposal retains unchanged application code from 386b1bc, includes PR #31 navigation and PR #30 compact header, and has no audit exceptions. Production migration 0006 is absent; read-only compatibility checks and local replay pass. Required CI passed for 386b1bcd541bea4ea788ba5a7abd2fa58c808623 (run 44641275660). The final proposed documentation-only commit and its required CI are recorded in PR #32. No merge, deployment, Access removal, credential reset, inventory change or Heroine modification is performed. See `docs/engineering/PR32-RELEASE-READINESS.md`.
+
 ## 2026-11-20 — website-only administrator authentication proposal
 
 Local review passed: 40 unit tests; 96 new independent-auth checks; 12 new browser checks; existing integration 85, password 55, OTP 25, security 77, domain 10, navigation 67, dashboard 87, browser 111, branding 88 and acceptance 12 checks. Typecheck/lint/build, no-exception audit and local migration/replay passed. Proposed security release is not merged/deployed; production Access remains active. Remote migration and exact production release require explicit owner approval. See `docs/engineering/WEBSITE-ADMIN-AUTH-REVIEW.md`.

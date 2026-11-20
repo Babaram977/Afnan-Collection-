@@ -1,5 +1,9 @@
 # Resume development
 
+## 2026-11-20 — consolidated release final preparation
+
+Complete CI for 386b1bc before pushing the fresh readiness-record head, then require CI on that final head. Obtain candidate-merge and acceptance-migration authorization, validate the resulting exact merge SHA through existing main/acceptance gates, and obtain exact production migration/deployment approval with Access retained. Only successful owner native-password verification permits requesting scoped Access-removal approval. See `docs/engineering/PR32-RELEASE-READINESS.md`.
+
 ## 2026-11-20 — website-only administrator authentication proposal
 
 Review the combined security proposal and its exact commit/CI. Approve the reviewed migration and existing acceptance workflow before any remote schema or deployment action; validate the resulting merge SHA. Request separate exact production release approval with Access retained, verify the owner password workflow, then obtain Afnan-only Access-removal approval. Keep actual production catalogue as found, rather than resetting to an older stated count. See `docs/engineering/WEBSITE-ADMIN-AUTH-REVIEW.md`.

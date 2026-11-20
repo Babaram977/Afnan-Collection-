@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-11-20 — consolidated release final preparation
+
+Preserve the actual current production catalogue, including drafts; read-only totals are 8 product rows/164 units rather than the older 7/114 baseline. Do not reset or remove records to match an earlier count. Keep Access until approved protected deployment and successful owner website-password verification; removal remains a separate reversible Afnan-only approval. See `docs/engineering/PR32-RELEASE-READINESS.md`.
+
 ## 2026-11-20 — website-only administrator authentication proposal
 
 Reuse Better Auth; do not introduce another login provider. Require a server-recorded password method for password-mode staff permissions; reject email-code/legacy sessions as admin proof. Migration 0006 adds session metadata only. Enforce canonical host/HTTPS and metadata-only authentication auditing. Keep Access until the approved exact release is validated, then seek separate Afnan-only removal approval. See `docs/engineering/WEBSITE-ADMIN-AUTH-REVIEW.md`.
