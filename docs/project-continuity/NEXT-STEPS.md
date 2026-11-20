@@ -1,5 +1,9 @@
 # Resume development
 
+## 2026-11-20 — acceptance migration credential path
+
+Review the migration-workflow PR, configure the repository owner as the sole required reviewer on existing Afnan-acceptance (retain main-only/no admin bypass), and approve its manual migration run. After ledger/retention/integrity verification, resume only the necessary existing acceptance deploy job for c99b317; cancel duplicate workflow-only automatic builds before migration. Verify hosted owner login with existing access. Production/Access changes remain separately gated. See `docs/engineering/acceptance/MIGRATION-0006-GITHUB-JOB.md`.
+
 ## 2026-11-20 — consolidated release final preparation
 
 Complete CI for 386b1bc before pushing the fresh readiness-record head, then require CI on that final head. Obtain candidate-merge and acceptance-migration authorization, validate the resulting exact merge SHA through existing main/acceptance gates, and obtain exact production migration/deployment approval with Access retained. Only successful owner native-password verification permits requesting scoped Access-removal approval. See `docs/engineering/PR32-RELEASE-READINESS.md`.

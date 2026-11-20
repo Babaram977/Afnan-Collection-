@@ -1,5 +1,9 @@
 # Release status
 
+## 2026-11-20 — acceptance migration credential path
+
+Main c99b317 CI run 44647111044 passed. Acceptance workflow 44649854105 built its artifact successfully, then stopped at the pending-migration guard: its existing credential listed 0006, and the actual deploy step was skipped. Migration 0006 and any new acceptance version are not claimed complete. Proposed migration workflow cannot run without the missing owner-review protection and main merge. Production remains unauthorized and unchanged. See `docs/engineering/acceptance/MIGRATION-0006-GITHUB-JOB.md`.
+
 ## 2026-11-20 — consolidated release final preparation
 
 The final consolidated proposal retains unchanged application code from 386b1bc, includes PR #31 navigation and PR #30 compact header, and has no audit exceptions. Production migration 0006 is absent; read-only compatibility checks and local replay pass. Required CI passed for 386b1bcd541bea4ea788ba5a7abd2fa58c808623 (run 44641275660). The final proposed documentation-only commit and its required CI are recorded in PR #32. No merge, deployment, Access removal, credential reset, inventory change or Heroine modification is performed. See `docs/engineering/PR32-RELEASE-READINESS.md`.

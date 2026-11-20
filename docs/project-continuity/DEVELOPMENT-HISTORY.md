@@ -1,5 +1,9 @@
 # Development history
 
+## 2026-11-20 — acceptance migration credential path
+
+Prepared an acceptance-only, manual, owner-gated Wrangler migration workflow pinned to application release c99b317 and D1 11950c2f-14bb-4a31-9add-356f155dea4e. Actionlint, YAML/shell/JavaScript syntax and 19 local guard cases passed. Existing application code and credentials are unchanged; no remote migration is executed. See `docs/engineering/acceptance/MIGRATION-0006-GITHUB-JOB.md`.
+
 ## 2026-11-20 — consolidated release final preparation
 
 Production-schema replay with two synthetic sessions preserved existing columns, backfilled legacy values, supported old-code inserts, enforced the method constraint and passed integrity/FK checks. This was schema-only local validation, not a production-data export or remote migration. Restricted preflight and Access rollback metadata remain outside Git. See `docs/engineering/PR32-RELEASE-READINESS.md`.

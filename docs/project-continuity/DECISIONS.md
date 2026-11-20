@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-11-20 — acceptance migration credential path
+
+Use the existing afnan-acceptance environment credential only inside a separately approved migration job; never extract it, request it in chat, substitute raw SQL writes or bypass main-only/owner-review controls. Preserve the earlier recovery bookmark; normal Wrangler ledger applies 0006 once. Adding the missing owner reviewer and merging the proposed workflow remain owner actions. See `docs/engineering/acceptance/MIGRATION-0006-GITHUB-JOB.md`.
+
 ## 2026-11-20 — consolidated release final preparation
 
 Preserve the actual current production catalogue, including drafts; read-only totals are 8 product rows/164 units rather than the older 7/114 baseline. Do not reset or remove records to match an earlier count. Keep Access until approved protected deployment and successful owner website-password verification; removal remains a separate reversible Afnan-only approval. See `docs/engineering/PR32-RELEASE-READINESS.md`.

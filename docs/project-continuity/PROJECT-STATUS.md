@@ -1,5 +1,9 @@
 # Project status
 
+## 2026-11-20 — acceptance migration credential path
+
+PR #32 is merged as c99b317; exact-main CI passed. Acceptance migration 0006 is authorized but pending. Existing GitHub acceptance credential is referenced by the deploy workflow; secret metadata is inaccessible (403), and the environment currently has no required reviewer. A separate manual migration workflow is proposed with a fail-closed owner-review check. No credential, migration, deployment or security-setting change occurred. See `docs/engineering/acceptance/MIGRATION-0006-GITHUB-JOB.md`.
+
 ## 2026-11-20 — consolidated release final preparation
 
 Final preparation revalidated migration 0006 against the actual production user/session schema using read-only metadata and a fresh local replay. No production row values or credentials were exported; no remote writes occurred. The final PR #32 preparation is documentation-only over application commit 386b1bcd541bea4ea788ba5a7abd2fa58c808623 and preserves PR #31/#30 by ancestry. See `docs/engineering/PR32-RELEASE-READINESS.md`.
