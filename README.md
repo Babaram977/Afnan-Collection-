@@ -8,10 +8,10 @@ A Nigerian children’s lifestyle store, initially serving Kano. This repository
 
 - D1-backed active catalog, dynamic categories, age navigation, search, filters, price/name sorting, variants/SKUs, images and stock availability.
 - Persistent browser cart plus owner-scoped server copy, with catalog-based rehydration and authoritative checkout validation.
-- Email-code customer sign-in (new registration restricted to localhost fixtures), profiles, saved delivery addresses, account order history and browser-scoped guest order tracking.
+- Public browsing and shopping bag without customer account navigation. `/account` redirects to `/`; profile, saved-address and order-history screens are retired. Existing customer records, sessions, addresses and historical orders remain intact. Administrator password login and Store Management stay at `/admin`.
 - Server-calculated NGN totals, configured delivery zones/fees, idempotent order preparation, transactional reservations, expiry/cancellation and guarded fulfilment.
 - Guided owner dashboard (no UUID entry for product/stock tasks): multi-photo upload/previews, main-image ordering, regular/promotional pricing, generated/assigned SKUs, opening stock, safe product deletion and publishing without a code deployment.
-- Mandatory administrator WebAuthn (verified passkey/security key), controlled pending enrollment, expiring privileged sessions and hashed one-use recovery codes. No Cloudflare account membership is required. Owner enrollment and hosted verification remain pending.
+- Existing administrator password sign-in, sessions, recovery and server-side D1 role checks are preserved. The WebAuthn implementation remains available for deployments configured to use it; retiring customer accounts does not change administrator authentication.
 - Protected staff dashboard: product/category/variant editing, R2 image uploads, audited stock changes and low-stock view, orders, customers/session revocation, banners, delivery settings, approved policy copy, payment verification/refunds and basic sales totals. Fulfilment staff have restricted access.
 - Paystack test adapter with signed webhooks, provider verification, duplicate-event handling, late-payment review and full-refund status reconciliation. Live keys are deliberately rejected. Real Paystack sandbox requests have **not** been verified.
 - Worker health endpoint, security headers, origin checks, validated/bounded requests, D1-backed rate limits, structured request IDs, local migrations and automated validation CI. No deployment workflow is included.

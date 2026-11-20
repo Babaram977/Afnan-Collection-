@@ -1,5 +1,9 @@
 # Project status
 
+## 2026-11-20 — customer account retirement proposal
+
+Prepared public account retirement on fix/retire-customer-account in an isolated worktree. /account redirects to the storefront and customer navigation/account controls are removed. Source changes do not touch backend authentication, /admin, migrations, inventory, configuration or logo assets. Original local production-release records in the other worktree are preserved. See `docs/engineering/CUSTOMER-ACCOUNT-RETIREMENT.md`.
+
 ## 2026-11-20 — production execution authorized
 
 Owner approved production migration 0006 and protected deployment of exact application release 38374f8. Production-only operator workflow reuses the existing GitHub production credential and Wrangler ledger; it does not introduce another application release. Production preflight confirms 8 products/164 units, integrity OK, no FK violations and 0006 pending. Access must remain until owner-confirmed native password login; checkout/payments remain disabled. See `docs/engineering/acceptance/PRODUCTION-0006-EXECUTION.md` for execution/recovery scope; do not infer completion from this authorization record.

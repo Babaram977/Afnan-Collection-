@@ -416,20 +416,19 @@ try {
           fullPage: true,
         });
       await page.goto(`${ORIGIN}/account`);
-      await page
-        .getByText(/^AC-\d{8}-\d{4}$/)
-        .first()
-        .waitFor({ timeout: 10000 });
-      const account = await page.locator("#main").innerText();
+      check(new URL(page.url()).pathname === "/", `Retired account redirects at ${width}`);
+      const preservedOrders = await (await page.request.get(`${ORIGIN}/api/orders`)).json();
       check(
-        /Awaiting bank transfer until/.test(account),
-        `Account shows transfer deadline at ${width}`,
+        preservedOrders.some(
+          (o) => o.payment_method === "bank_transfer" && typeof o.expires_at === "number",
+        ),
+        `Existing transfer records and deadlines remain available to their owner at ${width}`,
       );
       check(
         (await page.getByRole("button", { name: "Continue to payment" }).count()) === 0,
-        `Account offers no online payment for bank transfer at ${width}`,
+        `Retired account offers no payment controls at ${width}`,
       );
-      await page.goBack();
+
       await context.close();
     }
   } finally {

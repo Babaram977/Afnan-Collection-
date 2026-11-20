@@ -1,5 +1,9 @@
 # Development history
 
+## 2026-11-20 — customer account retirement proposal
+
+Added focused account-retirement regression coverage with real local customer sessions and before/after customer/account/session/address/order/history snapshots. Updated old browser, bank-transfer and navigation tests to preserve data/API/session coverage without expecting retired UI. New screenshot artifact is included in validation CI. See `docs/engineering/CUSTOMER-ACCOUNT-RETIREMENT.md`.
+
 ## 2026-11-20 — production execution authorized
 
 Owner approved production migration 0006 and protected deployment of exact application release 38374f8. Production-only operator workflow reuses the existing GitHub production credential and Wrangler ledger; it does not introduce another application release. Production preflight confirms 8 products/164 units, integrity OK, no FK violations and 0006 pending. Access must remain until owner-confirmed native password login; checkout/payments remain disabled. See `docs/engineering/acceptance/PRODUCTION-0006-EXECUTION.md` for execution/recovery scope; do not infer completion from this authorization record.

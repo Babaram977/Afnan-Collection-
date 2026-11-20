@@ -62,6 +62,13 @@ jobs:
           name: single-admin-login-review
           path: /tmp/afnan-single-login
           retention-days: 14
+      - run: bun run test:account-retirement
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: account-retirement-review
+          path: /tmp/afnan-account-retirement
+          retention-days: 14
       - run: bun run test:admin-navigation
       - uses: actions/upload-artifact@v4
         if: always()
