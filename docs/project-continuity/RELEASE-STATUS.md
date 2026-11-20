@@ -1,5 +1,9 @@
 # Release status
 
+## 2026-11-20 — customer account retirement proposal
+
+Customer-account retirement is a PR-only change, not deployed. 104 new retirement/retention/browsing/mobile checks passed locally; 40 unit tests, typecheck, local Worker build/package and unrestricted audit passed. Existing local regression suites passed: navigation 67, native login browser 12, mobile-header Chromium/WebKit 161 each, bank-transfer 79, browser 111, storefront 201 and branding 88. Lint has zero errors/ten baseline warnings. Final PR CI is tracked separately; do not infer CI success from local results. See `docs/engineering/CUSTOMER-ACCOUNT-RETIREMENT.md`.
+
 ## 2026-11-20 — production execution authorized
 
 Owner approved production migration 0006 and protected deployment of exact application release 38374f8. Production-only operator workflow reuses the existing GitHub production credential and Wrangler ledger; it does not introduce another application release. Production preflight confirms 8 products/164 units, integrity OK, no FK violations and 0006 pending. Access must remain until owner-confirmed native password login; checkout/payments remain disabled. See `docs/engineering/acceptance/PRODUCTION-0006-EXECUTION.md` for execution/recovery scope; do not infer completion from this authorization record.

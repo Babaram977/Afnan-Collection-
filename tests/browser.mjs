@@ -68,10 +68,24 @@ try {
       throw e;
     }
     checks++;
-    await page.getByRole("link", { name: "Track your order" }).click();
-    await page.getByRole("button", { name: "Cancel reservation" }).click();
-    await page.getByText("Cancelled", { exact: true }).waitFor();
+    const guestOrders = await (await page.request.get(`${ORIGIN}/api/orders`)).json();
+    const reserved = guestOrders.find((o) => o.status === "pending");
+    assert.ok(reserved);
+    assert.equal(
+      (
+        await page.request.post(`${ORIGIN}/api/orders/${reserved.id}/cancel`, {
+          headers: { Origin: ORIGIN },
+          data: {},
+        })
+      ).status(),
+      200,
+    );
+    assert.equal(
+      (await (await page.request.get(`${ORIGIN}/api/orders/${reserved.id}`)).json()).status,
+      "cancelled",
+    );
     checks++;
+
     for (const path of [
       "/",
       "/shop",
@@ -337,20 +351,33 @@ try {
   });
   try {
     const customerPage = await customerContext.newPage();
-    await customerPage.goto(ORIGIN + "/account");
-    await customerPage.getByLabel("Email", { exact: true }).fill("acceptance-customer@example.com");
-    await customerPage.getByLabel("Name", { exact: true }).fill("Acceptance customer");
-    await customerPage.getByRole("button", { name: "Send sign-in code" }).click();
-    await customerPage.getByLabel("Email code").waitFor();
+    // Preserve legacy customer-session/backend coverage without a public account UI.
+    const email = "acceptance-customer@example.com";
+    assert.equal(
+      (
+        await customerPage.request.post(`${ORIGIN}/api/auth/email-otp/send-verification-otp`, {
+          headers: { Origin: ORIGIN },
+          data: { email, type: "sign-in" },
+        })
+      ).status(),
+      200,
+    );
     const { code } = await db
       .prepare("SELECT code FROM test_outbox WHERE email=?")
-      .bind("acceptance-customer@example.com")
+      .bind(email)
       .first();
-    await customerPage.getByLabel("Email code").fill(code);
-    await customerPage.getByRole("button", { name: "Verify and sign in" }).click();
-    await customerPage
-      .getByRole("heading", { name: "Signed in as acceptance-customer@example.com" })
-      .waitFor();
+    assert.equal(
+      (
+        await customerPage.request.post(`${ORIGIN}/api/auth/sign-in/email-otp`, {
+          headers: { Origin: ORIGIN },
+          data: { email, otp: code, name: "Acceptance customer" },
+        })
+      ).status(),
+      200,
+    );
+    await customerPage.goto(`${ORIGIN}/account`);
+    assert.equal(new URL(customerPage.url()).pathname, "/");
+    assert.equal((await (await customerPage.request.get(`${ORIGIN}/api/me`)).json()).email, email);
     checks++;
 
     let releaseCart;
@@ -394,7 +421,7 @@ try {
     assert.equal(order.total_kobo, 260025);
     checks += 2;
     await customerPage.getByRole("button", { name: "Continue to payment", exact: true }).click();
-    await customerPage.waitForURL(/\/account/);
+    await customerPage.waitForURL(`${ORIGIN}/`);
     checks++;
     const event = JSON.stringify({ event: "charge.success", data: { reference: order.id } });
     const signature = createHmac("sha512", AUTH_SECRET).update(event).digest("hex");
@@ -419,9 +446,12 @@ try {
     await page.getByRole("button", { name: "Mark delivered", exact: true }).click();
     await page.getByText("Status: delivered", { exact: true }).waitFor();
     checks++;
-    await customerPage.getByRole("button", { name: "Refresh order status", exact: true }).click();
-    await customerPage.getByText("Delivered", { exact: true }).waitFor();
+    assert.equal(
+      (await (await customerPage.request.get(`${ORIGIN}/api/orders/${order.id}`)).json()).status,
+      "delivered",
+    );
     checks++;
+
     const balance = await db.prepare("SELECT stock FROM variants WHERE sku='BROWSER-001'").first();
     assert.equal(balance.stock, 5);
     checks++;

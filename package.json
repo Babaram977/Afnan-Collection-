@@ -30,6 +30,7 @@
     "test:receipts": "node tests/receipts.mjs",
     "test:admin-otp": "node tests/admin-otp.mjs",
     "test:single-admin-login": "node tests/single-admin-login.mjs",
+    "test:account-retirement": "node tests/account-retirement.mjs",
     "test:single-admin-login-browser": "node tests/single-admin-login-browser.mjs",
     "test:admin-password": "node tests/admin-password.mjs",
     "admin:provision": "node scripts/admin-provision-password.mjs",

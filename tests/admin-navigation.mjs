@@ -132,7 +132,16 @@ try {
   const management = page.getByRole("link", { name: "Store Management", exact: true });
   await page.goto(`${ORIGIN}/account`);
   await expect(management).toBeVisible();
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  assert.equal(
+    (
+      await page.request.post(`${ORIGIN}/api/auth/sign-out`, {
+        headers: { Origin: ORIGIN },
+        data: {},
+      })
+    ).status(),
+    200,
+  );
+  await page.reload();
   await expect(management).toHaveCount(0);
   checks++;
   await page.goto(`${ORIGIN}/admin`);

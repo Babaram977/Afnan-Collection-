@@ -28,7 +28,6 @@ function Checkout() {
   const [key, setKey] = useState("");
   const [email, setEmail] = useState("");
   const [accountEmail, setAccountEmail] = useState(false);
-  const [addresses, setAddresses] = useState<{ id: string; label: string; data: string }[]>([]);
   useEffect(() => {
     setKey(crypto.randomUUID());
     Promise.all([
@@ -42,10 +41,6 @@ function Checkout() {
         setZones(z);
         setEmail(m.email ?? "");
         setAccountEmail(Boolean(m.email));
-        if (m.userId)
-          void apiCall<typeof addresses>("/addresses")
-            .then(setAddresses)
-            .catch(() => {});
       })
       .catch((e) => setError(e.message));
   }, []);
@@ -74,10 +69,9 @@ function Checkout() {
               </p>
             )}
             <p>
-              <Link to="/account" className="underline">
-                Track your order
+              <Link to="/shop" className="underline">
+                Continue shopping
               </Link>
-              . Guest tracking is available on this browser.
             </p>
             {order.payment_method === "bank_transfer" ? null : payment ? (
               <Button
@@ -194,38 +188,7 @@ function Checkout() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            {addresses.length > 0 && (
-              <div>
-                <Label htmlFor="co-saved">Saved address</Label>
-                <select
-                  id="co-saved"
-                  className="min-h-11 w-full rounded-lg border bg-card px-3"
-                  defaultValue=""
-                  onChange={(e) => {
-                    const chosen = addresses.find((a) => a.id === e.target.value);
-                    if (!chosen) return;
-                    const address = JSON.parse(chosen.data);
-                    const form = e.currentTarget.form;
-                    for (const name of ["street", "city"]) {
-                      const input = form?.elements.namedItem(name);
-                      if (input instanceof HTMLInputElement) input.value = address[name];
-                    }
-                    setZoneId(
-                      zones.find(
-                        (z) => z.state.toLowerCase() === String(address.state).toLowerCase(),
-                      )?.id ?? "",
-                    );
-                  }}
-                >
-                  <option value="">Choose a saved address</option>
-                  {addresses.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+
             <div>
               <Label htmlFor="co-street">Street address</Label>
               <Input

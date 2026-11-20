@@ -89,7 +89,7 @@ try {
       await page.getByRole("button", { name: "Open menu" }).click();
       const nav = page.getByRole("navigation", { name: "Mobile", exact: true });
       await nav.waitFor();
-      for (const name of ["Account", "Shop", "About", "Contact", "Policies", "Cart"])
+      for (const name of ["Shop", "About", "Contact", "Policies", "Cart"])
         check(
           await nav.getByRole("link", { name, exact: true }).isVisible(),
           `${name} accessible at ${width}`,
