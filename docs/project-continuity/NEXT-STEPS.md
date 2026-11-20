@@ -1,5 +1,13 @@
 # Resume development
 
+## 2026-11-20 — production execution authorized
+
+Owner approved production migration 0006 and protected deployment of exact application release 38374f8. Production-only operator workflow reuses the existing GitHub production credential and Wrangler ledger; it does not introduce another application release. Production preflight confirms 8 products/164 units, integrity OK, no FK violations and 0006 pending. Access must remain until owner-confirmed native password login; checkout/payments remain disabled. See `docs/engineering/acceptance/PRODUCTION-0006-EXECUTION.md` for execution/recovery scope; do not infer completion from this authorization record.
+
+## 2026-11-20 — approved acceptance migration and deployment completed
+
+Obtain separate authorization for production migration 0006 and deployment of exact release 38374f8f000849b08b321daad6dfb9f459235eb1. Refresh production recovery/schema/ledger/counts first and use a production-only, approved Wrangler ledger job (never repoint the acceptance job). Preserve Access during deployment and owner native-password verification. Only after those conditions succeed, execute the already conditionally approved Afnan-only Access removal reversibly. Keep checkout/payments disabled and preserve all live records. Hosted acceptance owner verification remains pending through existing authorized access; never request passwords or create tokens merely to demonstrate it. Restricted operational receipt: `/workspace/work/afnan-acceptance-release-38374f8/receipt.json`.
+
 ## 2026-11-20 — acceptance migration credential path
 
 Review the migration-workflow PR, configure the repository owner as the sole required reviewer on existing Afnan-acceptance (retain main-only/no admin bypass), and approve its manual migration run. After ledger/retention/integrity verification, resume only the necessary existing acceptance deploy job for c99b317; cancel duplicate workflow-only automatic builds before migration. Verify hosted owner login with existing access. Production/Access changes remain separately gated. See `docs/engineering/acceptance/MIGRATION-0006-GITHUB-JOB.md`.

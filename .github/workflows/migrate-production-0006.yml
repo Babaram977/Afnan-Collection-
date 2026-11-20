@@ -1,0 +1,191 @@
+name: Migrate Afnan production 0006
+
+# Owner-dispatched and production-only. Green CI is the release gate; it neither
+# deploys a Worker nor changes an environment, credential, Access policy or DNS.
+on:
+  workflow_dispatch:
+    inputs:
+      approval_reference:
+        description: Owner approval reference for production migration 0006
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+# Serialize with the existing production workflow; never migrate during a deploy.
+concurrency:
+  group: afnan-production-deploy
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  RELEASE: 38374f8f000849b08b321daad6dfb9f459235eb1
+  ACCOUNT: b4e142fe9da84ef204eecda2efe4a730
+  DATABASE: 73ddfc46-34ba-4733-841d-e4819af0b957
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require owner dispatch and passing exact-release CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+          APPROVAL: ${{ inputs.approval_reference }}
+        run: |
+          test -n "$APPROVAL"
+          gh api "repos/$GITHUB_REPOSITORY/environments/afnan-production" > "$RUNNER_TEMP/environment.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/44689968521" > "$RUNNER_TEMP/ci.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/44691155030" > "$RUNNER_TEMP/acceptance.json"
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const read = name => JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/${name}.json`, 'utf8'));
+          const e = read('environment');
+          // Owner-only workflow dispatch and successful exact-release CI are the gates.
+          // No additional environment reviewer is required.
+          assert.equal(e.name.toLowerCase(), 'afnan-production');
+          const ci = read('ci');
+          assert.equal(ci.head_sha, process.env.RELEASE);
+          assert.equal(ci.conclusion, 'success');
+          assert.equal(ci.event, 'push');
+          const acceptance = read('acceptance');
+          assert.equal(acceptance.head_sha, process.env.RELEASE);
+          assert.equal(acceptance.conclusion, 'success');
+          JS
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: 38374f8f000849b08b321daad6dfb9f459235eb1
+          persist-credentials: false
+          sparse-checkout: migrations
+
+      - name: Package only the approved migration sequence (no application execution)
+        run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE"
+          test "$(find migrations -type f | wc -l)" = 6
+          echo '7369cf4f682bb1e485fc29fa1b9f4dbd9699da035d55de0e9b656a78c08cb26f  migrations/0006_session_authentication_method.sql' | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/migration-artifact"
+          cp -R migrations "$RUNNER_TEMP/migration-artifact/"
+          cd "$RUNNER_TEMP/migration-artifact"
+          sha256sum migrations/*.sql > MANIFEST.sha256
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: approved-production-migrations
+          path: ${{ runner.temp }}/migration-artifact
+          retention-days: 1
+          if-no-files-found: error
+
+  migrate:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: afnan-production
+    steps:
+      # No checkout, application dependencies or application scripts in this job.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: approved-production-migrations
+          path: ${{ runner.temp }}/migration-work
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Install pinned operator tooling without application code
+        run: |
+          mkdir -p "$RUNNER_TEMP/operator"
+          cd "$RUNNER_TEMP/operator"
+          npm install --no-save --ignore-scripts --no-audit --no-fund wrangler@4.160.0
+
+      - name: Verify identity and recovery, then apply through Wrangler ledger once
+        working-directory: ${{ runner.temp }}/migration-work
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: b4e142fe9da84ef204eecda2efe4a730
+          WRANGLER_SEND_METRICS: 'false'
+          APPROVAL: ${{ inputs.approval_reference }}
+        run: |
+          umask 077
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::Existing afnan-production CLOUDFLARE_API_TOKEN is unavailable; configure it securely in GitHub, never chat.'; exit 1; }
+          sha256sum --quiet -c MANIFEST.sha256
+          echo '7369cf4f682bb1e485fc29fa1b9f4dbd9699da035d55de0e9b656a78c08cb26f  migrations/0006_session_authentication_method.sql' | sha256sum -c -
+          cat > wrangler.jsonc <<'JSON'
+          {"name":"afnan-collection-production","account_id":"b4e142fe9da84ef204eecda2efe4a730","d1_databases":[{"binding":"DB","database_name":"afnan-collection-production","database_id":"73ddfc46-34ba-4733-841d-e4819af0b957","migrations_dir":"migrations"}]}
+          JSON
+          W="$RUNNER_TEMP/operator/node_modules/.bin/wrangler"
+          # No debug tracing. Only schema, aggregates and session IDs are queried;
+          # tokens, password hashes and personal account rows are never selected.
+          node --input-type=module <<'JS'
+          import fs from 'node:fs'; import assert from 'node:assert/strict';
+          const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${process.env.ACCOUNT}/d1/database/${process.env.DATABASE}`, {
+            headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` }
+          });
+          assert(response.ok, `D1 identity read failed: HTTP ${response.status}; check existing token's D1 permission on the fixed account`);
+          const body = await response.json(); assert.equal(body.success, true);
+          const d = body.result;
+          assert.equal(d.uuid, process.env.DATABASE);
+          assert.equal(d.name, 'afnan-collection-production');
+          JS
+          "$W" d1 time-travel info DB --config wrangler.jsonc --json > recovery.json
+          "$W" d1 migrations list DB --config wrangler.jsonc --remote > pending-before.txt
+          SQL="SELECT name FROM d1_migrations ORDER BY id; PRAGMA table_info(session); PRAGMA quick_check; SELECT COUNT(*) AS violations FROM pragma_foreign_key_check; SELECT id FROM session ORDER BY id; SELECT (SELECT COUNT(*) FROM products) AS products,(SELECT COUNT(*) FROM variants) AS variants,(SELECT COALESCE(SUM(stock),0) FROM variants) AS units,(SELECT COUNT(*) FROM account) AS accounts,(SELECT COUNT(*) FROM staff) AS staff,(SELECT COUNT(*) FROM inventory_movements) AS inventory_history,(SELECT COUNT(*) FROM audit) AS audit;"
+          "$W" d1 execute DB --config wrangler.jsonc --remote --json --command "$SQL" > before.json
+          node --input-type=module <<'JS'
+          import fs from 'node:fs'; import assert from 'node:assert/strict';
+          const rows = JSON.parse(fs.readFileSync('before.json', 'utf8'));
+          assert(rows.every(r => r.success === true));
+          const expected = ['0001_commerce.sql','0002_admin_management.sql','0003_administrator_mfa.sql','0004_bank_transfer_reservation.sql','0005_payment_receipts.sql'];
+          const ledger = rows[0].results.map(r => r.name);
+          const column = rows[1].results.find(r => r.name === 'auth_method');
+          const already = ledger.includes('0006_session_authentication_method.sql');
+          assert.deepEqual(ledger, already ? [...expected, '0006_session_authentication_method.sql'] : expected);
+          assert.equal(Boolean(column), already, 'Column and ledger must agree; stop on partial/manual migration');
+          if (column) { assert.equal(column.type, 'TEXT'); assert.equal(column.notnull, 1); assert.equal(column.dflt_value, "'legacy'"); }
+          assert.equal(rows[2].results[0].quick_check, 'ok');
+          assert.equal(rows[3].results[0].violations, 0);
+          assert.equal(rows[5].results[0].products, 8);
+          assert.equal(rows[5].results[0].units, 164);
+          const pending = fs.readFileSync('pending-before.txt', 'utf8');
+          if (already) assert(pending.includes('No migrations to apply'));
+          else {
+            assert(pending.includes('0006_session_authentication_method.sql'));
+            for (const name of expected) assert(!pending.includes(name), 'Earlier migration unexpectedly pending');
+          }
+          const recovery = JSON.parse(fs.readFileSync('recovery.json', 'utf8'));
+          assert.equal(typeof recovery.bookmark, 'string'); assert(recovery.bookmark.length > 0);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Production migration recovery\n- Release: ${process.env.RELEASE}\n- D1: ${process.env.DATABASE}\n- Pre-action bookmark: ${recovery.bookmark}\n- Earlier captured bookmark retained in restricted operator record.\n`);
+          fs.writeFileSync('migration-needed', already ? 'no' : 'yes');
+          JS
+          if [ "$(cat migration-needed)" = yes ]; then
+            "$W" d1 migrations apply DB --config wrangler.jsonc --remote
+          else
+            echo 'Migration 0006 already recorded; no ALTER or ledger write repeated.'
+          fi
+          "$W" d1 migrations list DB --config wrangler.jsonc --remote > pending-after.txt
+          grep -q 'No migrations to apply' pending-after.txt
+          "$W" d1 execute DB --config wrangler.jsonc --remote --json --command "$SQL SELECT id,auth_method FROM session ORDER BY id;" > after.json
+          node --input-type=module <<'JS'
+          import fs from 'node:fs'; import assert from 'node:assert/strict';
+          const read = n => JSON.parse(fs.readFileSync(n, 'utf8'));
+          const b = read('before.json'), a = read('after.json');
+          assert(a.every(r => r.success === true));
+          assert.deepEqual(a[0].results.map(r => r.name), ['0001_commerce.sql','0002_admin_management.sql','0003_administrator_mfa.sql','0004_bank_transfer_reservation.sql','0005_payment_receipts.sql','0006_session_authentication_method.sql']);
+          const col = a[1].results.find(r => r.name === 'auth_method');
+          assert(col); assert.equal(col.type, 'TEXT'); assert.equal(col.notnull, 1); assert.equal(col.dflt_value, "'legacy'");
+          assert.equal(a[2].results[0].quick_check, 'ok'); assert.equal(a[3].results[0].violations, 0);
+          assert.deepEqual(a[4].results, b[4].results, 'Existing session identities must remain unchanged');
+          assert.deepEqual(a[5].results, b[5].results, 'Business/account/history aggregates must remain unchanged');
+          if (fs.readFileSync('migration-needed', 'utf8') === 'yes') assert(a[6].results.every(s => s.auth_method === 'legacy'));
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `- Migration 0006: recorded; no migrations pending.\n- Existing sessions retained: ${a[4].results.length}; integrity/FK and aggregate preservation passed.\n- No Worker, production, Access, secret, account or payment setting changes.\n`);
+          JS
+      - name: Remove ephemeral metadata (never upload database evidence)
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/migration-work"
