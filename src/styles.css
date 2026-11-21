@@ -63,13 +63,13 @@
   --card-foreground: oklch(0.27 0.03 45);
   --popover: oklch(0.995 0.006 85);
   --popover-foreground: oklch(0.27 0.03 45);
-  --primary: oklch(0.52 0.12 35);          /* terracotta */
+  --primary: oklch(0.52 0.12 35); /* terracotta */
   --primary-foreground: oklch(0.99 0.01 85);
   --secondary: oklch(0.93 0.03 80);
   --secondary-foreground: oklch(0.3 0.03 45);
   --muted: oklch(0.94 0.018 82);
   --muted-foreground: oklch(0.47 0.03 50);
-  --accent: oklch(0.92 0.045 150);         /* soft sage */
+  --accent: oklch(0.92 0.045 150); /* soft sage */
   --accent-foreground: oklch(0.3 0.05 155);
   --destructive: oklch(0.55 0.2 27);
   --destructive-foreground: oklch(0.99 0 0);
@@ -99,23 +99,34 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
+  * {
+    border-color: var(--color-border);
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
 }
 
-@utility shadow-soft { box-shadow: var(--shadow-soft); }
+@utility shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
 @utility container-page {
   margin-inline: auto;
   width: 100%;
   max-width: 80rem;
   padding-inline: 1rem;
-  @media (min-width: 768px) { padding-inline: 2rem; }
+  @media (min-width: 768px) {
+    padding-inline: 2rem;
+  }
 }
 @utility placeholder-pattern {
   background-color: var(--muted);

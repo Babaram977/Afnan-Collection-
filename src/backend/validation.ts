@@ -18,7 +18,7 @@ export const productInput = z.object({
   description: z.string().max(5000).default(""),
   category: text,
   ageGroups: z.array(z.enum(["newborn", "baby", "toddler", "kids"])).max(4),
-  images: z.array(z.object({ url: safeImage, alt: text })).max(12),
+  images: z.array(z.object({ url: safeImage, alt: text, thumb: safeImage.optional() })).max(12),
   status: z.enum(["draft", "active", "archived"]),
   featured: z.boolean().default(false),
   seasonal: z.boolean().default(false),
