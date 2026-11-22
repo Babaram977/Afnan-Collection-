@@ -233,8 +233,12 @@ try {
     )) === 1,
     "Submission audited",
   );
+  // Staff notice (migration 0008): an inbox event plus an email outbox row, delivered at once in
+  // test mode ("test"); the legacy notifications table is no longer written.
   const notification = await db
-    .prepare("SELECT recipient,status,attempts FROM notifications WHERE order_id=?")
+    .prepare(
+      "SELECT x.recipient,x.status,x.attempts FROM email_outbox x JOIN admin_events e ON e.id=x.event_id WHERE e.order_id=? AND e.kind='receipt.uploaded'",
+    )
     .bind(order.id)
     .first();
   check(
@@ -255,7 +259,10 @@ try {
     "Duplicate stored once",
   );
   check(
-    (await count("SELECT COUNT(*) AS n FROM notifications WHERE order_id=?", order.id)) === 1,
+    (await count(
+      "SELECT COUNT(*) AS n FROM admin_events WHERE order_id=? AND kind='receipt.uploaded'",
+      order.id,
+    )) === 1,
     "Duplicate not re-notified",
   );
   const view = (await guest.request(`/orders/${order.id}`)).body;

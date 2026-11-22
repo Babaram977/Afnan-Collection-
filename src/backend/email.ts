@@ -42,13 +42,14 @@ export async function sendSignInCode(env: CommerceEnv, email: string, otp: strin
   }
   console.log(JSON.stringify({ event: "auth.email.accepted" }));
 }
-// Staff notice that payment evidence awaits review. Contains no receipt link or file: staff open
-// the authenticated admin dashboard. Returns a delivery state; it never throws, so a failed
-// notice cannot change an order or payment.
-export async function sendPaymentReviewNotice(
+// Staff notice (new order, payment evidence, late payment). Contains no receipt link, file or
+// customer contact details: staff open the authenticated admin dashboard. Returns a delivery state
+// and never throws, so a failed notice cannot change an order or payment. A provider-accepted email
+// is recorded as "sent", which means accepted by Resend, not confirmed delivered.
+export async function sendStaffNotice(
   env: CommerceEnv,
   to: string,
-  notice: { reference: string; totalNaira: string },
+  notice: { subject: string; text: string; idempotencyKey: string },
 ): Promise<{ status: "sent" | "failed" | "unconfigured" | "test"; error?: string }> {
   if (testMode(env)) return { status: "test" };
   try {
@@ -63,12 +64,13 @@ export async function sendPaymentReviewNotice(
       headers: {
         Authorization: `Bearer ${env.RESEND_API_KEY}`,
         "Content-Type": "application/json",
+        "Idempotency-Key": notice.idempotencyKey.slice(0, 256),
       },
       body: JSON.stringify({
         from: env.EMAIL_FROM,
         to,
-        subject: `Payment evidence to review: ${notice.reference}`,
-        text: `A customer submitted bank-transfer payment evidence for order ${notice.reference} (total ${notice.totalNaira}).\n\nReview it in the Afnan admin dashboard: ${env.APP_ORIGIN}/admin\n\nConfirm the credit in the Moniepoint account before approving. Do not forward receipts outside the dashboard.`,
+        subject: notice.subject,
+        text: notice.text,
       }),
     });
     await response.body?.cancel();

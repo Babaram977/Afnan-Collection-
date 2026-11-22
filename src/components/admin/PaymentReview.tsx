@@ -12,6 +12,9 @@ interface Receipt {
   status: "submitted" | "accepted" | "rejected" | "superseded";
   submitted_at: number;
   review_note: string | null;
+  transfer_reference?: string | null;
+  /** Other orders whose evidence or approval used the same reference. */
+  duplicate_orders?: string | null;
 }
 interface ReviewOrder {
   id: string;
@@ -197,6 +200,14 @@ function ReviewCard({
                 {r.status} · {when(r.submitted_at)}
               </span>
               {r.review_note && <span>Reason: {r.review_note}</span>}
+              {r.transfer_reference && (
+                <span data-transfer-reference>Customer reference: {r.transfer_reference}</span>
+              )}
+              {r.duplicate_orders && (
+                <strong data-duplicate-reference className="text-destructive">
+                  Same reference also used on order {r.duplicate_orders} — check before approving.
+                </strong>
+              )}
             </li>
           ))}
         </ul>

@@ -10,9 +10,8 @@ import { apiCall, type Order, type Me } from "@/lib/store";
 import { PageHeader } from "@/components/site/PageHeader";
 import { business } from "@/lib/business";
 import { afnanDelivery } from "@/lib/delivery-policy";
-import { ReceiptUpload } from "@/components/site/ReceiptUpload";
-import { SelectionList } from "@/components/site/SelectionList";
-import { parseSelections } from "@/lib/order-lines";
+import { BankTransferInstructions, OrderSummary } from "@/components/site/OrderDetails";
+import { rememberOrder } from "@/lib/order-status";
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [{ title: "Checkout — Afnan Collection Online" }, { name: "robots", content: "noindex" }],
@@ -74,7 +73,11 @@ function Checkout() {
                 server verification.
               </p>
             )}
-            <p>
+            <p className="flex flex-wrap gap-x-5 gap-y-2">
+              {/* The order is saved on the server; this page survives a refresh or a closed tab. */}
+              <Link to="/order/$id" params={{ id: order.id }} className="font-semibold underline">
+                Track this order
+              </Link>
               <Link to="/shop" className="underline">
                 Continue shopping
               </Link>
@@ -163,6 +166,9 @@ function Checkout() {
                   body: JSON.stringify({ ...payload, idempotencyKey: requestKey }),
                 });
                 setOrder(o);
+                // Remember the order on this device before clearing the cart, so it can always be
+                // reopened from /orders even if this page is closed.
+                rememberOrder(o.id);
                 clear();
               } catch (e) {
                 setError((e as Error).message);
@@ -318,95 +324,6 @@ function Checkout() {
           </p>
         )}
       </div>
-    </>
-  );
-}
-
-const deadlineFormat = new Intl.DateTimeFormat("en-NG", {
-  dateStyle: "full",
-  timeStyle: "short",
-  timeZone: "Africa/Lagos",
-});
-function BankTransferInstructions({ order }: { order: Order }) {
-  const [copied, setCopied] = useState(false);
-  const deadline = deadlineFormat.format(new Date(order.expires_at * 1000));
-  return (
-    <div className="space-y-3">
-      <p>
-        <strong>Pay by:</strong>{" "}
-        <time dateTime={new Date(order.expires_at * 1000).toISOString()}>{deadline}</time> (Nigeria
-        time). Your items are reserved until then. Unpaid orders are cancelled automatically after
-        24 hours and the items are released.
-      </p>
-      <dl className="grid gap-1 rounded-xl border p-4">
-        <dt className="text-sm text-muted-foreground">Bank</dt>
-        <dd>{business.bankName}</dd>
-        <dt className="text-sm text-muted-foreground">Account name</dt>
-        <dd>{business.bankAccountName}</dd>
-        <dt className="text-sm text-muted-foreground">Account number</dt>
-        <dd className="flex flex-wrap items-center gap-3">
-          <span className="font-semibold tracking-wider">{business.bankAccountNumber}</span>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(business.bankAccountNumber);
-                setCopied(true);
-              } catch {
-                setCopied(false);
-              }
-            }}
-          >
-            {copied ? "Copied" : "Copy account number"}
-          </Button>
-        </dd>
-        <dt className="text-sm text-muted-foreground">Amount to transfer</dt>
-        <dd className="font-semibold">{formatNaira(order.total_kobo)}</dd>
-      </dl>
-      <p>
-        Transfer the exact order total to the account shown. After payment, upload your receipt for
-        verification. Your order will be processed once payment is confirmed.
-      </p>
-      <p role="status">
-        Awaiting transfer. Payment is confirmed only after our team verifies the credit in our
-        account.
-      </p>
-      <ReceiptUpload orderId={order.id} />
-    </div>
-  );
-}
-
-// After the order is prepared the cart is cleared, so the summary must come from the order the
-// server saved (its item price snapshot, delivery fee and total), never from the empty cart.
-function OrderSummary({ order }: { order: Order }) {
-  const delivery = order.delivery_kobo ?? 0;
-  return (
-    <>
-      {(order.items ?? []).map((i) => (
-        <div key={i.variant_id} className="mt-2 text-sm" data-order-item>
-          <p>
-            {i.qty} × {i.name} — {formatNaira(i.qty * i.price_kobo)}
-          </p>
-          <SelectionList selections={parseSelections(i.selections)} />
-        </div>
-      ))}
-      <p className="mt-4">Subtotal: {formatNaira(order.total_kobo - delivery)}</p>
-      <p>
-        {order.fulfilment_method === "pickup" ? "Store pickup" : "Delivery"}:{" "}
-        {order.fulfilment_method === "pickup"
-          ? "Free"
-          : order.carrier_paid_direct
-            ? "Paid directly to the transport company"
-            : formatNaira(delivery)}
-      </p>
-      <p className="mt-2 font-bold">Amount payable to Afnan: {formatNaira(order.total_kobo)}</p>
-      {order.carrier_paid_direct ? (
-        <p className="text-sm">
-          Interstate carrier fee is not included; you pay the transport company directly.
-        </p>
-      ) : null}
-      <p className="mt-2 text-xs text-muted-foreground">Saved with your order.</p>
     </>
   );
 }
