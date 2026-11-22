@@ -28,7 +28,7 @@ import {
   receiptHeaders,
   sha256Hex,
 } from "./receipts";
-import { sendPaymentReviewNotice } from "./email";
+import { deliverOutbox, eventStatements, type EventKind } from "./notifications";
 import {
   initialize,
   paymentEnabled,
@@ -243,8 +243,12 @@ async function submitReceipt(request: Request, env: CommerceEnv, a: Actor, order
       .first<{ id: string; status: string }>();
   const prior = await existing();
   if (prior) return json({ id: prior.id, status: prior.status, duplicate: true });
+  // Optional transfer reference typed by the customer: evidence only, never proof of payment.
+  const typed = request.headers.get("X-Transfer-Reference")?.trim() ?? "";
+  if (typed && !/^[A-Za-z0-9 ._/-]{3,120}$/.test(typed))
+    fail(400, "Transfer reference: use 3-120 letters, numbers, spaces or . _ / -");
+  const transferReference = typed || null;
   const id = uuid();
-  const notificationId = uuid();
   const key = `receipts/${order.id}/${uuid()}.${type.extension}`;
   const now = nowSeconds();
   await env.RECEIPTS.put(key, bytes, { httpMetadata: { contentType: type.contentType } });
@@ -253,7 +257,7 @@ async function submitReceipt(request: Request, env: CommerceEnv, a: Actor, order
     const results = await env.DB.batch([
       // The per-order limit is checked inside the insert, so concurrent uploads cannot exceed it.
       env.DB.prepare(
-        "INSERT INTO payment_receipts(id,order_id,object_key,content_type,bytes,sha256,submitted_at) SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM payment_receipts WHERE order_id=?)<?",
+        "INSERT INTO payment_receipts(id,order_id,object_key,content_type,bytes,sha256,submitted_at,transfer_reference) SELECT ?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM payment_receipts WHERE order_id=?)<?",
       ).bind(
         id,
         order.id,
@@ -262,12 +266,15 @@ async function submitReceipt(request: Request, env: CommerceEnv, a: Actor, order
         bytes.length,
         sha256,
         now,
+        transferReference,
         order.id,
         RECEIPTS_PER_ORDER,
       ),
-      env.DB.prepare(
-        "INSERT INTO notifications(id,kind,order_id,recipient,status,created_at,updated_at) SELECT ?,'payment_review',?,?,'pending',?,? WHERE EXISTS (SELECT 1 FROM payment_receipts WHERE id=?)",
-      ).bind(notificationId, order.id, business.salesEmail, now, now, id),
+      ...eventStatements(env, "receipt.uploaded", order.id, now, {
+        subject: id,
+        guard: "EXISTS (SELECT 1 FROM payment_receipts WHERE id=?)",
+        guardParams: [id],
+      }),
       env.DB.prepare(
         "INSERT INTO audit(actor,action,entity_id,detail) SELECT ?,'payment.receipt.submitted',?,? WHERE EXISTS (SELECT 1 FROM payment_receipts WHERE id=?)",
       ).bind(
@@ -279,6 +286,7 @@ async function submitReceipt(request: Request, env: CommerceEnv, a: Actor, order
           bytes: bytes.length,
           sha256,
           afterDeadline: order.status === "expired",
+          transferReference: Boolean(transferReference),
         }),
         id,
       ),
@@ -293,21 +301,14 @@ async function submitReceipt(request: Request, env: CommerceEnv, a: Actor, order
     if (raced) return json({ id: raced.id, status: raced.status, duplicate: true });
     return fail(429, "Receipt limit reached for this order. Contact us on WhatsApp for help.");
   }
-  const notice = await sendPaymentReviewNotice(env, business.salesEmail, {
-    reference: order.reference ?? order.id,
-    totalNaira: naira(order.total_kobo),
-  });
-  await env.DB.prepare(
-    "UPDATE notifications SET status=?,attempts=attempts+1,last_error=?,updated_at=? WHERE id=?",
-  )
-    .bind(notice.status, notice.error ?? null, nowSeconds(), notificationId)
-    .run();
+  // Email is best-effort here and retried from the outbox later; it never affects the receipt.
+  await deliverOutbox(env).catch(() => undefined);
   return json({ id, status: "submitted" }, 201);
 }
 async function orderReceipts(env: CommerceEnv, orderId: string) {
   return (
     await env.DB.prepare(
-      "SELECT id,content_type,bytes,status,submitted_at,review_note FROM payment_receipts WHERE order_id=? ORDER BY submitted_at DESC, rowid DESC",
+      "SELECT id,content_type,bytes,status,submitted_at,review_note,transfer_reference FROM payment_receipts WHERE order_id=? ORDER BY submitted_at DESC, rowid DESC",
     )
       .bind(orderId)
       .all<{ id: string; status: string }>()
@@ -333,6 +334,9 @@ async function expire(env: CommerceEnv) {
     env.DB.prepare(
       "INSERT INTO audit(actor,action,entity_id,detail) SELECT 'order-service','order.expired',id,json_object('paymentMethod',payment_method,'expiresAt',expires_at,'stockReleased',1) FROM orders WHERE status='pending' AND expires_at<=?",
     ).bind(now),
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO admin_events(id,kind,order_id,audience,created_at) SELECT 'order.expired:'||id,'order.expired',id,'admin',? FROM orders WHERE status='pending' AND expires_at<=?",
+    ).bind(now, now),
     env.DB.prepare(
       "UPDATE orders SET status='expired' WHERE status='pending' AND expires_at<=?",
     ).bind(now),
@@ -529,6 +533,8 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       fulfilmentMethod: method,
       carrierPaidDirect,
     }),
+    // Same transaction as the order: if the order (or its reservation) fails, so does the event.
+    ...eventStatements(env, "order.created", id, nowSeconds()),
   );
   try {
     await env.DB.batch(statements);
@@ -540,6 +546,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       return json(await orderWithItems(env, replay));
     return fail(409, "Stock changed or this request conflicts. Refresh your cart.");
   }
+  await deliverOutbox(env).catch(() => undefined);
   return json(await orderWithItems(env, await ownOrder(env, a, id)), 201);
 }
 async function reconcile(env: CommerceEnv, reference: string) {
@@ -790,16 +797,26 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
   if (path === "/api/orders" || path.startsWith("/api/orders/")) {
     await expire(env);
     if (path === "/api/orders" && method === "POST") return createOrder(request, env, a);
-    if (path === "/api/orders" && method === "GET")
+    if (path === "/api/orders" && method === "GET") {
+      // Each row carries the same derived payment status as the single-order view.
+      const rows = (
+        await env.DB.prepare(
+          "SELECT o.id,o.reference,o.status,o.total_kobo,o.created_at,o.expires_at,o.payment_method,(SELECT r.status FROM payment_receipts r WHERE r.order_id=o.id ORDER BY r.submitted_at DESC, r.rowid DESC LIMIT 1) AS latest_receipt,(SELECT outcome FROM bank_transfer_approvals WHERE order_id=o.id) AS decision FROM orders o WHERE o.owner=? ORDER BY o.created_at DESC LIMIT 100",
+        )
+          .bind(a.owner)
+          .all<OrderRow & { latest_receipt: string | null; decision: string | null }>()
+      ).results;
       return json(
-        (
-          await env.DB.prepare(
-            "SELECT id,reference,status,total_kobo,created_at,expires_at,payment_method FROM orders WHERE owner=? ORDER BY created_at DESC LIMIT 100",
-          )
-            .bind(a.owner)
-            .all()
-        ).results,
+        rows.map(({ latest_receipt, decision, ...row }) => ({
+          ...row,
+          paymentStatus: customerPaymentStatus(
+            row,
+            latest_receipt ? { status: latest_receipt } : null,
+            decision,
+          ),
+        })),
       );
+    }
     const id = path.split("/")[3] ?? "";
     const order = await ownOrder(env, a, id);
     if (method === "GET") {
@@ -831,6 +848,10 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
           id,
         ),
         await audit(env, a, "order.cancel", id),
+        ...eventStatements(env, "order.cancelled", id, nowSeconds(), {
+          guard: "EXISTS (SELECT 1 FROM orders WHERE id=? AND status='cancelled')",
+          guardParams: [id],
+        }),
       ]);
       return json(await ownOrder(env, a, id));
     }
@@ -959,10 +980,52 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
           id,
           order.status,
         ),
+        // Immediately after the UPDATE: changes() is 1 only when this request made the transition.
+        ...eventStatements(env, `order.${input.status}` as EventKind, id, nowSeconds(), {
+          guard: "changes()=1",
+        }),
         await audit(env, a, `order.${input.status}`, id),
       ]);
       if (!result[0]?.meta.changes) fail(409, "Order changed; refresh");
       return json({ saved: true });
+    }
+    // Administrator notification inbox. Fulfilment staff see fulfilment events only; payment
+    // evidence and decisions are admin-only. Polling also retries due notification emails.
+    if (path === "/api/admin/events" && method === "GET") {
+      await expire(env);
+      await deliverOutbox(env).catch(() => undefined);
+      const audiences = a.role === "admin" ? ["admin", "staff"] : ["staff"];
+      const visible = "audience IN (SELECT value FROM json_each(?))";
+      const events = (
+        await env.DB.prepare(
+          `SELECT e.id,e.kind,e.order_id,e.created_at,e.read_at,o.reference,o.total_kobo FROM admin_events e JOIN orders o ON o.id=e.order_id WHERE ${visible.replace("audience", "e.audience")} ORDER BY e.created_at DESC, e.rowid DESC LIMIT 50`,
+        )
+          .bind(JSON.stringify(audiences))
+          .all()
+      ).results;
+      const unread = await env.DB.prepare(
+        `SELECT COUNT(*) AS n FROM admin_events WHERE read_at IS NULL AND ${visible}`,
+      )
+        .bind(JSON.stringify(audiences))
+        .first<{ n: number }>("n");
+      return json({ unread: unread ?? 0, events });
+    }
+    if (path === "/api/admin/events/read" && method === "POST") {
+      const input = z
+        .object({ ids: z.array(z.string().max(200)).max(100).optional() })
+        .parse(await body(request));
+      const audiences = a.role === "admin" ? ["admin", "staff"] : ["staff"];
+      const result = await env.DB.prepare(
+        `UPDATE admin_events SET read_at=?,read_by=? WHERE read_at IS NULL AND audience IN (SELECT value FROM json_each(?)) ${input.ids ? "AND id IN (SELECT value FROM json_each(?))" : ""}`,
+      )
+        .bind(
+          nowSeconds(),
+          a.userId,
+          JSON.stringify(audiences),
+          ...(input.ids ? [JSON.stringify(input.ids)] : []),
+        )
+        .run();
+      return json({ marked: result.meta.changes ?? 0 });
     }
     requireRole(a);
     // Payment review (admin only: requireRole above needs a verified WebAuthn admin session).
@@ -976,7 +1039,8 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       const receipts = orders.length
         ? (
             await env.DB.prepare(
-              "SELECT id,order_id,content_type,bytes,status,submitted_at,review_note FROM payment_receipts WHERE order_id IN (SELECT value FROM json_each(?)) ORDER BY submitted_at DESC, rowid DESC",
+              // duplicate_orders: other orders whose evidence or approval used the same reference.
+              "SELECT r.id,r.order_id,r.content_type,r.bytes,r.status,r.submitted_at,r.review_note,r.transfer_reference,CASE WHEN r.transfer_reference IS NULL THEN NULL ELSE (SELECT group_concat(DISTINCT COALESCE(o2.reference,o2.id)) FROM orders o2 WHERE o2.id<>r.order_id AND (EXISTS (SELECT 1 FROM payment_receipts r2 WHERE r2.order_id=o2.id AND upper(trim(r2.transfer_reference))=upper(trim(r.transfer_reference))) OR EXISTS (SELECT 1 FROM bank_transfer_approvals a2 WHERE a2.order_id=o2.id AND upper(trim(a2.bank_reference))=upper(trim(r.transfer_reference))))) END AS duplicate_orders FROM payment_receipts r WHERE r.order_id IN (SELECT value FROM json_each(?)) ORDER BY r.submitted_at DESC, r.rowid DESC",
             )
               .bind(JSON.stringify(orders.map((o) => o.id)))
               .all<{ order_id: string }>()
@@ -1015,13 +1079,20 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
         .bind(receiptId)
         .first<{ order_id: string }>();
       if (!row) return fail(404, "Receipt not found");
+      const reviewedAt = nowSeconds();
       const results = await env.DB.batch([
         env.DB.prepare(
           "UPDATE payment_receipts SET status='rejected',reviewed_by=?,reviewed_at=?,review_note=? WHERE id=? AND status='submitted'",
-        ).bind(a.userId, nowSeconds(), input.reason, receiptId),
+        ).bind(a.userId, reviewedAt, input.reason, receiptId),
         env.DB.prepare(
           "INSERT INTO audit(actor,action,entity_id,detail) SELECT ?,'payment.receipt.rejected',?,? WHERE changes()=1",
         ).bind(a.userId, row.order_id, JSON.stringify({ receiptId, reason: input.reason })),
+        ...eventStatements(env, "receipt.rejected", row.order_id, reviewedAt, {
+          subject: receiptId,
+          guard:
+            "EXISTS (SELECT 1 FROM payment_receipts WHERE id=? AND status='rejected' AND reviewed_by=? AND reviewed_at=?)",
+          guardParams: [receiptId, a.userId, reviewedAt],
+        }),
       ]);
       if (!results[0]?.meta.changes) fail(409, "This receipt has already been reviewed");
       return json({ status: "rejected" });
@@ -1050,6 +1121,17 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       }
       const now = nowSeconds();
       const decisionId = uuid();
+      // A bank transaction reference settles at most one order (also enforced by a unique index).
+      const reused = await env.DB.prepare(
+        "SELECT o.reference,a.order_id FROM bank_transfer_approvals a JOIN orders o ON o.id=a.order_id WHERE upper(trim(a.bank_reference))=upper(trim(?)) AND a.order_id<>?",
+      )
+        .bind(input.bankReference, id)
+        .first<{ reference: string | null; order_id: string }>();
+      if (reused)
+        fail(
+          409,
+          `This bank reference was already used for order ${reused.reference ?? reused.order_id}`,
+        );
       // One transaction: record the decision (primary key = once per order), mark paid only when
       // the decision is 'paid', and audit. A late payment is recorded for manual review and never
       // reactivates the order or re-reserves stock. Approval does not touch inventory, so it
@@ -1070,6 +1152,16 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
           env.DB.prepare(
             "UPDATE payment_receipts SET status=CASE WHEN id=? THEN 'accepted' ELSE 'superseded' END,reviewed_by=?,reviewed_at=? WHERE order_id=? AND status='submitted' AND EXISTS (SELECT 1 FROM bank_transfer_approvals WHERE decision_id=?)",
           ).bind(input.receiptId ?? "", a.userId, now, id, decisionId),
+          ...eventStatements(env, "payment.verified", id, now, {
+            guard:
+              "EXISTS (SELECT 1 FROM bank_transfer_approvals WHERE decision_id=? AND outcome='paid')",
+            guardParams: [decisionId],
+          }),
+          ...eventStatements(env, "payment.late_review", id, now, {
+            guard:
+              "EXISTS (SELECT 1 FROM bank_transfer_approvals WHERE decision_id=? AND outcome='late_review')",
+            guardParams: [decisionId],
+          }),
         ]);
         recorded = results[0]?.meta.changes ?? 0;
       } catch {
@@ -1087,6 +1179,7 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
             ? "A payment decision is already recorded for this order"
             : "This order cannot take a bank-transfer decision",
         );
+      await deliverOutbox(env).catch(() => undefined);
       return json({ outcome: decision!.outcome });
     }
     if (path.startsWith("/api/admin/customers/") && path.endsWith("/revoke") && method === "POST") {
@@ -1407,9 +1500,10 @@ export async function api(request: Request, env: CommerceEnv) {
     const token = Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
       b.toString(16).padStart(2, "0"),
     ).join("");
+    // 90 days: long enough for a guest to follow an order from payment to delivery on this device.
     headers.append(
       "Set-Cookie",
-      `afnan_guest=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${env.APP_ORIGIN.startsWith("https:") ? "; Secure" : ""}`,
+      `afnan_guest=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=7776000${env.APP_ORIGIN.startsWith("https:") ? "; Secure" : ""}`,
     );
   }
   return new Response(response.body, { status: response.status, headers });

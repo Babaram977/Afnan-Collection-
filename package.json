@@ -28,6 +28,7 @@
     "test:security": "node tests/admin-security.mjs",
     "test:bank-transfer": "node tests/bank-transfer.mjs",
     "test:order-selections": "node tests/order-selections.mjs",
+    "test:order-tracking": "node tests/order-tracking.mjs",
     "test:receipts": "node tests/receipts.mjs",
     "test:admin-otp": "node tests/admin-otp.mjs",
     "test:single-admin-login": "node tests/single-admin-login.mjs",
