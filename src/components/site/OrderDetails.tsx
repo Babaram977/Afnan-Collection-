@@ -39,9 +39,12 @@ const deadlineFormat = new Intl.DateTimeFormat("en-NG", {
 export function BankTransferInstructions({
   order,
   onUploaded,
+  showStatus = true,
 }: {
   order: Order;
   onUploaded?: () => void;
+  /** The order page shows the live status in its header, so it hides this fixed line. */
+  showStatus?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const deadline = deadlineFormat.format(new Date(order.expires_at * 1000));
@@ -83,10 +86,12 @@ export function BankTransferInstructions({
         Transfer the exact order total to the account shown. After payment, upload your receipt for
         verification. Your order will be processed once payment is confirmed.
       </p>
-      <p role="status">
-        Awaiting transfer. Payment is confirmed only after our team verifies the credit in our
-        account.
-      </p>
+      {showStatus && (
+        <p role="status">
+          Awaiting transfer. Payment is confirmed only after our team verifies the credit in our
+          account.
+        </p>
+      )}
       <ReceiptUpload orderId={order.id} {...(onUploaded ? { onUploaded } : {})} />
       <WhatsAppReceiptButton order={order} />
     </div>

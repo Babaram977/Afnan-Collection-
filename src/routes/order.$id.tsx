@@ -106,7 +106,11 @@ function OrderPage() {
             )}
             <p>Total payable to Afnan: {formatNaira(order.total_kobo)}</p>
             {order.payment_method === "bank_transfer" && order.status === "pending" ? (
-              <BankTransferInstructions order={order} onUploaded={() => void load()} />
+              <BankTransferInstructions
+                order={order}
+                showStatus={false}
+                onUploaded={() => void load()}
+              />
             ) : order.payment_method === "bank_transfer" && order.status === "expired" ? (
               // A late transfer can still be evidenced; it never reactivates the order.
               <div className="space-y-3">

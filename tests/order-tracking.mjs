@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { chromium } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { createTestApp, Client, ORIGIN } from "./harness.mjs";
 import { provisionPasswordAdmin } from "../scripts/admin-provision-password.mjs";
 
@@ -324,10 +325,11 @@ try {
 
   // 9. Browser: checkout -> persistent order page -> receipt + reference -> WhatsApp -> /orders.
   await db.prepare("DELETE FROM rate_limits").run();
-  const page = await browser.newPage({
+  const customerContext = await browser.newContext({
     viewport: { width: 390, height: 844 },
     extraHTTPHeaders: { "CF-Connecting-IP": "198.51.100.140" },
   });
+  const page = await customerContext.newPage();
   await page.goto(`${ORIGIN}/shop`);
   await page
     .getByRole("link", { name: /Test fixture romper/ })
@@ -358,6 +360,13 @@ try {
   const status = page.locator("[data-order-status]");
   await status.waitFor();
   eq(await status.innerText(), "Awaiting Transfer", "Order page survives reload");
+  const axe = await new AxeBuilder({ page }).include("#main").analyze();
+  const serious = axe.violations.filter((v) => ["serious", "critical"].includes(v.impact));
+  eq(
+    serious.map((v) => v.id),
+    [],
+    "Order page has no serious accessibility issues",
+  );
   ok(
     (await page.locator("#main").innerText()).includes("7035963225"),
     "Bank details on order page",
@@ -369,6 +378,15 @@ try {
   await page.getByRole("button", { name: "Submit receipt" }).click();
   await page.locator("[data-order-status]", { hasText: "Receipt Submitted" }).waitFor();
   ok(true, "Status updates to Receipt Submitted after upload");
+  ok(
+    !(await page.locator("#main").innerText()).includes("Awaiting transfer."),
+    "No contradictory 'Awaiting transfer' line once a receipt is submitted",
+  );
+  if (process.env.TRACKING_SCREENSHOTS)
+    await page.screenshot({
+      path: `${process.env.TRACKING_SCREENSHOTS}/order-page-390.png`,
+      fullPage: true,
+    });
   ok(
     !(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)),
     "Order page fits 390 px",
@@ -396,11 +414,13 @@ try {
   await adminPage.getByRole("navigation", { name: "Administration", exact: true }).waitFor();
   const badge = adminPage.locator("[data-unread-count]");
   await badge.waitFor();
-  ok(Number(await badge.innerText()) > 0, "Unread badge shown");
+  ok(parseInt(await badge.innerText(), 10) > 0, "Unread badge shown");
   await adminPage.locator("[data-notification-inbox] > button").click();
   const receiptEvent = adminPage.locator('[data-event="receipt.uploaded"]').first();
   await receiptEvent.waitFor();
   ok((await receiptEvent.innerText()).includes("verification required"), "Receipt event described");
+  if (process.env.TRACKING_SCREENSHOTS)
+    await adminPage.screenshot({ path: `${process.env.TRACKING_SCREENSHOTS}/admin-inbox-390.png` });
   ok(
     !(await adminPage.evaluate(() => document.documentElement.scrollWidth > innerWidth)),
     "Inbox fits 390 px",

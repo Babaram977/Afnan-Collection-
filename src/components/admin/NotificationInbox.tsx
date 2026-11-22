@@ -105,7 +105,6 @@ export function NotificationInbox({ onOpen }: { onOpen: (tab: string) => void })
         className="min-h-10 gap-2"
         aria-expanded={open}
         aria-controls="admin-notifications"
-        aria-label={`Notifications, ${unread} unread`}
         onClick={() => setOpen((v) => !v)}
       >
         <Bell className="size-4" aria-hidden />
@@ -116,6 +115,8 @@ export function NotificationInbox({ onOpen }: { onOpen: (tab: string) => void })
             className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"
           >
             {unread}
+            {/* Accessible name = visible text + " unread" (no aria-label mismatch). */}
+            <span className="sr-only"> unread</span>
           </span>
         )}
       </Button>
