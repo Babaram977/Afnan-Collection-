@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiCall } from "@/lib/store";
 import type { Product, ProductVariant, AgeGroup, CategorySlug } from "@/lib/catalog";
 import { AGE_GROUPS, formatNaira } from "@/lib/catalog";
@@ -25,13 +25,19 @@ function VariantEditor({
   onError: (s: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  // Feedback stays next to this form: on a phone the product's alert is far above, off-screen.
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const sending = useRef(false);
   return (
     <form
       key={variant?.id ?? "new"}
       className="grid gap-4 rounded-xl border p-4 sm:grid-cols-2"
       onSubmit={async (e) => {
         e.preventDefault();
+        if (sending.current) return;
+        sending.current = true;
         setBusy(true);
+        setMessage(null);
         const form = e.currentTarget;
         const f = new FormData(form);
         try {
@@ -51,10 +57,14 @@ function VariantEditor({
             }),
           });
           form.reset();
+          setMessage({ ok: true, text: variant ? "Option saved." : "Option added." });
           onSaved();
         } catch (e) {
-          onError((e as Error).message);
+          const text = (e as Error).message;
+          setMessage({ ok: false, text });
+          onError(text);
         } finally {
+          sending.current = false;
           setBusy(false);
         }
       }}
@@ -97,6 +107,15 @@ function VariantEditor({
         </div>
       ))}
       <Button disabled={busy}>{busy ? "Saving…" : "Save option"}</Button>
+      {message && (
+        <p
+          role={message.ok ? "status" : "alert"}
+          data-variant-feedback
+          className={`self-center text-sm ${message.ok ? "font-medium text-foreground" : "text-destructive"}`}
+        >
+          {message.text}
+        </p>
+      )}
     </form>
   );
 }
@@ -119,6 +138,10 @@ function ProductEditor({
   const [ages, setAges] = useState<AgeGroup[]>(initial?.ageGroups ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState("");
+  // Blocks a second submit before React re-renders the disabled button (a double tap on "Save
+  // product" for a new product would otherwise create it twice).
+  const sending = useRef(false);
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [variants, setVariants] = useState(initial?.variants ?? []);
   async function reload() {
@@ -144,8 +167,11 @@ function ProductEditor({
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={async (e) => {
           e.preventDefault();
+          if (sending.current) return;
+          sending.current = true;
           setBusy(true);
           setError("");
+          setSaved("");
           const f = new FormData(e.currentTarget);
           try {
             const result = await apiCall<{ id: string }>("/admin/products", {
@@ -167,9 +193,15 @@ function ProductEditor({
             });
             setId(result.id);
             await onSaved(result.id);
+            setSaved(
+              id
+                ? "Product saved."
+                : "Product saved. Add its prices, sizes, colours and stock below.",
+            );
           } catch (e) {
             setError((e as Error).message);
           } finally {
+            sending.current = false;
             setBusy(false);
           }
         }}
@@ -385,6 +417,29 @@ function ProductEditor({
                   }
                 />
                 <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      [-1, "Move earlier", index === 0],
+                      [1, "Move later", index === images.length - 1],
+                    ] as const
+                  ).map(([step, label, disabled]) => (
+                    <Button
+                      key={label}
+                      type="button"
+                      variant="outline"
+                      disabled={disabled}
+                      aria-label={`${label}: photo ${index + 1} of ${images.length}`}
+                      onClick={() =>
+                        setImages((previous) => {
+                          const next = [...previous];
+                          [next[index], next[index + step]] = [next[index + step]!, next[index]!];
+                          return next;
+                        })
+                      }
+                    >
+                      {label}
+                    </Button>
+                  ))}
                   <Button
                     type="button"
                     variant="outline"
@@ -410,7 +465,14 @@ function ProductEditor({
             ))}
           </ul>
         </section>
-        <Button disabled={busy}>{busy ? "Working…" : "Save product"}</Button>
+        <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+          <Button disabled={busy}>{busy ? "Working…" : "Save product"}</Button>
+          {saved && (
+            <p role="status" data-product-saved className="text-sm font-medium text-foreground">
+              {saved}
+            </p>
+          )}
+        </div>
       </form>
       {id ? (
         <section className="space-y-4 border-t pt-5">
@@ -422,8 +484,14 @@ function ProductEditor({
                 className="flex flex-wrap items-center gap-3 rounded-xl bg-secondary p-3"
               >
                 <span>
-                  {v.sku} · {[v.size, v.color].filter(Boolean).join(" / ")} ·{" "}
-                  {formatNaira(v.priceKobo)} · {v.stock ?? 0} available
+                  {[
+                    v.sku,
+                    [v.size, v.color].filter(Boolean).join(" / "),
+                    formatNaira(v.priceKobo),
+                    `${v.stock ?? 0} available`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
                 <Button variant="outline" onClick={() => setSelectedVariant(v)}>
                   Edit option
