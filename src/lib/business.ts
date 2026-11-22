@@ -17,8 +17,8 @@ export const business = {
   cacBusinessNumber: "BN 4050963",
   tin: "24511952-001",
   registrationVerification: "Owner-supplied; not independently verified",
-  // Manual bank transfer, owner-supplied in implementation spec v1.0 (2026-11-15). The owner is
-  // still to confirm the account receives transfers under this name before live checkout.
+  // Manual bank-transfer beneficiary reaffirmed by the owner on 2026-11-22.
+  // Receiving-credit verification must still be tested during final release acceptance.
   bankName: "Moniepoint Microfinance Bank",
   bankAccountName: "Afnan Collection",
   bankAccountNumber: "7035963225",
