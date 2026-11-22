@@ -1,5 +1,6 @@
 import { business } from "../lib/business";
 import { afnanDelivery, FULFILMENT_ZONE_IDS } from "../lib/delivery-policy";
+import { canonicalLines, groupOrderLines } from "../lib/order-lines";
 import { z } from "zod";
 import type { Product, CategorySlug, AgeGroup } from "../lib/catalog";
 import { authFor } from "./auth";
@@ -211,7 +212,7 @@ const referenceDay = () => lagosDay.format(new Date()).replaceAll("-", "");
 // The order as saved, with its item price snapshot, for the customer's confirmation.
 async function orderWithItems(env: CommerceEnv, order: OrderRow) {
   const items = await env.DB.prepare(
-    "SELECT variant_id,name,sku,price_kobo,qty FROM order_items WHERE order_id=?",
+    "SELECT variant_id,name,sku,price_kobo,qty,selections FROM order_items WHERE order_id=?",
   )
     .bind(order.id)
     .all();
@@ -408,7 +409,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
   const requestHash = await hash(
     JSON.stringify({
       ...input,
-      lines: [...input.lines].sort((a, b) => a.variantId.localeCompare(b.variantId)),
+      lines: canonicalLines(input.lines),
     }),
   );
   const existing = await env.DB.prepare("SELECT * FROM orders WHERE owner=? AND idempotency_key=?")
@@ -479,7 +480,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       day,
     ),
   ];
-  for (const line of input.lines) {
+  for (const line of groupOrderLines(input.lines)) {
     const variant = await env.DB.prepare(
       "SELECT v.*,p.name FROM variants v JOIN products p ON p.id=v.product_id WHERE v.id=? AND p.status='active' AND p.deleted_at IS NULL",
     )
@@ -494,7 +495,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
     if (!variant) fail(409, "An item is no longer available");
     statements.push(
       env.DB.prepare(
-        "INSERT INTO order_items(order_id,variant_id,name,sku,price_kobo,qty) VALUES(?,?,?,?,?,?)",
+        "INSERT INTO order_items(order_id,variant_id,name,sku,price_kobo,qty,selections) VALUES(?,?,?,?,?,?,?)",
       ).bind(
         id,
         variant.id,
@@ -502,6 +503,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
         variant.sku,
         variant.sale_price_kobo ?? variant.price_kobo,
         line.qty,
+        JSON.stringify(line.selections),
       ),
     );
   }
@@ -523,7 +525,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
     await audit(env, a, "order.created", id, {
       paymentMethod,
       expiresAt,
-      stockReserved: input.lines.map(({ variantId, qty }) => ({ variantId, qty })),
+      stockReserved: groupOrderLines(input.lines).map(({ variantId, qty }) => ({ variantId, qty })),
       fulfilmentMethod: method,
       carrierPaidDirect,
     }),

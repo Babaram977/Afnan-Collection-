@@ -11,6 +11,8 @@ import { PageHeader } from "@/components/site/PageHeader";
 import { business } from "@/lib/business";
 import { afnanDelivery } from "@/lib/delivery-policy";
 import { ReceiptUpload } from "@/components/site/ReceiptUpload";
+import { SelectionList } from "@/components/site/SelectionList";
+import { parseSelections } from "@/lib/order-lines";
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [{ title: "Checkout — Afnan Collection Online" }, { name: "robots", content: "noindex" }],
@@ -55,7 +57,7 @@ function Checkout() {
         title="Checkout"
         intro="Prices and availability are checked when your order is prepared."
       />
-      <div className="container-page grid gap-8 py-8 lg:grid-cols-[1fr_320px]">
+      <div className="container-page grid gap-8 py-8 lg:grid-cols-[1fr_320px] [&>*]:min-w-0">
         {order ? (
           <section className="space-y-4 rounded-2xl bg-card p-6 shadow-soft">
             <h2 className="text-2xl font-semibold">Order prepared</h2>
@@ -118,7 +120,13 @@ function Checkout() {
               try {
                 const payload = {
                   fulfilmentMethod,
-                  lines: lines.map(({ variantId, qty }) => ({ variantId, qty })),
+                  // Each cart line keeps its own selection (colour, size, note); the server groups
+                  // lines of the same item without merging different selections.
+                  lines: lines.map(({ variantId, qty, note }) => ({
+                    variantId,
+                    qty,
+                    ...(note ? { note } : {}),
+                  })),
                   customer: { name: form.get("name"), phone: form.get("phone"), email },
                   ...(fulfilmentMethod === "delivery"
                     ? {
@@ -336,7 +344,7 @@ function BankTransferInstructions({ order }: { order: Order }) {
         <dt className="text-sm text-muted-foreground">Account name</dt>
         <dd>{business.bankAccountName}</dd>
         <dt className="text-sm text-muted-foreground">Account number</dt>
-        <dd className="flex items-center gap-3">
+        <dd className="flex flex-wrap items-center gap-3">
           <span className="font-semibold tracking-wider">{business.bankAccountNumber}</span>
           <Button
             type="button"
@@ -376,9 +384,12 @@ function OrderSummary({ order }: { order: Order }) {
   return (
     <>
       {(order.items ?? []).map((i) => (
-        <p key={i.variant_id} className="mt-2 text-sm">
-          {i.qty} × {i.name} — {formatNaira(i.qty * i.price_kobo)}
-        </p>
+        <div key={i.variant_id} className="mt-2 text-sm" data-order-item>
+          <p>
+            {i.qty} × {i.name} — {formatNaira(i.qty * i.price_kobo)}
+          </p>
+          <SelectionList selections={parseSelections(i.selections)} />
+        </div>
       ))}
       <p className="mt-4">Subtotal: {formatNaira(order.total_kobo - delivery)}</p>
       <p>

@@ -6,3 +6,6 @@ INSERT OR IGNORE INTO zones(id,name,state,fee_kobo,active) VALUES
 ('4dce8f67-efc6-472d-89ce-66396973e985','Internal direct-pay interstate transport','Other states',0,0);
 ALTER TABLE orders ADD COLUMN fulfilment_method TEXT NOT NULL DEFAULT 'delivery' CHECK(fulfilment_method IN ('delivery','pickup'));
 ALTER TABLE orders ADD COLUMN carrier_paid_direct INTEGER NOT NULL DEFAULT 0 CHECK(carrier_paid_direct IN (0,1));
+-- Customer selections per order line (owner-approved 2026-11-22): JSON [{qty,note}] for each distinct
+-- colour/size/note of this variant; quantities sum to qty. NULL on orders created before this.
+ALTER TABLE order_items ADD COLUMN selections TEXT CHECK(selections IS NULL OR (json_valid(selections) AND json_type(selections)='array' AND length(selections)<=6000));
