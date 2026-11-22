@@ -78,6 +78,7 @@ jobs:
           retention-days: 14
       - run: bun run test:admin-overview
       - run: bun run test:admin-images
+      - run: bun run test:admin-editor
       - run: bun run test:cart-flow
       - run: bun run test:shopping
       - uses: actions/upload-artifact@v4

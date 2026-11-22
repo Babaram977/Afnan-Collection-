@@ -1143,6 +1143,11 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       if (existing && existing.product_id !== v.productId)
         fail(409, "Variant belongs to a different product");
       if (existing && v.openingStock) fail(400, "Use inventory adjustments for existing variants");
+      // SKUs are unique: say so instead of letting the constraint surface as a generic error.
+      if (
+        await env.DB.prepare("SELECT 1 FROM variants WHERE sku=? AND id<>?").bind(v.sku, id).first()
+      )
+        fail(409, "That SKU is already used by another option. Choose a different SKU.");
       const statements = [
         env.DB.prepare(
           "INSERT INTO variants(id,product_id,sku,size,color,price_kobo,low_stock,sale_price_kobo,stock) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET sku=excluded.sku,size=excluded.size,color=excluded.color,price_kobo=excluded.price_kobo,low_stock=excluded.low_stock,sale_price_kobo=excluded.sale_price_kobo",
