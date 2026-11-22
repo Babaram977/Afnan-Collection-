@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiCall } from "@/lib/store";
 import type { Product, ProductVariant, AgeGroup, CategorySlug } from "@/lib/catalog";
 import { AGE_GROUPS, formatNaira } from "@/lib/catalog";
-import { nairaToKobo, optimizeProductPhoto } from "@/lib/images";
+import { nairaToKobo, optimizeProductPhoto, productCardPhoto } from "@/lib/images";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -362,22 +362,36 @@ function ProductEditor({
               }
               setBusy(true);
               setError("");
+              const upload = async (blob: Blob) => {
+                const response = await fetch("/api/admin/media", {
+                  method: "POST",
+                  body: blob,
+                  headers: { "Content-Type": "image/webp" },
+                });
+                const data = (await response.json()) as { url: string; error?: string };
+                if (!response.ok) throw new Error(data.error ?? "Upload failed");
+                return data.url;
+              };
+              let added = 0;
               try {
-                const uploaded: Product["images"] = [];
                 for (const file of files) {
-                  const blob = await optimizeProductPhoto(file);
-                  const response = await fetch("/api/admin/media", {
-                    method: "POST",
-                    body: blob,
-                    headers: { "Content-Type": "image/webp" },
-                  });
-                  const data = (await response.json()) as { url: string; error?: string };
-                  if (!response.ok) throw new Error(data.error ?? "Upload failed");
-                  uploaded.push({ url: data.url, alt: initial?.name ?? "Product photograph" });
+                  const url = await upload(await optimizeProductPhoto(file));
+                  const thumb = await upload(await productCardPhoto(file));
+                  // Keep each photo as soon as it is stored, so a later failure in the same
+                  // selection does not discard the ones that already uploaded.
+                  setImages((previous) => [
+                    ...previous,
+                    { url, thumb, alt: initial?.name ?? "Product photograph" },
+                  ]);
+                  added++;
                 }
-                setImages((previous) => [...previous, ...uploaded]);
               } catch (e) {
-                setError((e as Error).message);
+                const message = (e as Error).message;
+                setError(
+                  added
+                    ? `${added} of ${files.length} photos added. The rest did not upload: ${message}`
+                    : message,
+                );
               } finally {
                 setBusy(false);
               }

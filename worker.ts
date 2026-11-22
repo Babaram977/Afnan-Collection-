@@ -43,18 +43,25 @@ export default {
       if (!/^[a-f0-9-]+\.(png|jpg|webp)$/.test(key) || !env.MEDIA)
         return new Response("Not found", { status: 404 });
       const visible = await env.DB.prepare(
-        "SELECT id FROM products WHERE status='active' AND EXISTS(SELECT 1 FROM json_each(images) WHERE json_extract(value,'$.url')=?) UNION ALL SELECT id FROM banners WHERE active=1 AND image_url=? LIMIT 1",
+        "SELECT id FROM products WHERE status='active' AND EXISTS(SELECT 1 FROM json_each(images) WHERE ? IN (json_extract(value,'$.url'),json_extract(value,'$.thumb'))) UNION ALL SELECT id FROM banners WHERE active=1 AND image_url=? LIMIT 1",
       )
         .bind(path, path)
         .first();
       if (!visible) return new Response("Not found", { status: 404 });
-      const image = await env.MEDIA.get(key);
+      // Keys are random per upload and never rewritten, so the ETag lets a returning visitor
+      // revalidate with a 304 instead of downloading the photograph again.
+      const image = await env.MEDIA.get(key, { onlyIf: request.headers });
       if (!image) return new Response("Not found", { status: 404 });
+      const headers = {
+        ETag: image.httpEtag,
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "public,max-age=3600",
+      };
+      if (!("body" in image)) return new Response(null, { status: 304, headers });
       return new Response(image.body, {
         headers: {
+          ...headers,
           "Content-Type": image.httpMetadata?.contentType ?? "application/octet-stream",
-          "X-Content-Type-Options": "nosniff",
-          "Cache-Control": "public,max-age=3600",
         },
       });
     }

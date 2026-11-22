@@ -38,6 +38,7 @@
     "test:admin-navigation": "node tests/admin-navigation.mjs",
     "test:admin-dashboard": "node tests/admin-dashboard.mjs",
     "test:admin-images": "node tests/admin-images.mjs",
+    "test:image-performance": "node tests/image-performance.mjs",
     "test:admin-editor": "node tests/admin-editor-feedback.mjs",
     "test:cart-flow": "node tests/cart-flow.mjs",
     "test:admin-overview": "node tests/admin-overview.mjs",
