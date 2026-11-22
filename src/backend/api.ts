@@ -1,4 +1,5 @@
 import { business } from "../lib/business";
+import { afnanDelivery, FULFILMENT_ZONE_IDS } from "../lib/delivery-policy";
 import { z } from "zod";
 import type { Product, CategorySlug, AgeGroup } from "../lib/catalog";
 import { authFor } from "./auth";
@@ -418,12 +419,24 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       fail(409, "Idempotency key already used for another request");
     return json(await orderWithItems(env, existing));
   }
-  const zone = await env.DB.prepare(
-    "SELECT * FROM zones WHERE id=? AND active=1 AND lower(state)=lower(?)",
-  )
-    .bind(input.zoneId, input.address.state)
-    .first<{ fee_kobo: number }>();
-  if (!zone) fail(400, "Delivery is unavailable for this address");
+  const legacyZone = Boolean(input.zoneId && !input.fulfilmentMethod);
+  const method = input.fulfilmentMethod ?? "delivery";
+  if (method === "delivery" && !input.address)
+    fail(400,"Delivery requires a full street, city and state");
+  if (method === "pickup" && (input.address || input.zoneId))
+    fail(400,"Pickup cannot include a shipping address or delivery zone");
+  const selectedAddress = input.address ?? {street:"Store pickup",city:"Kano",state:"Kano"};
+  const policy = afnanDelivery(0, method, selectedAddress.state);
+  const legacyRecord = legacyZone
+    ? await env.DB.prepare("SELECT fee_kobo FROM zones WHERE id=? AND active=1 AND lower(state)=lower(?)")
+      .bind(input.zoneId, selectedAddress.state).first<{fee_kobo:number}>()
+    : null;
+  if (legacyZone && !legacyRecord) fail(400,"Delivery is unavailable for this address");
+  const chosenZone = legacyZone ? input.zoneId! :
+    method==="pickup" ? FULFILMENT_ZONE_IDS.pickup :
+    policy.carrierDirect ? FULFILMENT_ZONE_IDS.interstate : FULFILMENT_ZONE_IDS.kano;
+  const initialFee = legacyZone ? legacyRecord!.fee_kobo :
+    method==="delivery" && !policy.carrierDirect ? 150_000 : 0;
   const id = uuid();
   // Paystack is used only when it is explicitly enabled; otherwise orders are manual bank transfers.
   const paymentMethod = paymentEnabled(env) ? "paystack" : "bank_transfer";
@@ -436,7 +449,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       "INSERT INTO order_reference_counters(day,last) VALUES(?,1) ON CONFLICT(day) DO UPDATE SET last=last+1",
     ).bind(day),
     env.DB.prepare(
-      "INSERT INTO orders(id,owner,user_id,idempotency_key,request_hash,email,customer,address,zone_id,delivery_kobo,payment_method,expires_at,reference) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,(SELECT 'AC-'||day||'-'||printf('%04d',last) FROM order_reference_counters WHERE day=?))",
+      "INSERT INTO orders(id,owner,user_id,idempotency_key,request_hash,email,customer,address,zone_id,delivery_kobo,fulfilment_method,carrier_paid_direct,payment_method,expires_at,reference) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,(SELECT 'AC-'||day||'-'||printf('%04d',last) FROM order_reference_counters WHERE day=?))",
     ).bind(
       id,
       a.owner,
@@ -445,9 +458,11 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       requestHash,
       input.customer.email.toLowerCase(),
       JSON.stringify(input.customer),
-      JSON.stringify(input.address),
-      input.zoneId,
-      zone.fee_kobo,
+      JSON.stringify(selectedAddress),
+      chosenZone,
+      initialFee,
+      method,
+      policy.carrierDirect ? 1 : 0,
       paymentMethod,
       expiresAt,
       day,
@@ -480,15 +495,25 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
     );
   }
   statements.push(
-    env.DB.prepare(
-      "UPDATE orders SET total_kobo=delivery_kobo+(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?) WHERE id=?",
-    ).bind(id, id),
+    legacyZone
+      ? env.DB.prepare(
+          "UPDATE orders SET total_kobo=delivery_kobo+(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?) WHERE id=?",
+        ).bind(id,id)
+      : env.DB.prepare(
+          "UPDATE orders SET delivery_kobo=CASE WHEN fulfilment_method='pickup' OR carrier_paid_direct=1 OR " +
+          "(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?)>=25000000 THEN 0 ELSE 150000 END, " +
+          "total_kobo=(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?)+" +
+          "CASE WHEN fulfilment_method='pickup' OR carrier_paid_direct=1 OR " +
+          "(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?)>=25000000 THEN 0 ELSE 150000 END " +
+          "WHERE id=?",
+        ).bind(id,id,id,id),
   );
   statements.push(
     await audit(env, a, "order.created", id, {
       paymentMethod,
       expiresAt,
       stockReserved: input.lines.map(({ variantId, qty }) => ({ variantId, qty })),
+      fulfilmentMethod:method, carrierPaidDirect:policy.carrierDirect,
     }),
   );
   try {
