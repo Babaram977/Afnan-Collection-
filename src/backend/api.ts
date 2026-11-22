@@ -435,6 +435,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
   const chosenZone = legacyZone ? input.zoneId! :
     method==="pickup" ? FULFILMENT_ZONE_IDS.pickup :
     policy.carrierDirect ? FULFILMENT_ZONE_IDS.interstate : FULFILMENT_ZONE_IDS.kano;
+  const carrierPaidDirect = !legacyZone && policy.carrierDirect;
   const initialFee = legacyZone ? legacyRecord!.fee_kobo :
     method==="delivery" && !policy.carrierDirect ? 150_000 : 0;
   const id = uuid();
@@ -462,7 +463,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       chosenZone,
       initialFee,
       method,
-      policy.carrierDirect ? 1 : 0,
+      carrierPaidDirect ? 1 : 0,
       paymentMethod,
       expiresAt,
       day,
@@ -513,7 +514,7 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
       paymentMethod,
       expiresAt,
       stockReserved: input.lines.map(({ variantId, qty }) => ({ variantId, qty })),
-      fulfilmentMethod:method, carrierPaidDirect:policy.carrierDirect,
+      fulfilmentMethod:method, carrierPaidDirect,
     }),
   );
   try {
