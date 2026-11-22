@@ -75,7 +75,7 @@ export function restoreCart(raw: unknown, products: Product[]): CartLine[] {
       variantLabel: [v.size, v.color].filter(Boolean).join(" · "),
       priceKobo: v.priceKobo,
       qty: Math.min(l.qty, v.stock, 99),
-      imageUrl: p.images[0]?.url,
+      imageUrl: p.images[0]?.thumb ?? p.images[0]?.url,
       ...(l.note ? { note: l.note } : {}),
     };
     if (!result.some((x) => lineKey(x) === lineKey(line))) result.push(line);

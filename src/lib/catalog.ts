@@ -31,6 +31,8 @@ export interface ProductVariant {
 export interface ProductImage {
   url: string;
   alt: string;
+  /** Small card-sized copy (uploads from 2026-11-21); older photos have none. */
+  thumb?: string | undefined;
 }
 export interface Product {
   id: string;

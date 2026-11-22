@@ -6,14 +6,24 @@ export function ProductImageOrPlaceholder({
   src,
   alt,
   className = "",
+  priority = false,
 }: {
   src?: string | undefined;
   alt: string;
   className?: string;
+  /** The main photo on a page (its largest element): load it first rather than lazily. */
+  priority?: boolean;
 }) {
   if (src)
     return (
-      <img src={src} alt={alt} loading="lazy" className={`size-full object-cover ${className}`} />
+      <img
+        src={src}
+        alt={alt}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding="async"
+        className={`size-full object-cover ${className}`}
+      />
     );
   return (
     <div
@@ -43,7 +53,7 @@ export function ProductCard({ product }: { product: Product }) {
     >
       <div className="relative aspect-square overflow-hidden rounded-t-2xl">
         <ProductImageOrPlaceholder
-          src={product.images[0]?.url}
+          src={product.images[0]?.thumb ?? product.images[0]?.url}
           alt={product.images[0]?.alt ?? product.name}
           className={soldOut ? "opacity-60" : ""}
         />

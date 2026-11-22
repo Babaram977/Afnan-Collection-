@@ -67,7 +67,11 @@ function ProductPage() {
     <div className="container-page grid gap-8 py-8 md:grid-cols-2 md:py-12">
       <div className="min-w-0">
         <div className="aspect-square overflow-hidden rounded-3xl">
-          <ProductImageOrPlaceholder src={p.images[img]?.url} alt={p.images[img]?.alt ?? p.name} />
+          <ProductImageOrPlaceholder
+            src={p.images[img]?.url}
+            alt={p.images[img]?.alt ?? p.name}
+            priority
+          />
         </div>
         {p.images.length > 1 && (
           <ul className="mt-3 flex flex-wrap gap-2" aria-label="Gallery">
@@ -79,7 +83,12 @@ function ProductPage() {
                   aria-pressed={i === img}
                   className="size-16 overflow-hidden rounded-xl ring-primary aria-pressed:ring-2"
                 >
-                  <img src={im.url} alt="" className="size-full object-cover" />
+                  <img
+                    src={im.thumb ?? im.url}
+                    alt=""
+                    decoding="async"
+                    className="size-full object-cover"
+                  />
                 </button>
               </li>
             ))}
@@ -159,7 +168,7 @@ function ProductPage() {
               variantLabel: [v.size, v.color].filter(Boolean).join(" · "),
               priceKobo: v.priceKobo,
               qty: 1,
-              imageUrl: p.images[0]?.url,
+              imageUrl: p.images[0]?.thumb ?? p.images[0]?.url,
               ...(lineText ? { note: lineText } : {}),
             });
             setAdded(lineText ? `${p.name} (${lineText})` : p.name);
