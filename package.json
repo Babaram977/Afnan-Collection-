@@ -40,6 +40,7 @@
     "test:admin-images": "node tests/admin-images.mjs",
     "test:image-performance": "node tests/image-performance.mjs",
     "test:admin-editor": "node tests/admin-editor-feedback.mjs",
+    "test:admin-categories-banners": "node tests/admin-categories-banners.mjs",
     "test:cart-flow": "node tests/cart-flow.mjs",
     "test:admin-overview": "node tests/admin-overview.mjs",
     "test:mobile-header": "node tests/mobile-header.mjs",

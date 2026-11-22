@@ -1,4 +1,5 @@
 import { BannerPhoto } from "@/components/admin/BannerPhoto";
+import { AdminImage } from "@/components/admin/AdminImage";
 import { nairaToKobo } from "@/lib/images";
 import { ProductManager, InventoryManager } from "@/components/admin/ProductManager";
 import { OrderManager } from "@/components/admin/OrderManager";
@@ -9,7 +10,7 @@ import { PasswordSignIn, SetupPassword, SignOutButton } from "@/components/admin
 import { AdminNav } from "@/components/admin/AdminShell";
 import { OverviewPanel } from "@/components/admin/OverviewPanel";
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SignIn } from "@/components/site/SignIn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,11 +30,33 @@ type Field = {
   type?: "number" | "checkbox" | "textarea" | "select";
   options?: string[];
   value?: string;
+  required?: boolean;
+  /** Browser-side format check, mirroring the server's validation, with a plain-language hint. */
+  pattern?: string;
+  hint?: string;
+  placeholder?: string;
+  /** Read-only when editing an existing record (it is the record's key). */
+  lockOnEdit?: boolean;
+};
+// What one record is called in headings and confirmations.
+const singular: Record<string, string> = {
+  categories: "category",
+  banners: "banner",
+  zones: "delivery zone",
+  content: "page text",
 };
 const forms: Record<string, Field[]> = {
   categories: [
-    { name: "slug", label: "Category slug" },
-    { name: "label", label: "Display label" },
+    {
+      name: "slug",
+      label: "Category slug",
+      required: true,
+      pattern: "[a-z0-9\\-]+",
+      placeholder: "e.g. toys-games",
+      hint: "Lowercase letters, numbers and hyphens only. It is used in shop links and products refer to it, so it cannot be changed after saving.",
+      lockOnEdit: true,
+    },
+    { name: "label", label: "Display label", required: true },
   ],
   zones: [
     { name: "id", label: "Zone ID (blank for new)" },
@@ -44,8 +67,15 @@ const forms: Record<string, Field[]> = {
   ],
   banners: [
     { name: "id", label: "Banner ID (blank for new)" },
-    { name: "title", label: "Title" },
-    { name: "href", label: "Shop or product link" },
+    { name: "title", label: "Title", required: true },
+    {
+      name: "href",
+      label: "Shop or product link",
+      required: true,
+      pattern: "/(shop(\\?.*)?|product/[a-z0-9\\-]+)",
+      placeholder: "e.g. /shop?category=clothing",
+      hint: "Start with /shop or /product/, for example /shop?category=toys or /product/kids-gown.",
+    },
     { name: "imageUrl", label: "Uploaded image URL (optional)" },
     { name: "active", label: "Published", type: "checkbox" },
   ],
@@ -64,20 +94,30 @@ function Editor({
   initial,
   onSaved,
   onError,
+  onCancel,
 }: {
   kind: string;
   initial: Row;
   onSaved: () => void;
   onError: (message: string) => void;
+  onCancel: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
+  // Blocks a second submit before the disabled button renders: a double tap on a new banner or
+  // zone would otherwise create it twice.
+  const sending = useRef(false);
+  const editing = Object.keys(initial).length > 0;
+  const name = singular[kind] ?? kind;
   return (
     <form
       key={`${kind}-${JSON.stringify(initial)}`}
-      className="grid gap-4 rounded-xl border bg-card p-4 md:p-6 sm:grid-cols-2"
+      // min-w-0: a file input's intrinsic width otherwise widens the phone column past the card.
+      className="grid gap-4 rounded-xl border bg-card p-4 md:p-6 sm:grid-cols-2 [&>*]:min-w-0"
       onSubmit={async (e) => {
         e.preventDefault();
+        if (sending.current) return;
+        sending.current = true;
         setBusy(true);
         const f = new FormData(e.currentTarget);
         try {
@@ -98,12 +138,13 @@ function Editor({
         } catch (e) {
           onError((e as Error).message);
         } finally {
+          sending.current = false;
           setBusy(false);
         }
       }}
     >
       <h3 className="text-base font-medium sm:col-span-2">
-        {initial["id"] ? "Edit" : "Add / update"} {kind}
+        {kind === "content" ? "Update page text" : `${editing ? "Edit" : "Add a"} ${name}`}
       </h3>
       {(forms[kind] ?? []).map((field) => {
         let value = initial[field.name] ?? field.value ?? "";
@@ -116,11 +157,17 @@ function Editor({
         if (field.name === "images" && Array.isArray(value))
           value = value.map((i) => `${i.url} | ${i.alt}`).join("\n");
         const id = `edit-${kind}-${field.name}`;
+        const locked = Boolean(field.lockOnEdit && editing);
         const cls =
           "min-h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
         return (
           <div key={field.name} className={field.type === "textarea" ? "sm:col-span-2" : ""}>
             <Label htmlFor={id}>{field.label}</Label>
+            {field.hint && (
+              <p id={`${id}-hint`} className="mb-1 text-xs text-muted-foreground">
+                {locked ? "Cannot be changed after saving: products refer to it." : field.hint}
+              </p>
+            )}
             {field.type === "textarea" ? (
               <textarea
                 id={id}
@@ -152,6 +199,12 @@ function Editor({
               <Input
                 id={id}
                 name={field.name}
+                required={field.required}
+                pattern={field.pattern}
+                placeholder={field.placeholder}
+                readOnly={locked}
+                aria-describedby={field.hint ? `${id}-hint` : undefined}
+                className={locked ? "bg-muted text-muted-foreground" : undefined}
                 type={field.type ?? "text"}
                 step={field.name === "feeKobo" ? 0.01 : field.type === "number" ? 1 : undefined}
                 defaultValue={String(value)}
@@ -160,9 +213,22 @@ function Editor({
           </div>
         );
       })}
-      <Button disabled={busy || uploadBusy}>
-        {busy || uploadBusy ? "Working…" : "Save changes"}
-      </Button>
+      <div className="flex flex-wrap gap-2 sm:col-span-2">
+        <Button disabled={busy || uploadBusy} className="w-full sm:w-auto">
+          {busy || uploadBusy ? "Working…" : "Save changes"}
+        </Button>
+        {editing && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={busy}
+            className="w-full sm:w-auto"
+          >
+            Cancel editing
+          </Button>
+        )}
+      </div>
     </form>
   );
 }
@@ -176,6 +242,8 @@ function Admin() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [edit, setEdit] = useState<Row>({});
+  // Bumped after a successful save so the form clears instead of still showing what was saved.
+  const [saves, setSaves] = useState(0);
   const [loading, setLoading] = useState(true);
   const [setupToken, setSetupToken] = useState<string | null>(null);
   useEffect(() => {
@@ -351,14 +419,21 @@ function Admin() {
                   )}
                   {forms[tab] && (
                     <Editor
+                      key={`${tab}-${saves}`}
                       kind={tab}
                       initial={edit}
                       onSaved={() => {
-                        setNotice("Saved.");
+                        const name = singular[tab] ?? tab;
+                        setNotice(`${name[0]?.toUpperCase()}${name.slice(1)} saved.`);
                         setEdit({});
+                        setSaves((n) => n + 1);
                         void load();
                       }}
-                      onError={setError}
+                      onError={(message) => {
+                        setNotice("");
+                        setError(message);
+                      }}
+                      onCancel={() => setEdit({})}
                     />
                   )}
                   <section
@@ -384,6 +459,20 @@ function Admin() {
                               className="border-t"
                             >
                               <td className="max-w-48 break-words p-2">
+                                {tab === "banners" &&
+                                  typeof row["image_url"] === "string" &&
+                                  row["image_url"] && (
+                                    <AdminImage
+                                      url={row["image_url"]}
+                                      alt={`Banner photograph: ${String(row["title"] ?? "")}`}
+                                      className="mb-1.5 h-16 w-28 rounded-lg object-cover"
+                                    />
+                                  )}
+                                {tab === "banners" && (
+                                  <span className="mb-1 block text-xs text-muted-foreground">
+                                    {Number(row["active"]) ? "Published" : "Hidden"}
+                                  </span>
+                                )}
                                 {String(
                                   row["name"] ??
                                     row["sku"] ??
