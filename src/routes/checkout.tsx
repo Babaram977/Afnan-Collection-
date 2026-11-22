@@ -6,10 +6,13 @@ import { Label } from "@/components/ui/label";
 import { useCart } from "@/lib/cart";
 import { lineKey } from "@/lib/options";
 import { formatNaira } from "@/lib/catalog";
-import { apiCall, type Zone, type Order, type Me } from "@/lib/store";
+import { apiCall, type Order, type Me } from "@/lib/store";
 import { PageHeader } from "@/components/site/PageHeader";
 import { business } from "@/lib/business";
+import { afnanDelivery } from "@/lib/delivery-policy";
 import { ReceiptUpload } from "@/components/site/ReceiptUpload";
+import { SelectionList } from "@/components/site/SelectionList";
+import { parseSelections } from "@/lib/order-lines";
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [{ title: "Checkout — Afnan Collection Online" }, { name: "robots", content: "noindex" }],
@@ -18,8 +21,8 @@ export const Route = createFileRoute("/checkout")({
 });
 function Checkout() {
   const { lines, subtotalKobo, clear } = useCart();
-  const [zones, setZones] = useState<Zone[]>([]);
-  const [zoneId, setZoneId] = useState("");
+  const [fulfilmentMethod, setFulfilmentMethod] = useState<"delivery" | "pickup">("delivery");
+  const [stateName, setStateName] = useState("");
   const [enabled, setEnabled] = useState(false);
   const [payment, setPayment] = useState(false);
   const [error, setError] = useState("");
@@ -32,26 +35,29 @@ function Checkout() {
     setKey(crypto.randomUUID());
     Promise.all([
       apiCall<{ checkoutEnabled: boolean; paymentsEnabled: boolean }>("/health"),
-      apiCall<Zone[]>("/zones"),
       apiCall<Me>("/me"),
     ])
-      .then(([h, z, m]) => {
+      .then(([h, m]) => {
         setEnabled(h.checkoutEnabled);
         setPayment(h.paymentsEnabled);
-        setZones(z);
         setEmail(m.email ?? "");
         setAccountEmail(Boolean(m.email));
       })
       .catch((e) => setError(e.message));
   }, []);
-  const zone = zones.find((z) => z.id === zoneId);
+  const quote =
+    fulfilmentMethod === "pickup"
+      ? afnanDelivery(subtotalKobo, "pickup", "")
+      : stateName.trim()
+        ? afnanDelivery(subtotalKobo, "delivery", stateName)
+        : null;
   return (
     <>
       <PageHeader
         title="Checkout"
         intro="Prices and availability are checked when your order is prepared."
       />
-      <div className="container-page grid gap-8 py-8 lg:grid-cols-[1fr_320px]">
+      <div className="container-page grid gap-8 py-8 lg:grid-cols-[1fr_320px] [&>*]:min-w-0">
         {order ? (
           <section className="space-y-4 rounded-2xl bg-card p-6 shadow-soft">
             <h2 className="text-2xl font-semibold">Order prepared</h2>
@@ -59,7 +65,7 @@ function Checkout() {
               Order reference:{" "}
               <strong className="tracking-wide">{order.reference ?? order.id}</strong>
             </p>
-            <p>Total: {formatNaira(order.total_kobo)}</p>
+            <p>Total payable to Afnan: {formatNaira(order.total_kobo)}</p>
             {order.payment_method === "bank_transfer" ? (
               <BankTransferInstructions order={order} />
             ) : (
@@ -113,14 +119,24 @@ function Checkout() {
               const form = new FormData(e.currentTarget);
               try {
                 const payload = {
-                  zoneId,
-                  lines: lines.map(({ variantId, qty }) => ({ variantId, qty })),
+                  fulfilmentMethod,
+                  // Each cart line keeps its own selection (colour, size, note); the server groups
+                  // lines of the same item without merging different selections.
+                  lines: lines.map(({ variantId, qty, note }) => ({
+                    variantId,
+                    qty,
+                    ...(note ? { note } : {}),
+                  })),
                   customer: { name: form.get("name"), phone: form.get("phone"), email },
-                  address: {
-                    street: form.get("street"),
-                    city: form.get("city"),
-                    state: zone?.state,
-                  },
+                  ...(fulfilmentMethod === "delivery"
+                    ? {
+                        address: {
+                          street: form.get("street"),
+                          city: form.get("city"),
+                          state: stateName,
+                        },
+                      }
+                    : {}),
                 };
                 const fingerprint = Array.from(
                   new Uint8Array(
@@ -189,45 +205,76 @@ function Checkout() {
               />
             </div>
 
-            <div>
-              <Label htmlFor="co-street">Street address</Label>
-              <Input
-                id="co-street"
-                name="street"
-                autoComplete="street-address"
-                minLength={5}
-                maxLength={500}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="co-city">City</Label>
-              <Input id="co-city" name="city" autoComplete="address-level2" required />
-            </div>
-            <div>
-              <Label htmlFor="co-zone">Delivery area</Label>
-              <select
-                id="co-zone"
-                className="h-11 w-full rounded-lg border bg-card px-3"
-                required
-                value={zoneId}
-                onChange={(e) => {
-                  setZoneId(e.target.value);
-                  setKey(crypto.randomUUID());
-                }}
-              >
-                <option value="">
-                  {zones.length ? "Select your area" : "Delivery not configured"}
-                </option>
-                {zones.map((z) => (
-                  <option key={z.id} value={z.id}>
-                    {z.name}, {z.state} — {formatNaira(z.fee_kobo)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <fieldset className="space-y-3 rounded-xl border p-4">
+              <legend className="font-semibold">How would you like to receive your order?</legend>
+              <label className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="fulfilmentMethod"
+                  value="delivery"
+                  checked={fulfilmentMethod === "delivery"}
+                  onChange={() => setFulfilmentMethod("delivery")}
+                />
+                Delivery
+              </label>
+              <label className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="fulfilmentMethod"
+                  value="pickup"
+                  checked={fulfilmentMethod === "pickup"}
+                  onChange={() => setFulfilmentMethod("pickup")}
+                />
+                Store pickup — FREE
+              </label>
+            </fieldset>
+            {fulfilmentMethod === "delivery" ? (
+              <>
+                <div>
+                  <Label htmlFor="co-street">Street address</Label>
+                  <Input
+                    id="co-street"
+                    name="street"
+                    autoComplete="street-address"
+                    minLength={5}
+                    maxLength={500}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="co-city">City</Label>
+                  <Input id="co-city" name="city" autoComplete="address-level2" required />
+                </div>
+                <div>
+                  <Label htmlFor="co-state">State</Label>
+                  <Input
+                    id="co-state"
+                    name="state"
+                    autoComplete="address-level1"
+                    required
+                    value={stateName}
+                    onChange={(e) => setStateName(e.target.value)}
+                  />
+                </div>
+                <p className="text-sm">
+                  Within Kano: ₦1,500 delivery below ₦250,000; free at ₦250,000 or more. Outside
+                  Kano: transport company determines and collects its fee directly, separate from
+                  your Afnan payment.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm">
+                Store pickup is free at every order amount. Collection location and time will be
+                confirmed by our team.
+              </p>
+            )}
             <Button
-              disabled={!enabled || !zone || !lines.length || busy}
+              disabled={
+                !enabled ||
+                (fulfilmentMethod === "delivery" && !stateName.trim()) ||
+                !lines.length ||
+                busy
+              }
               type="submit"
               className="w-full rounded-full"
             >
@@ -247,12 +294,20 @@ function Checkout() {
                 </p>
               ))}
               <p className="mt-4">Subtotal: {formatNaira(subtotalKobo)}</p>
-              <p>Delivery: {zone ? formatNaira(zone.fee_kobo) : "Choose an area"}</p>
+              <p>
+                {fulfilmentMethod === "pickup" ? "Store pickup" : "Delivery"}:{" "}
+                {quote
+                  ? quote.carrierDirect
+                    ? "Paid directly to transport company"
+                    : formatNaira(quote.feeKobo)
+                  : "Enter your state"}
+              </p>
               <p className="mt-2 font-bold">
-                Estimated total: {formatNaira(subtotalKobo + (zone?.fee_kobo ?? 0))}
+                Estimated payable to Afnan: {formatNaira(subtotalKobo + (quote?.feeKobo ?? 0))}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                Final total is calculated on the server.
+                Final total is calculated on the server. Any interstate transport fee is separate
+                and paid directly to the logistics company.
               </p>
             </>
           )}
@@ -289,7 +344,7 @@ function BankTransferInstructions({ order }: { order: Order }) {
         <dt className="text-sm text-muted-foreground">Account name</dt>
         <dd>{business.bankAccountName}</dd>
         <dt className="text-sm text-muted-foreground">Account number</dt>
-        <dd className="flex items-center gap-3">
+        <dd className="flex flex-wrap items-center gap-3">
           <span className="font-semibold tracking-wider">{business.bankAccountNumber}</span>
           <Button
             type="button"
@@ -329,13 +384,28 @@ function OrderSummary({ order }: { order: Order }) {
   return (
     <>
       {(order.items ?? []).map((i) => (
-        <p key={i.variant_id} className="mt-2 text-sm">
-          {i.qty} × {i.name} — {formatNaira(i.qty * i.price_kobo)}
-        </p>
+        <div key={i.variant_id} className="mt-2 text-sm" data-order-item>
+          <p>
+            {i.qty} × {i.name} — {formatNaira(i.qty * i.price_kobo)}
+          </p>
+          <SelectionList selections={parseSelections(i.selections)} />
+        </div>
       ))}
       <p className="mt-4">Subtotal: {formatNaira(order.total_kobo - delivery)}</p>
-      <p>Delivery: {formatNaira(delivery)}</p>
-      <p className="mt-2 font-bold">Order total: {formatNaira(order.total_kobo)}</p>
+      <p>
+        {order.fulfilment_method === "pickup" ? "Store pickup" : "Delivery"}:{" "}
+        {order.fulfilment_method === "pickup"
+          ? "Free"
+          : order.carrier_paid_direct
+            ? "Paid directly to the transport company"
+            : formatNaira(delivery)}
+      </p>
+      <p className="mt-2 font-bold">Amount payable to Afnan: {formatNaira(order.total_kobo)}</p>
+      {order.carrier_paid_direct ? (
+        <p className="text-sm">
+          Interstate carrier fee is not included; you pay the transport company directly.
+        </p>
+      ) : null}
       <p className="mt-2 text-xs text-muted-foreground">Saved with your order.</p>
     </>
   );

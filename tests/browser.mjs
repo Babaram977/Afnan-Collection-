@@ -43,7 +43,8 @@ try {
     await page.locator("#main").getByText("2", { exact: true }).waitFor();
     checks++;
     await page.getByRole("link", { name: "Continue to checkout" }).click();
-    await page.getByLabel("Delivery area").selectOption(zoneId);
+    // PR #41 checkout: delivery is the default fulfilment method; the server prices it from the state.
+    await page.getByLabel("State", { exact: true }).fill("Kano");
     await page.getByLabel("Full name", { exact: true }).fill("Browser fixture buyer");
     await page.getByLabel("Phone", { exact: true }).fill("08012345678");
     await page.getByLabel("Email", { exact: true }).fill(`browser-${width}@example.com`);
@@ -403,7 +404,8 @@ try {
     await customerPage.getByRole("button", { name: "Add to cart", exact: true }).click();
     await customerPage.unroute("**/api/cart", holdCart);
     await customerPage.goto(ORIGIN + "/checkout");
-    await customerPage.getByLabel("Delivery area").selectOption(zoneId);
+    // PR #41 checkout: delivery is the default fulfilment method; the server prices it from the state.
+    await customerPage.getByLabel("State", { exact: true }).fill("Kano");
     await customerPage.getByLabel("Full name", { exact: true }).fill("Acceptance customer");
     await customerPage.getByLabel("Phone", { exact: true }).fill("08012345678");
     await customerPage
@@ -418,7 +420,8 @@ try {
       )
       .first();
     assert.ok(order.user_id);
-    assert.equal(order.total_kobo, 260025);
+    // PR #41 tariff: 210,025 kobo of goods + ₦1,500 Kano delivery (subtotal below ₦250,000).
+    assert.equal(order.total_kobo, 360025);
     checks += 2;
     await customerPage.getByRole("button", { name: "Continue to payment", exact: true }).click();
     await customerPage.waitForURL(`${ORIGIN}/`);

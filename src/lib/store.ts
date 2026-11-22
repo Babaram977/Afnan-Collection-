@@ -65,5 +65,15 @@ export interface Order {
   /** Short customer-facing reference (AC-YYYYMMDD-NNNN); the UUID `id` stays internal. */
   reference?: string | null;
   delivery_kobo?: number;
-  items?: { variant_id: string; name: string; sku: string; price_kobo: number; qty: number }[];
+  fulfilment_method?: "delivery" | "pickup";
+  carrier_paid_direct?: number;
+  items?: {
+    variant_id: string;
+    name: string;
+    sku: string;
+    price_kobo: number;
+    qty: number;
+    /** JSON [{qty,note}]: the customer's distinct selections of this item (NULL on older orders). */
+    selections?: string | null;
+  }[];
 }

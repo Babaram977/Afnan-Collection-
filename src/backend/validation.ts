@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { groupOrderLines, MAX_QTY_PER_VARIANT } from "../lib/order-lines";
 export const money = z.number().int().min(0).max(1_000_000_000);
 const text = z.string().trim().min(1).max(200);
 export const safeImage = z
@@ -36,13 +37,21 @@ export const variantInput = z.object({
   salePriceKobo: money.min(1).nullable().optional(),
   lowStock: z.number().int().min(0).max(100000).default(3),
 });
+// The same variant may appear on several lines when the customer's selections (colour, size,
+// note) differ; the server groups them per variant (src/lib/order-lines.ts).
 export const linesInput = z
-  .array(z.object({ variantId: z.string().uuid(), qty: z.number().int().min(1).max(99) }))
+  .array(
+    z.object({
+      variantId: z.string().uuid(),
+      qty: z.number().int().min(1).max(MAX_QTY_PER_VARIANT),
+      note: z.string().trim().max(200).optional(),
+    }),
+  )
   .min(1)
   .max(50)
   .refine(
-    (lines) => new Set(lines.map((l) => l.variantId)).size === lines.length,
-    "Duplicate variants",
+    (lines) => groupOrderLines(lines).every((l) => l.qty <= MAX_QTY_PER_VARIANT),
+    `At most ${MAX_QTY_PER_VARIANT} of one item per order`,
   );
 export const addressInput = z.object({
   street: z.string().trim().min(5).max(500),
@@ -56,8 +65,9 @@ export const orderInput = z.object({
     phone: z.string().regex(/^\+?[0-9 ()-]{7,20}$/),
     email: z.string().email().max(254),
   }),
-  address: addressInput,
-  zoneId: z.string().uuid(),
+  fulfilmentMethod: z.enum(["delivery", "pickup"]).optional(),
+  address: addressInput.optional(),
+  zoneId: z.string().uuid().optional(),
   idempotencyKey: z.string().uuid(),
 });
 export const stockInput = z.object({

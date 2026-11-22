@@ -603,7 +603,8 @@ try {
         .click();
       await page.getByRole("button", { name: "Add to cart", exact: true }).click();
       await page.goto(`${ORIGIN}/checkout`);
-      await page.getByLabel("Delivery area").selectOption(ui.zoneId);
+      // PR #41 checkout: delivery is the default fulfilment method; the server prices it from the state.
+      await page.getByLabel("State", { exact: true }).fill("Kano");
       await page.getByLabel("Full name", { exact: true }).fill("Browser fixture buyer");
       await page.getByLabel("Phone", { exact: true }).fill("08012345678");
       await page.getByLabel("Email", { exact: true }).fill(`receipt-${width}@example.com`);

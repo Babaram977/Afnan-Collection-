@@ -3,6 +3,8 @@ import { apiCall } from "@/lib/store";
 import { formatNaira } from "@/lib/catalog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { SelectionList } from "@/components/site/SelectionList";
+import { parseSelections } from "@/lib/order-lines";
 interface StaffOrder {
   id: string;
   reference?: string | null;
@@ -12,7 +14,13 @@ interface StaffOrder {
   customer: string;
   address: string;
   created_at: number;
-  items?: { name: string; sku: string; qty: number; price_kobo: number }[];
+  items?: {
+    name: string;
+    sku: string;
+    qty: number;
+    price_kobo: number;
+    selections?: string | null;
+  }[];
 }
 export function OrderManager() {
   const [orders, setOrders] = useState<StaffOrder[]>([]);
@@ -109,8 +117,9 @@ export function OrderManager() {
           </address>
           <ul>
             {detail.items?.map((i) => (
-              <li key={i.sku}>
+              <li key={i.sku} data-order-item>
                 {i.qty} × {i.name} ({i.sku}) — {formatNaira(i.price_kobo * i.qty)}
+                <SelectionList selections={parseSelections(i.selections)} />
               </li>
             ))}
           </ul>
