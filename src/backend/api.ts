@@ -422,22 +422,32 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
   const legacyZone = Boolean(input.zoneId && !input.fulfilmentMethod);
   const method = input.fulfilmentMethod ?? "delivery";
   if (method === "delivery" && !input.address)
-    fail(400,"Delivery requires a full street, city and state");
+    fail(400, "Delivery requires a full street, city and state");
   if (method === "pickup" && (input.address || input.zoneId))
-    fail(400,"Pickup cannot include a shipping address or delivery zone");
-  const selectedAddress = input.address ?? {street:"Store pickup",city:"Kano",state:"Kano"};
+    fail(400, "Pickup cannot include a shipping address or delivery zone");
+  const selectedAddress = input.address ?? { street: "Store pickup", city: "Kano", state: "Kano" };
   const policy = afnanDelivery(0, method, selectedAddress.state);
   const legacyRecord = legacyZone
-    ? await env.DB.prepare("SELECT fee_kobo FROM zones WHERE id=? AND active=1 AND lower(state)=lower(?)")
-      .bind(input.zoneId, selectedAddress.state).first<{fee_kobo:number}>()
+    ? await env.DB.prepare(
+        "SELECT fee_kobo FROM zones WHERE id=? AND active=1 AND lower(state)=lower(?)",
+      )
+        .bind(input.zoneId, selectedAddress.state)
+        .first<{ fee_kobo: number }>()
     : null;
-  if (legacyZone && !legacyRecord) fail(400,"Delivery is unavailable for this address");
-  const chosenZone = legacyZone ? input.zoneId! :
-    method==="pickup" ? FULFILMENT_ZONE_IDS.pickup :
-    policy.carrierDirect ? FULFILMENT_ZONE_IDS.interstate : FULFILMENT_ZONE_IDS.kano;
+  if (legacyZone && !legacyRecord) fail(400, "Delivery is unavailable for this address");
+  const chosenZone = legacyZone
+    ? input.zoneId!
+    : method === "pickup"
+      ? FULFILMENT_ZONE_IDS.pickup
+      : policy.carrierDirect
+        ? FULFILMENT_ZONE_IDS.interstate
+        : FULFILMENT_ZONE_IDS.kano;
   const carrierPaidDirect = !legacyZone && policy.carrierDirect;
-  const initialFee = legacyZone ? legacyRecord!.fee_kobo :
-    method==="delivery" && !policy.carrierDirect ? 150_000 : 0;
+  const initialFee = legacyZone
+    ? legacyRecord!.fee_kobo
+    : method === "delivery" && !policy.carrierDirect
+      ? 150_000
+      : 0;
   const id = uuid();
   // Paystack is used only when it is explicitly enabled; otherwise orders are manual bank transfers.
   const paymentMethod = paymentEnabled(env) ? "paystack" : "bank_transfer";
@@ -499,22 +509,23 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
     legacyZone
       ? env.DB.prepare(
           "UPDATE orders SET total_kobo=delivery_kobo+(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?) WHERE id=?",
-        ).bind(id,id)
+        ).bind(id, id)
       : env.DB.prepare(
           "UPDATE orders SET delivery_kobo=CASE WHEN fulfilment_method='pickup' OR carrier_paid_direct=1 OR " +
-          "(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?)>=25000000 THEN 0 ELSE 150000 END, " +
-          "total_kobo=(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?)+" +
-          "CASE WHEN fulfilment_method='pickup' OR carrier_paid_direct=1 OR " +
-          "(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?)>=25000000 THEN 0 ELSE 150000 END " +
-          "WHERE id=?",
-        ).bind(id,id,id,id),
+            "(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?)>=25000000 THEN 0 ELSE 150000 END, " +
+            "total_kobo=(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?)+" +
+            "CASE WHEN fulfilment_method='pickup' OR carrier_paid_direct=1 OR " +
+            "(SELECT SUM(price_kobo*qty) FROM order_items WHERE order_id=?)>=25000000 THEN 0 ELSE 150000 END " +
+            "WHERE id=?",
+        ).bind(id, id, id, id),
   );
   statements.push(
     await audit(env, a, "order.created", id, {
       paymentMethod,
       expiresAt,
       stockReserved: input.lines.map(({ variantId, qty }) => ({ variantId, qty })),
-      fulfilmentMethod:method, carrierPaidDirect,
+      fulfilmentMethod: method,
+      carrierPaidDirect,
     }),
   );
   try {

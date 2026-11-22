@@ -48,7 +48,9 @@ export async function createTestApp(options = {}) {
     "\n" +
     (await readFile("migrations/0005_payment_receipts.sql", "utf8")) +
     "\n" +
-    (await readFile("migrations/0006_session_authentication_method.sql", "utf8"))
+    (await readFile("migrations/0006_session_authentication_method.sql", "utf8")) +
+    "\n" +
+    (await readFile("migrations/0007_fulfilment_options.sql", "utf8"))
   ).replace(/--[^\n]*/g, "");
   const statements = [];
   let statement = "";

@@ -56,7 +56,7 @@ export const orderInput = z.object({
     phone: z.string().regex(/^\+?[0-9 ()-]{7,20}$/),
     email: z.string().email().max(254),
   }),
-  fulfilmentMethod: z.enum(["delivery","pickup"]).optional(),
+  fulfilmentMethod: z.enum(["delivery", "pickup"]).optional(),
   address: addressInput.optional(),
   zoneId: z.string().uuid().optional(),
   idempotencyKey: z.string().uuid(),

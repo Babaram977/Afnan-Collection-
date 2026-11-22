@@ -43,7 +43,12 @@ function Checkout() {
       })
       .catch((e) => setError(e.message));
   }, []);
-  const quote = fulfilmentMethod==="pickup" ? afnanDelivery(subtotalKobo,"pickup","") : stateName.trim() ? afnanDelivery(subtotalKobo,"delivery",stateName) : null;
+  const quote =
+    fulfilmentMethod === "pickup"
+      ? afnanDelivery(subtotalKobo, "pickup", "")
+      : stateName.trim()
+        ? afnanDelivery(subtotalKobo, "delivery", stateName)
+        : null;
   return (
     <>
       <PageHeader
@@ -115,11 +120,15 @@ function Checkout() {
                   fulfilmentMethod,
                   lines: lines.map(({ variantId, qty }) => ({ variantId, qty })),
                   customer: { name: form.get("name"), phone: form.get("phone"), email },
-                  ...(fulfilmentMethod === "delivery" ? {address: {
-                    street: form.get("street"),
-                    city: form.get("city"),
-                    state: stateName,
-                  }} : {}),
+                  ...(fulfilmentMethod === "delivery"
+                    ? {
+                        address: {
+                          street: form.get("street"),
+                          city: form.get("city"),
+                          state: stateName,
+                        },
+                      }
+                    : {}),
                 };
                 const fingerprint = Array.from(
                   new Uint8Array(
@@ -191,35 +200,73 @@ function Checkout() {
             <fieldset className="space-y-3 rounded-xl border p-4">
               <legend className="font-semibold">How would you like to receive your order?</legend>
               <label className="flex items-center gap-3">
-                <input type="radio" name="fulfilmentMethod" value="delivery"
-                  checked={fulfilmentMethod==="delivery"} onChange={()=>setFulfilmentMethod("delivery")}/>
+                <input
+                  type="radio"
+                  name="fulfilmentMethod"
+                  value="delivery"
+                  checked={fulfilmentMethod === "delivery"}
+                  onChange={() => setFulfilmentMethod("delivery")}
+                />
                 Delivery
               </label>
               <label className="flex items-center gap-3">
-                <input type="radio" name="fulfilmentMethod" value="pickup"
-                  checked={fulfilmentMethod==="pickup"} onChange={()=>setFulfilmentMethod("pickup")}/>
+                <input
+                  type="radio"
+                  name="fulfilmentMethod"
+                  value="pickup"
+                  checked={fulfilmentMethod === "pickup"}
+                  onChange={() => setFulfilmentMethod("pickup")}
+                />
                 Store pickup — FREE
               </label>
             </fieldset>
-            {fulfilmentMethod === "delivery" ? <>
-              <div>
-                <Label htmlFor="co-street">Street address</Label>
-                <Input id="co-street" name="street" autoComplete="street-address"
-                  minLength={5} maxLength={500} required />
-              </div>
-              <div>
-                <Label htmlFor="co-city">City</Label>
-                <Input id="co-city" name="city" autoComplete="address-level2" required/>
-              </div>
-              <div>
-                <Label htmlFor="co-state">State</Label>
-                <Input id="co-state" name="state" autoComplete="address-level1"
-                  required value={stateName} onChange={e=>setStateName(e.target.value)}/>
-              </div>
-              <p className="text-sm">Within Kano: ₦1,500 delivery below ₦250,000; free at ₦250,000 or more. Outside Kano: transport company determines and collects its fee directly, separate from your Afnan payment.</p>
-            </> : <p className="text-sm">Store pickup is free at every order amount. Collection location and time will be confirmed by our team.</p>}
+            {fulfilmentMethod === "delivery" ? (
+              <>
+                <div>
+                  <Label htmlFor="co-street">Street address</Label>
+                  <Input
+                    id="co-street"
+                    name="street"
+                    autoComplete="street-address"
+                    minLength={5}
+                    maxLength={500}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="co-city">City</Label>
+                  <Input id="co-city" name="city" autoComplete="address-level2" required />
+                </div>
+                <div>
+                  <Label htmlFor="co-state">State</Label>
+                  <Input
+                    id="co-state"
+                    name="state"
+                    autoComplete="address-level1"
+                    required
+                    value={stateName}
+                    onChange={(e) => setStateName(e.target.value)}
+                  />
+                </div>
+                <p className="text-sm">
+                  Within Kano: ₦1,500 delivery below ₦250,000; free at ₦250,000 or more. Outside
+                  Kano: transport company determines and collects its fee directly, separate from
+                  your Afnan payment.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm">
+                Store pickup is free at every order amount. Collection location and time will be
+                confirmed by our team.
+              </p>
+            )}
             <Button
-              disabled={!enabled || (fulfilmentMethod==="delivery" && !stateName.trim()) || !lines.length || busy}
+              disabled={
+                !enabled ||
+                (fulfilmentMethod === "delivery" && !stateName.trim()) ||
+                !lines.length ||
+                busy
+              }
               type="submit"
               className="w-full rounded-full"
             >
@@ -239,12 +286,20 @@ function Checkout() {
                 </p>
               ))}
               <p className="mt-4">Subtotal: {formatNaira(subtotalKobo)}</p>
-              <p>{fulfilmentMethod==="pickup"?"Store pickup":"Delivery"}: {quote ? quote.carrierDirect ? "Paid directly to transport company" : formatNaira(quote.feeKobo) : "Enter your state"}</p>
+              <p>
+                {fulfilmentMethod === "pickup" ? "Store pickup" : "Delivery"}:{" "}
+                {quote
+                  ? quote.carrierDirect
+                    ? "Paid directly to transport company"
+                    : formatNaira(quote.feeKobo)
+                  : "Enter your state"}
+              </p>
               <p className="mt-2 font-bold">
                 Estimated payable to Afnan: {formatNaira(subtotalKobo + (quote?.feeKobo ?? 0))}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                Final total is calculated on the server. Any interstate transport fee is separate and paid directly to the logistics company.
+                Final total is calculated on the server. Any interstate transport fee is separate
+                and paid directly to the logistics company.
               </p>
             </>
           )}
@@ -326,9 +381,20 @@ function OrderSummary({ order }: { order: Order }) {
         </p>
       ))}
       <p className="mt-4">Subtotal: {formatNaira(order.total_kobo - delivery)}</p>
-      <p>{order.fulfilment_method==="pickup"?"Store pickup":"Delivery"}: {order.fulfilment_method==="pickup"?"Free":order.carrier_paid_direct?"Paid directly to the transport company":formatNaira(delivery)}</p>
+      <p>
+        {order.fulfilment_method === "pickup" ? "Store pickup" : "Delivery"}:{" "}
+        {order.fulfilment_method === "pickup"
+          ? "Free"
+          : order.carrier_paid_direct
+            ? "Paid directly to the transport company"
+            : formatNaira(delivery)}
+      </p>
       <p className="mt-2 font-bold">Amount payable to Afnan: {formatNaira(order.total_kobo)}</p>
-      {order.carrier_paid_direct ? <p className="text-sm">Interstate carrier fee is not included; you pay the transport company directly.</p> : null}
+      {order.carrier_paid_direct ? (
+        <p className="text-sm">
+          Interstate carrier fee is not included; you pay the transport company directly.
+        </p>
+      ) : null}
       <p className="mt-2 text-xs text-muted-foreground">Saved with your order.</p>
     </>
   );
