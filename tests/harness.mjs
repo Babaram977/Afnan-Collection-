@@ -59,6 +59,8 @@ export async function createTestApp(options = {}) {
             CHECKOUT_ENABLED: "true",
             PAYMENT_MODE: "fixture",
             TEST_FIXTURES: "true",
+            // Existing fixtures place orders through the pre-#41 zone path; deployed stores never set this.
+            LEGACY_ZONE_ORDERS: "enabled",
             ...options.bindings,
           },
           ...(options.outboundService ? { outboundService: options.outboundService } : {}),

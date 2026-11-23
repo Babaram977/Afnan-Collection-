@@ -52,6 +52,7 @@ jobs:
       - run: bun run test:bank-transfer
       - run: bun run test:order-selections
       - run: bun run test:order-tracking
+      - run: bun run test:delivery-policy
       - run: bun run test:migration-upgrade
       - run: bun run test:receipts
       - run: bun run test:browser

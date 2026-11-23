@@ -29,6 +29,7 @@
     "test:bank-transfer": "node tests/bank-transfer.mjs",
     "test:order-selections": "node tests/order-selections.mjs",
     "test:order-tracking": "node tests/order-tracking.mjs",
+    "test:delivery-policy": "node tests/delivery-policy.mjs",
     "test:migration-upgrade": "node tests/migration-upgrade.mjs",
     "test:receipts": "node tests/receipts.mjs",
     "test:admin-otp": "node tests/admin-otp.mjs",
