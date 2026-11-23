@@ -117,7 +117,7 @@ function Cart() {
                 <span>{formatNaira(subtotalKobo)}</span>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Delivery fees are not yet configured.
+                Delivery: ₦1,500 within Kano for orders below ₦250,000; free within Kano from ₦250,000. Store pickup is free. Outside Kano, transport is paid directly to the carrier.
               </p>
               {checkoutEnabled ? (
                 <Button asChild className="mt-6 w-full rounded-full">
