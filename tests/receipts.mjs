@@ -628,15 +628,23 @@ try {
         mimeType: "image/png",
         buffer: makePng(String(width)),
       });
-      await page.getByRole("button", { name: "Submit receipt" }).click();
-      await page.getByText("Receipt received.").waitFor({ timeout: 10000 });
+      await page.getByRole("button", { name: "I have paid — submit order receipt" }).click();
+      await page.getByText("Paid order submitted for verification.").waitFor({ timeout: 10000 });
       uiCheck(true, `Receipt uploaded from confirmation page at ${width}`);
+      {
+        // The receipt form's own message must say it awaits verification, never that it is paid.
+        const message = await page.locator("form [role=status]").first().innerText();
+        uiCheck(
+          /verification/i.test(message) && !/\b(confirmed|successful|is paid)\b/i.test(message),
+          `Receipt message awaits verification at ${width}: ${message}`,
+        );
+      }
       await page.getByLabel("Upload your payment receipt").setInputFiles({
         name: "not-a-receipt.png",
         mimeType: "image/png",
         buffer: Buffer.from("GIF89a definitely not png"),
       });
-      await page.getByRole("button", { name: "Submit receipt" }).click();
+      await page.getByRole("button", { name: "I have paid — submit order receipt" }).click();
       await page
         .getByRole("alert")
         .filter({ hasText: "JPEG, PNG, WebP or PDF" })

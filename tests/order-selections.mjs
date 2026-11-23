@@ -286,8 +286,11 @@ try {
   await page
     .locator('input[type="file"]')
     .setInputFiles({ name: "receipt.png", mimeType: "image/png", buffer: png });
-  await page.getByRole("button", { name: "Submit receipt" }).click();
-  await page.getByRole("status").filter({ hasText: "Receipt received" }).waitFor();
+  await page.getByRole("button", { name: "I have paid — submit order receipt" }).click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Paid order submitted for verification" })
+    .waitFor();
   ok(true, "Receipt upload works from the confirmation page");
   ok(
     !(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)),

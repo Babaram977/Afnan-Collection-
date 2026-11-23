@@ -383,7 +383,7 @@ try {
   await page
     .locator('input[type="file"]')
     .setInputFiles({ name: "receipt.png", mimeType: "image/png", buffer: png });
-  await page.getByRole("button", { name: "Submit receipt" }).click();
+  await page.getByRole("button", { name: "I have paid — submit order receipt" }).click();
   await page.locator("[data-order-status]", { hasText: "Receipt Submitted" }).waitFor();
   ok(true, "Status updates to Receipt Submitted after upload");
   ok(
