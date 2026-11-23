@@ -168,6 +168,20 @@ try {
     await page.getByRole("button", { name: "Remove Fixture Jeans" }).first().click();
     await page.waitForFunction(() => document.querySelectorAll("main li").length === 2);
     ok(true, "Remove one line");
+    // Delivery policy in the bag (owner report 2026-11-23: it still said "not yet configured").
+    const policy = await page.locator("[data-delivery-policy]").innerText();
+    ok(
+      policy.includes("Within Kano: ₦1,500, free on orders from ₦250,000") &&
+        policy.includes("Store pickup: free") &&
+        policy.includes("Outside Kano: paid directly to the transport company"),
+      `Approved delivery policy shown: ${policy}`,
+    );
+    ok(
+      !(await page.locator("main").innerText()).includes("not yet configured"),
+      "No stale delivery text",
+    );
+    await page.getByText("Add ₦232,000 more for free delivery within Kano.").waitFor();
+    ok(true, "Free-delivery distance follows the subtotal (₦250,000 - ₦18,000)");
     const notice = page.locator("[data-checkout-unavailable]");
     await page.getByText("temporarily unavailable").waitFor();
     ok(
