@@ -425,6 +425,11 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
     return json(await orderWithItems(env, existing));
   }
   const legacyZone = Boolean(input.zoneId && !input.fulfilmentMethod);
+  // Deployed stores price delivery only by the approved policy (Kano ₦1,500, free from ₦250,000,
+  // pickup free, interstate paid to the carrier). The old per-zone path charged a zone's own fee
+  // with no free threshold; it stays available only where explicitly enabled (local test fixtures).
+  if (legacyZone && env.LEGACY_ZONE_ORDERS !== "enabled")
+    fail(400, "Choose delivery or store pickup");
   const method = input.fulfilmentMethod ?? "delivery";
   if (method === "delivery" && !input.address)
     fail(400, "Delivery requires a full street, city and state");
