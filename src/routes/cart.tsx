@@ -6,6 +6,7 @@ import { chosenLabel, lineKey } from "@/lib/options";
 import { useEffect, useState } from "react";
 import { apiCall } from "@/lib/store";
 import { formatNaira } from "@/lib/catalog";
+import { FREE_DELIVERY_THRESHOLD_KOBO, KANO_DELIVERY_KOBO } from "@/lib/delivery-policy";
 import { PageHeader } from "@/components/site/PageHeader";
 import { EmptyState } from "@/components/site/EmptyState";
 import { ProductImageOrPlaceholder } from "@/components/site/ProductCard";
@@ -116,9 +117,22 @@ function Cart() {
                 <span>Subtotal</span>
                 <span>{formatNaira(subtotalKobo)}</span>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Delivery fees are not yet configured.
-              </p>
+              {/* Approved delivery policy, from the same constants the server prices with. */}
+              <div className="mt-3 space-y-1 text-xs text-muted-foreground" data-delivery-policy>
+                <p className="font-medium text-foreground">Delivery</p>
+                <p>
+                  Within Kano: {formatNaira(KANO_DELIVERY_KOBO)}, free on orders from{" "}
+                  {formatNaira(FREE_DELIVERY_THRESHOLD_KOBO)}
+                </p>
+                <p>Store pickup: free</p>
+                <p>Outside Kano: paid directly to the transport company</p>
+                <p data-free-delivery-note>
+                  {subtotalKobo >= FREE_DELIVERY_THRESHOLD_KOBO
+                    ? "This order qualifies for free delivery within Kano."
+                    : `Add ${formatNaira(FREE_DELIVERY_THRESHOLD_KOBO - subtotalKobo)} more for free delivery within Kano.`}
+                </p>
+                <p>Your delivery choice and final total are confirmed at checkout.</p>
+              </div>
               {checkoutEnabled ? (
                 <Button asChild className="mt-6 w-full rounded-full">
                   <Link to="/checkout">Continue to checkout</Link>

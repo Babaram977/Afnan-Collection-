@@ -32,6 +32,14 @@ function Checkout() {
   const [accountEmail, setAccountEmail] = useState(false);
   useEffect(() => {
     setKey(crypto.randomUUID());
+    // On a slow connection a customer can type before the page becomes interactive. Keep what
+    // they typed in the two controlled fields instead of resetting them to empty state.
+    const typed = (id: string) =>
+      (document.getElementById(id) as HTMLInputElement | null)?.value.trim() ?? "";
+    const typedEmail = typed("co-email");
+    const typedState = typed("co-state");
+    if (typedEmail) setEmail((current) => current || typedEmail);
+    if (typedState) setStateName((current) => current || typedState);
     Promise.all([
       apiCall<{ checkoutEnabled: boolean; paymentsEnabled: boolean }>("/health"),
       apiCall<Me>("/me"),
@@ -39,7 +47,8 @@ function Checkout() {
       .then(([h, m]) => {
         setEnabled(h.checkoutEnabled);
         setPayment(h.paymentsEnabled);
-        setEmail(m.email ?? "");
+        // An account email (legacy) wins; otherwise never clear what the customer typed.
+        setEmail((current) => m.email ?? current);
         setAccountEmail(Boolean(m.email));
       })
       .catch((e) => setError(e.message));
