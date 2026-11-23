@@ -47,8 +47,8 @@ export function ReceiptUpload({
           if (!response.ok) throw new Error(data.error ?? "Upload failed");
           setMessage(
             data.duplicate
-              ? "We already have this receipt. Our team will review it."
-              : "Receipt received. Our team will check the payment and confirm your order.",
+              ? "Your paid-order receipt is already submitted and awaiting verification."
+              : "Paid order submitted for verification. Our team will confirm the order after checking the bank credit.",
           );
           setFile(null);
           setReference("");
@@ -84,7 +84,7 @@ export function ReceiptUpload({
         transfer; it does not confirm payment.
       </p>
       <Button type="submit" disabled={busy || !file}>
-        {busy ? "Uploading…" : "Submit receipt"}
+        {busy ? "Submitting…" : "I have paid — submit order receipt"}
       </Button>
       {message && <p role="status">{message}</p>}
       {error && (
