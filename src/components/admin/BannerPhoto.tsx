@@ -19,6 +19,7 @@ export function BannerPhoto({
       <input
         id="banner-photo"
         type="file"
+        className="block w-full max-w-full text-sm"
         accept="image/jpeg,image/png,image/webp"
         onChange={async (e) => {
           const file = e.target.files?.[0];
