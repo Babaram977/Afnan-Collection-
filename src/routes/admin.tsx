@@ -3,6 +3,7 @@ import { AdminImage } from "@/components/admin/AdminImage";
 import { nairaToKobo } from "@/lib/images";
 import { ProductManager, InventoryManager } from "@/components/admin/ProductManager";
 import { OrderManager } from "@/components/admin/OrderManager";
+import { NotificationInbox } from "@/components/admin/NotificationInbox";
 import { PaymentReview } from "@/components/admin/PaymentReview";
 import { BusinessSettings } from "@/components/admin/BusinessSettings";
 import { AdminSecurity } from "@/components/admin/AdminSecurity";
@@ -381,6 +382,16 @@ function Admin() {
                   <AdminSecurity settings onVerified={() => void load()} />
                 </details>
               )}
+              <div className="flex justify-end">
+                <NotificationInbox
+                  onOpen={(t) => {
+                    setTab(t);
+                    setEdit({});
+                    setNotice("");
+                    window.scrollTo({ top: 0 });
+                  }}
+                />
+              </div>
               <AdminNav
                 tabs={tabs.filter((t) => me.role === "admin" || ["overview", "orders"].includes(t))}
                 current={tab}

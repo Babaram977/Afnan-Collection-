@@ -1,0 +1,222 @@
+name: Migrate Afnan production 0007
+
+# Owner-dispatched and production-only (owner approval 2026-11-22: apply migration 0007 for the
+# merged PR #41 release). Applies exactly one pending migration, 0007_fulfilment_options.sql, through
+# Wrangler's D1 ledger. It deploys no Worker and changes no environment, credential, Access policy,
+# DNS, checkout or payment setting.
+#
+# Safeguards mirror migrate-production-0006.yml: owner dispatch from main; exact-release CI must have
+# passed; only the approved migration files at the pinned release are packaged and checksum-verified;
+# the job that holds the Cloudflare token runs no application code; D1 identity is confirmed; a
+# Time Travel recovery bookmark is captured; ledger/schema agreement, integrity and foreign keys are
+# checked before and after; existing orders, order lines, inventory and history must be unchanged.
+#
+# One deliberate difference from 0006: 0006 also required a successful acceptance deploy of the
+# release. Acceptance deploys refuse to run while a migration is pending on the acceptance D1, and
+# applying 0007 to acceptance is not part of this owner approval, so that gate cannot be met. The
+# exact-release CI run applies migrations 0001-0007 to a fresh database in every test (integration,
+# checkout, order-selection and migration-sensitive suites), which is the evidence used instead.
+on:
+  workflow_dispatch:
+    inputs:
+      approval_reference:
+        description: Owner approval reference for production migration 0007
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+# Serialize with the existing production workflow; never migrate during a deploy.
+concurrency:
+  group: afnan-production-deploy
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  RELEASE: 8ed6e8a3ccf2ab03e9fe0d06bc48d6e7d611fd73
+  RELEASE_CI_RUN: "45042358968"
+  ACCOUNT: b4e142fe9da84ef204eecda2efe4a730
+  DATABASE: 73ddfc46-34ba-4733-841d-e4819af0b957
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require owner dispatch and passing exact-release CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVAL: ${{ inputs.approval_reference }}
+        run: |
+          test -n "$APPROVAL"
+          gh api "repos/$GITHUB_REPOSITORY/environments/afnan-production" > "$RUNNER_TEMP/environment.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_CI_RUN" > "$RUNNER_TEMP/ci.json"
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const read = name => JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/${name}.json`, 'utf8'));
+          const e = read('environment');
+          assert.equal(e.name.toLowerCase(), 'afnan-production');
+          const ci = read('ci');
+          assert.equal(ci.name, 'Validate Afnan');
+          assert.equal(ci.head_sha, process.env.RELEASE);
+          assert.equal(ci.head_branch, 'main');
+          assert.equal(ci.event, 'push');
+          assert.equal(ci.conclusion, 'success');
+          JS
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: 8ed6e8a3ccf2ab03e9fe0d06bc48d6e7d611fd73
+          persist-credentials: false
+          sparse-checkout: migrations
+
+      - name: Package only the approved migration sequence (no application execution)
+        run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE"
+          test "$(find migrations -type f | wc -l)" = 7
+          sha256sum -c - <<'SUMS'
+          7369cf4f682bb1e485fc29fa1b9f4dbd9699da035d55de0e9b656a78c08cb26f  migrations/0006_session_authentication_method.sql
+          9ca0074838f8ccffd089acb3c1b013ce0004148db5fe16bee3418393013affc7  migrations/0007_fulfilment_options.sql
+          SUMS
+          mkdir -p "$RUNNER_TEMP/migration-artifact"
+          cp -R migrations "$RUNNER_TEMP/migration-artifact/"
+          cd "$RUNNER_TEMP/migration-artifact"
+          sha256sum migrations/*.sql > MANIFEST.sha256
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: approved-production-migrations-0007
+          path: ${{ runner.temp }}/migration-artifact
+          retention-days: 1
+          if-no-files-found: error
+
+  migrate:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: afnan-production
+    steps:
+      # No checkout, application dependencies or application scripts in this job.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: approved-production-migrations-0007
+          path: ${{ runner.temp }}/migration-work
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Install pinned operator tooling without application code
+        run: |
+          mkdir -p "$RUNNER_TEMP/operator"
+          cd "$RUNNER_TEMP/operator"
+          npm install --no-save --ignore-scripts --no-audit --no-fund wrangler@4.160.0
+
+      - name: Verify identity and recovery, then apply 0007 through the Wrangler ledger once
+        working-directory: ${{ runner.temp }}/migration-work
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: b4e142fe9da84ef204eecda2efe4a730
+          WRANGLER_SEND_METRICS: 'false'
+          APPROVAL: ${{ inputs.approval_reference }}
+        run: |
+          umask 077
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::Existing afnan-production CLOUDFLARE_API_TOKEN is unavailable; configure it securely in GitHub, never chat.'; exit 1; }
+          sha256sum --quiet -c MANIFEST.sha256
+          echo '9ca0074838f8ccffd089acb3c1b013ce0004148db5fe16bee3418393013affc7  migrations/0007_fulfilment_options.sql' | sha256sum -c -
+          cat > wrangler.jsonc <<'JSON'
+          {"name":"afnan-collection-production","account_id":"b4e142fe9da84ef204eecda2efe4a730","d1_databases":[{"binding":"DB","database_name":"afnan-collection-production","database_id":"73ddfc46-34ba-4733-841d-e4819af0b957","migrations_dir":"migrations"}]}
+          JSON
+          W="$RUNNER_TEMP/operator/node_modules/.bin/wrangler"
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${process.env.ACCOUNT}/d1/database/${process.env.DATABASE}`, {
+            headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` }
+          });
+          assert(response.ok, `D1 identity read failed: HTTP ${response.status}; check existing token's D1 permission on the fixed account`);
+          const body = await response.json(); assert.equal(body.success, true);
+          assert.equal(body.result.uuid, process.env.DATABASE);
+          assert.equal(body.result.name, 'afnan-collection-production');
+          JS
+          "$W" d1 time-travel info DB --config wrangler.jsonc --json > recovery.json
+          "$W" d1 migrations list DB --config wrangler.jsonc --remote > pending-before.txt
+          # Only schema, integrity, aggregates and order/line amounts are read. No customer contact
+          # details, addresses, tokens, password hashes or account rows are selected, and nothing
+          # read here is uploaded: the evidence is summarised and the work directory is deleted.
+          SQL="SELECT name FROM d1_migrations ORDER BY id; PRAGMA table_info(orders); PRAGMA table_info(order_items); PRAGMA quick_check; SELECT COUNT(*) AS violations FROM pragma_foreign_key_check; SELECT (SELECT COUNT(*) FROM products) AS products,(SELECT COUNT(*) FROM variants) AS variants,(SELECT COALESCE(SUM(stock),0) FROM variants) AS units,(SELECT COUNT(*) FROM orders) AS orders,(SELECT COUNT(*) FROM order_items) AS order_items,(SELECT COUNT(*) FROM staff) AS staff,(SELECT COUNT(*) FROM inventory_movements) AS inventory_history,(SELECT COUNT(*) FROM audit) AS audit,(SELECT COUNT(*) FROM payment_receipts) AS receipts; SELECT id,status,zone_id,delivery_kobo,total_kobo,payment_method,expires_at FROM orders ORDER BY id; SELECT order_id,variant_id,price_kobo,qty FROM order_items ORDER BY order_id,variant_id; SELECT id,stock,price_kobo,sale_price_kobo FROM variants ORDER BY id; SELECT id,name,state,fee_kobo,active FROM zones ORDER BY id;"
+          "$W" d1 execute DB --config wrangler.jsonc --remote --json --command "$SQL" > before.json
+          node --input-type=module <<'JS'
+          import fs from 'node:fs'; import assert from 'node:assert/strict';
+          const rows = JSON.parse(fs.readFileSync('before.json', 'utf8'));
+          assert(rows.every(r => r.success === true));
+          const expected = ['0001_commerce.sql','0002_admin_management.sql','0003_administrator_mfa.sql','0004_bank_transfer_reservation.sql','0005_payment_receipts.sql','0006_session_authentication_method.sql'];
+          const ledger = rows[0].results.map(r => r.name);
+          const already = ledger.includes('0007_fulfilment_options.sql');
+          assert.deepEqual(ledger, already ? [...expected, '0007_fulfilment_options.sql'] : expected);
+          const has = (i, name) => rows[i].results.some(c => c.name === name);
+          const present = [has(1, 'fulfilment_method'), has(1, 'carrier_paid_direct'), has(2, 'selections')];
+          assert(present.every(p => p === already), `Columns ${JSON.stringify(present)} and ledger (${already}) must agree; stop on partial/manual migration`);
+          assert.equal(rows[3].results[0].quick_check, 'ok');
+          assert.equal(rows[4].results[0].violations, 0);
+          const pending = fs.readFileSync('pending-before.txt', 'utf8');
+          if (already) assert(pending.includes('No migrations to apply'));
+          else {
+            assert(pending.includes('0007_fulfilment_options.sql'));
+            for (const name of expected) assert(!pending.includes(name), 'Earlier migration unexpectedly pending');
+          }
+          const internal = ['c3b0d60b-bbc3-4542-958a-f81b5f6e50fd','3c28076b-0e9f-4c76-97c5-e52d07aa2b8e','4dce8f67-efc6-472d-89ce-66396973e985'];
+          const clash = rows[9].results.filter(z => internal.includes(z.id));
+          // INSERT OR IGNORE must not silently keep a different pre-existing row under these ids.
+          if (!already) assert.equal(clash.length, 0, 'Internal zone ids already exist before 0007');
+          const recovery = JSON.parse(fs.readFileSync('recovery.json', 'utf8'));
+          assert.equal(typeof recovery.bookmark, 'string'); assert(recovery.bookmark.length > 0);
+          const a = rows[5].results[0];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Production migration 0007\n- Release: ${process.env.RELEASE}\n- D1: ${process.env.DATABASE} (identity verified)\n- Pre-action Time Travel bookmark: ${recovery.bookmark}\n- Before: ledger ${ledger.length} migrations; integrity ok; FK violations 0; products ${a.products}, variants ${a.variants}, units ${a.units}, orders ${a.orders}, order lines ${a.order_items}, receipts ${a.receipts}.\n`);
+          fs.writeFileSync('migration-needed', already ? 'no' : 'yes');
+          JS
+          if [ "$(cat migration-needed)" = yes ]; then
+            "$W" d1 migrations apply DB --config wrangler.jsonc --remote
+          else
+            echo 'Migration 0007 already recorded; no ALTER or ledger write repeated.'
+          fi
+          "$W" d1 migrations list DB --config wrangler.jsonc --remote > pending-after.txt
+          grep -q 'No migrations to apply' pending-after.txt
+          "$W" d1 execute DB --config wrangler.jsonc --remote --json --command "$SQL SELECT COUNT(*) AS changed FROM orders WHERE fulfilment_method<>'delivery' OR carrier_paid_direct<>0; SELECT COUNT(*) AS with_selections FROM order_items WHERE selections IS NOT NULL;" > after.json
+          node --input-type=module <<'JS'
+          import fs from 'node:fs'; import assert from 'node:assert/strict';
+          const read = n => JSON.parse(fs.readFileSync(n, 'utf8'));
+          const b = read('before.json'), a = read('after.json');
+          assert(a.every(r => r.success === true));
+          assert.deepEqual(a[0].results.map(r => r.name), ['0001_commerce.sql','0002_admin_management.sql','0003_administrator_mfa.sql','0004_bank_transfer_reservation.sql','0005_payment_receipts.sql','0006_session_authentication_method.sql','0007_fulfilment_options.sql']);
+          const col = (i, name) => a[i].results.find(c => c.name === name);
+          const fm = col(1, 'fulfilment_method'), cp = col(1, 'carrier_paid_direct'), sel = col(2, 'selections');
+          assert(fm && cp && sel, 'New columns present');
+          assert.equal(fm.type, 'TEXT'); assert.equal(fm.notnull, 1); assert.equal(fm.dflt_value, "'delivery'");
+          assert.equal(cp.type, 'INTEGER'); assert.equal(cp.notnull, 1); assert.equal(cp.dflt_value, '0');
+          assert.equal(sel.type, 'TEXT'); assert.equal(sel.notnull, 0); assert.equal(sel.dflt_value, null);
+          assert.equal(a[3].results[0].quick_check, 'ok'); assert.equal(a[4].results[0].violations, 0);
+          assert.deepEqual(a[5].results, b[5].results, 'Catalogue, inventory, order, staff and history aggregates unchanged');
+          assert.deepEqual(a[6].results, b[6].results, 'Existing orders (status, zone, delivery, total, payment, deadline) unchanged');
+          assert.deepEqual(a[7].results, b[7].results, 'Existing order lines unchanged');
+          assert.deepEqual(a[8].results, b[8].results, 'Variant stock and prices unchanged');
+          const internal = ['c3b0d60b-bbc3-4542-958a-f81b5f6e50fd','3c28076b-0e9f-4c76-97c5-e52d07aa2b8e','4dce8f67-efc6-472d-89ce-66396973e985'];
+          const zonesAfter = a[9].results;
+          assert.deepEqual(zonesAfter.filter(z => !internal.includes(z.id)), b[9].results.filter(z => !internal.includes(z.id)), 'Existing delivery zones unchanged');
+          const added = zonesAfter.filter(z => internal.includes(z.id));
+          assert.equal(added.length, 3); assert(added.every(z => z.active === 0 && z.fee_kobo === 0), 'Internal zones inactive and free');
+          if (fs.readFileSync('migration-needed', 'utf8') === 'yes') {
+            assert.equal(a[10].results[0].changed, 0, 'Existing orders default to delivery, not carrier-paid');
+            assert.equal(a[11].results[0].with_selections, 0, 'Existing order lines have no selections');
+          }
+          const s = a[5].results[0];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `- After: migration 0007 recorded; no migrations pending.\n- New columns: orders.fulfilment_method TEXT NOT NULL DEFAULT 'delivery'; orders.carrier_paid_direct INTEGER NOT NULL DEFAULT 0; order_items.selections TEXT NULL.\n- Integrity ok; FK violations 0. Unchanged: ${s.orders} orders, ${s.order_items} order lines, ${s.products} products, ${s.variants} variants, ${s.units} units, delivery zones; 3 internal zones added inactive.\n- No Worker, checkout, payment, Access, DNS, secret or account changes.\n`);
+          JS
+      - name: Remove ephemeral metadata (never upload database evidence)
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/migration-work"
