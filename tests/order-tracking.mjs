@@ -338,12 +338,20 @@ try {
   await page.getByRole("button", { name: "Add to cart", exact: true }).click();
   await page.locator("[data-added-to-cart]").waitFor();
   await page.goto(`${ORIGIN}/checkout`);
+  // Wait until checkout is interactive (the summary lists the restored cart) before typing:
+  // controlled fields filled before React hydrates are reset, which made a CI run time out.
+  await page.locator("aside", { hasText: "Test fixture romper" }).waitFor();
   await page.getByLabel("Full name", { exact: true }).fill("Browser Tracking Buyer");
   await page.getByLabel("Phone", { exact: true }).fill("08012345678");
   await page.getByLabel("Email", { exact: true }).fill("browser-tracking@example.com");
   await page.getByLabel("Street address", { exact: true }).fill("Fixture street 10");
   await page.getByLabel("City", { exact: true }).fill("Kano");
   await page.getByLabel("State", { exact: true }).fill("Kano");
+  eq(
+    await page.getByLabel("Email", { exact: true }).inputValue(),
+    "browser-tracking@example.com",
+    "Typed details kept",
+  );
   await page.getByRole("button", { name: "Prepare order", exact: true }).click();
   await page.getByRole("heading", { name: "Order prepared" }).waitFor({ timeout: 10000 });
   const wa = await page.locator("[data-whatsapp-receipt]").first().getAttribute("href");
@@ -400,6 +408,49 @@ try {
   await otherDevice.getByText("We could not find this order on this device").waitFor();
   ok(true, "Another browser cannot open the order page");
   await otherDevice.close();
+
+  // 9b. Slow connection (CI failure 2026-11-23): the customer types before checkout becomes
+  // interactive. Their email and state must survive hydration and the account check, and the
+  // order must go through.
+  await db.prepare("DELETE FROM rate_limits").run();
+  const slowContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    extraHTTPHeaders: { "CF-Connecting-IP": "198.51.100.142" },
+  });
+  const slow = await slowContext.newPage();
+  await slow.goto(`${ORIGIN}/shop`);
+  await slow
+    .getByRole("link", { name: /Test fixture romper/ })
+    .first()
+    .click();
+  await slow.getByRole("button", { name: "Add to cart", exact: true }).click();
+  await slow.locator("[data-added-to-cart]").waitFor();
+  await slow.route(/\/assets\/checkout-[^/]+\.js$/, async (route) => {
+    await new Promise((r) => setTimeout(r, 3000));
+    await route.continue();
+  });
+  await slow.goto(`${ORIGIN}/checkout`);
+  // No waiting for the page to become interactive: type straight away, as a fast customer would.
+  await slow.getByLabel("Full name", { exact: true }).fill("Slow Network Buyer");
+  await slow.getByLabel("Phone", { exact: true }).fill("08012345678");
+  await slow.getByLabel("Email", { exact: true }).fill("slow-network@example.com");
+  await slow.getByLabel("Street address", { exact: true }).fill("Fixture street 11");
+  await slow.getByLabel("City", { exact: true }).fill("Kano");
+  await slow.getByLabel("State", { exact: true }).fill("Kano");
+  await slow.locator("aside", { hasText: "Test fixture romper" }).waitFor();
+  await slow.waitForLoadState("networkidle");
+  eq(
+    [
+      await slow.getByLabel("Email", { exact: true }).inputValue(),
+      await slow.getByLabel("State", { exact: true }).inputValue(),
+    ],
+    ["slow-network@example.com", "Kano"],
+    "Early typing kept after the page becomes interactive",
+  );
+  await slow.getByRole("button", { name: "Prepare order", exact: true }).click();
+  await slow.getByRole("heading", { name: "Order prepared" }).waitFor({ timeout: 10000 });
+  ok(true, "Order placed on a slow connection");
+  await slowContext.close();
 
   // 10. Admin inbox in the browser.
   await db.prepare("DELETE FROM rate_limits").run();
