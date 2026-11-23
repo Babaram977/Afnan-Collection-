@@ -18,6 +18,7 @@ export function ReceiptUpload({
   onUploaded?: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
+  const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -36,7 +37,10 @@ export function ReceiptUpload({
           const response = await fetch(`/api/orders/${orderId}/receipts`, {
             method: "POST",
             credentials: "same-origin",
-            headers: { "Content-Type": file.type || "application/octet-stream" },
+            headers: {
+              "Content-Type": file.type || "application/octet-stream",
+              ...(reference.trim() ? { "X-Transfer-Reference": reference.trim() } : {}),
+            },
             body: file,
           });
           const data = (await response.json()) as { error?: string; duplicate?: boolean };
@@ -47,6 +51,7 @@ export function ReceiptUpload({
               : "Receipt received. Our team will check the payment and confirm your order.",
           );
           setFile(null);
+          setReference("");
           onUploaded?.();
         } catch (err) {
           setError((err as Error).message);
@@ -64,6 +69,20 @@ export function ReceiptUpload({
         onChange={(e) => setFile(e.currentTarget.files?.[0] ?? null)}
       />
       <p className="text-xs text-muted-foreground">JPEG, PNG, WebP or PDF, up to 5 MB.</p>
+      <Label htmlFor={`${inputId}-reference`}>Transfer reference (optional)</Label>
+      <input
+        id={`${inputId}-reference`}
+        value={reference}
+        onChange={(e) => setReference(e.target.value)}
+        maxLength={120}
+        autoComplete="off"
+        className="min-h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+        aria-describedby={`${inputId}-reference-hint`}
+      />
+      <p id={`${inputId}-reference-hint`} className="text-xs text-muted-foreground">
+        The reference or session ID shown in your bank app, if you have it. It helps us find your
+        transfer; it does not confirm payment.
+      </p>
       <Button type="submit" disabled={busy || !file}>
         {busy ? "Uploading…" : "Submit receipt"}
       </Button>

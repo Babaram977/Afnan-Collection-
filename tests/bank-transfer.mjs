@@ -363,7 +363,8 @@ try {
         .click();
       await page.getByRole("button", { name: "Add to cart", exact: true }).click();
       await page.goto(`${ORIGIN}/checkout`);
-      await page.getByLabel("Delivery area").selectOption(ui.zoneId);
+      // PR #41 checkout: delivery is the default fulfilment method; the server prices it from the state.
+      await page.getByLabel("State", { exact: true }).fill("Kano");
       await page.getByLabel("Full name", { exact: true }).fill("Browser fixture buyer");
       await page.getByLabel("Phone", { exact: true }).fill("08012345678");
       await page.getByLabel("Email", { exact: true }).fill(`bank-${width}@example.com`);
@@ -385,9 +386,9 @@ try {
       check(!/30 minutes/.test(main), `No Paystack 30-minute copy at ${width}`);
       check(/Order reference: AC-\d{8}-\d{4}/.test(main), `Short reference shown at ${width}`);
       const summary = await page.locator("aside").innerText();
-      const confirmTotal = main.match(/Total: (₦[\d,]+)/)?.[1];
+      const confirmTotal = main.match(/Total payable to Afnan: (₦[\d,]+)/)?.[1];
       check(
-        Boolean(confirmTotal) && summary.includes(`Order total: ${confirmTotal}`),
+        Boolean(confirmTotal) && summary.includes(`Amount payable to Afnan: ${confirmTotal}`),
         `Summary total matches order total at ${width}: ${confirmTotal} / ${summary.replace(/\n/g, " | ")}`,
       );
       check(!/Subtotal: ₦0\b/.test(summary), `Summary not built from empty cart at ${width}`);

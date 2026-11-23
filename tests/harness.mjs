@@ -3,6 +3,38 @@ import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 export const ORIGIN = "http://localhost:8787";
 export const AUTH_SECRET = "local-test-only-secret-with-at-least-32-characters";
+// Every migration, in order. A test may start from an older schema (options.migrations) and then
+// upgrade with applyMigrations(), to prove a migration against data written by the previous release.
+export const MIGRATIONS = [
+  "0001_commerce.sql",
+  "0002_admin_management.sql",
+  "0003_administrator_mfa.sql",
+  "0004_bank_transfer_reservation.sql",
+  "0005_payment_receipts.sql",
+  "0006_session_authentication_method.sql",
+  "0007_fulfilment_options.sql",
+  "0008_order_tracking_notifications.sql",
+];
+export async function applyMigrations(db, files) {
+  let sql = "";
+  for (const file of files) sql += (await readFile(`migrations/${file}`, "utf8")) + "\n";
+  sql = sql.replace(/--[^\n]*/g, "");
+  const statements = [];
+  let statement = "";
+  let trigger = false;
+  for (const raw of sql.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (!statement) trigger = line.startsWith("CREATE TRIGGER");
+    statement += " " + line;
+    if ((trigger && line === "END;") || (!trigger && line.endsWith(";"))) {
+      statements.push(statement);
+      statement = "";
+      trigger = false;
+    }
+  }
+  for (const statement of statements) await db.prepare(statement.trim()).run();
+}
 export async function createTestApp(options = {}) {
   const mf = new Miniflare(
     convertV4MiniflareOptions({
@@ -37,34 +69,7 @@ export async function createTestApp(options = {}) {
   );
   await mf.ready;
   const db = await mf.getD1Database("DB");
-  const sql = (
-    (await readFile("migrations/0001_commerce.sql", "utf8")) +
-    "\n" +
-    (await readFile("migrations/0002_admin_management.sql", "utf8")) +
-    "\n" +
-    (await readFile("migrations/0003_administrator_mfa.sql", "utf8")) +
-    "\n" +
-    (await readFile("migrations/0004_bank_transfer_reservation.sql", "utf8")) +
-    "\n" +
-    (await readFile("migrations/0005_payment_receipts.sql", "utf8")) +
-    "\n" +
-    (await readFile("migrations/0006_session_authentication_method.sql", "utf8"))
-  ).replace(/--[^\n]*/g, "");
-  const statements = [];
-  let statement = "";
-  let trigger = false;
-  for (const raw of sql.split("\n")) {
-    const line = raw.trim();
-    if (!line) continue;
-    if (!statement) trigger = line.startsWith("CREATE TRIGGER");
-    statement += " " + line;
-    if ((trigger && line === "END;") || (!trigger && line.endsWith(";"))) {
-      statements.push(statement);
-      statement = "";
-      trigger = false;
-    }
-  }
-  for (const statement of statements) await db.prepare(statement.trim()).run();
+  await applyMigrations(db, options.migrations ?? MIGRATIONS);
   for (const statement of (await readFile("tests/fixtures.sql", "utf8"))
     .split(";")
     .filter((s) => s.trim()))

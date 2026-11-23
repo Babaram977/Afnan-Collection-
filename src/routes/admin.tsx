@@ -8,6 +8,7 @@ import { AdminSecurity } from "@/components/admin/AdminSecurity";
 import { PasswordSignIn, SetupPassword, SignOutButton } from "@/components/admin/PasswordAuth";
 import { AdminNav } from "@/components/admin/AdminShell";
 import { OverviewPanel } from "@/components/admin/OverviewPanel";
+import { NotificationInbox } from "@/components/admin/NotificationInbox";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { SignIn } from "@/components/site/SignIn";
@@ -313,6 +314,16 @@ function Admin() {
                   <AdminSecurity settings onVerified={() => void load()} />
                 </details>
               )}
+              <div className="flex justify-end">
+                <NotificationInbox
+                  onOpen={(t) => {
+                    setTab(t);
+                    setEdit({});
+                    setNotice("");
+                    window.scrollTo({ top: 0 });
+                  }}
+                />
+              </div>
               <AdminNav
                 tabs={tabs.filter((t) => me.role === "admin" || ["overview", "orders"].includes(t))}
                 current={tab}
