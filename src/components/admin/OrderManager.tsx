@@ -104,63 +104,66 @@ export function OrderManager() {
                 {detail?.id === o.id ? "Hide order details" : "View purchased items and delivery"}
               </Button>
               {detail?.id === o.id && (
-        <section className="space-y-4 border-t pt-4">
-          <h3 className="break-all text-base font-medium">Order {detail.reference ?? detail.id}</h3>
-          {detail.reference && (
-            <p className="break-all text-xs text-muted-foreground">Internal ID: {detail.id}</p>
-          )}
-          <p>Status: {detail.status}</p>
-          <p>
-            {customer.name} · {customer.phone} · {customer.email}
-          </p>
-          <address className="not-italic">
-            {address.street}, {address.city}, {address.state}
-          </address>
-          <ul>
-            {detail.items?.map((i) => (
-              <li key={i.sku} data-order-item>
-                {i.qty} × {i.name} ({i.sku}) — {formatNaira(i.price_kobo * i.qty)}
-                <SelectionList selections={parseSelections(i.selections)} />
-              </li>
-            ))}
-          </ul>
-          <p className="font-bold">Total: {formatNaira(detail.total_kobo)}</p>
-          {next[detail.status] && (
-            <Button
-              disabled={busy}
-              onClick={async () => {
-                const transition = next[detail.status];
-                if (!transition) return;
-                if (
-                  transition.status === "cancelled" &&
-                  !window.confirm("Cancel this unpaid order and release reserved stock?")
-                )
-                  return;
-                setBusy(true);
-                try {
-                  await apiCall(`/admin/orders/${detail.id}`, {
-                    method: "PATCH",
-                    body: JSON.stringify({ status: transition.status }),
-                  });
-                  setDetail(await apiCall(`/admin/orders/${detail.id}`));
-                  await load();
-                } catch (e) {
-                  setError((e as Error).message);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {next[detail.status]?.label}
-            </Button>
-          )}
-        </section>
-      )}
+                <section className="space-y-4 border-t pt-4">
+                  <h3 className="break-all text-base font-medium">
+                    Order {detail.reference ?? detail.id}
+                  </h3>
+                  {detail.reference && (
+                    <p className="break-all text-xs text-muted-foreground">
+                      Internal ID: {detail.id}
+                    </p>
+                  )}
+                  <p>Status: {detail.status}</p>
+                  <p>
+                    {customer.name} · {customer.phone} · {customer.email}
+                  </p>
+                  <address className="not-italic">
+                    {address.street}, {address.city}, {address.state}
+                  </address>
+                  <ul>
+                    {detail.items?.map((i) => (
+                      <li key={i.sku} data-order-item>
+                        {i.qty} × {i.name} ({i.sku}) — {formatNaira(i.price_kobo * i.qty)}
+                        <SelectionList selections={parseSelections(i.selections)} />
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="font-bold">Total: {formatNaira(detail.total_kobo)}</p>
+                  {next[detail.status] && (
+                    <Button
+                      disabled={busy}
+                      onClick={async () => {
+                        const transition = next[detail.status];
+                        if (!transition) return;
+                        if (
+                          transition.status === "cancelled" &&
+                          !window.confirm("Cancel this unpaid order and release reserved stock?")
+                        )
+                          return;
+                        setBusy(true);
+                        try {
+                          await apiCall(`/admin/orders/${detail.id}`, {
+                            method: "PATCH",
+                            body: JSON.stringify({ status: transition.status }),
+                          });
+                          setDetail(await apiCall(`/admin/orders/${detail.id}`));
+                          await load();
+                        } catch (e) {
+                          setError((e as Error).message);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      {next[detail.status]?.label}
+                    </Button>
+                  )}
+                </section>
+              )}
             </li>
           ))}
       </ul>
       {!orders.length && <p>No orders yet.</p>}
-
     </section>
   );
 }

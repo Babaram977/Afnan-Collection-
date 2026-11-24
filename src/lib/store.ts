@@ -47,6 +47,8 @@ export interface Me {
   userId: string | null;
   email: string | null;
   role: string | null;
+  /** True for any staff account, even without its admin proof on this request. */
+  staff?: boolean;
   adminAuth?: "password" | "webauthn";
 }
 export interface Zone {

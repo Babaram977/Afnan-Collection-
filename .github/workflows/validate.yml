@@ -87,6 +87,7 @@ jobs:
       - run: bun run test:admin-categories-banners
       - run: bun run test:cart-flow
       - run: bun run test:shopping
+      - run: bun run test:checkout-staff-email
       - uses: actions/upload-artifact@v4
         if: always()
         with:

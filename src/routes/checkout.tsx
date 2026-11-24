@@ -49,7 +49,7 @@ function Checkout() {
         setPayment(h.paymentsEnabled);
         // A staff member may shop while signed into the admin dashboard in this browser.
         // Never prefill the admin's identity into a customer's checkout.
-        const customerEmail = m.role === "admin" || m.role === "staff" ? null : m.email;
+        const customerEmail = m.staff || m.role ? null : m.email;
         setEmail((current) => current || customerEmail || "");
         setAccountEmail(Boolean(customerEmail));
       })
