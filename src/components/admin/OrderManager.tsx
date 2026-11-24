@@ -90,20 +90,21 @@ export function OrderManager() {
                 variant="outline"
                 onClick={async () => {
                   try {
-                    setDetail(await apiCall(`/admin/orders/${o.id}`));
+                    if (detail?.id === o.id) {
+                      setDetail(null);
+                    } else {
+                      setDetail(await apiCall(`/admin/orders/${o.id}`));
+                    }
                   } catch (e) {
                     setError((e as Error).message);
                   }
                 }}
+                aria-expanded={detail?.id === o.id}
               >
-                View purchased items and delivery
+                {detail?.id === o.id ? "Hide order details" : "View purchased items and delivery"}
               </Button>
-            </li>
-          ))}
-      </ul>
-      {!orders.length && <p>No orders yet.</p>}
-      {detail && (
-        <section className="space-y-4 rounded-xl border bg-card p-4 md:p-6">
+              {detail?.id === o.id && (
+        <section className="space-y-4 border-t pt-4">
           <h3 className="break-all text-base font-medium">Order {detail.reference ?? detail.id}</h3>
           {detail.reference && (
             <p className="break-all text-xs text-muted-foreground">Internal ID: {detail.id}</p>
@@ -155,6 +156,11 @@ export function OrderManager() {
           )}
         </section>
       )}
+            </li>
+          ))}
+      </ul>
+      {!orders.length && <p>No orders yet.</p>}
+
     </section>
   );
 }
