@@ -76,7 +76,8 @@ export function OrderManager() {
       </div>
       <ul className="grid gap-4 md:grid-cols-2">
         {orders
-          .filter((o) => !filter || o.status === filter)
+          // The open order stays in view after its status changes past the filter.
+          .filter((o) => !filter || o.status === filter || o.id === detail?.id)
           .map((o) => (
             <li key={o.id} className="space-y-3 rounded-xl border bg-card p-4">
               <h3 className="break-all font-semibold">Order {o.reference ?? o.id}</h3>
