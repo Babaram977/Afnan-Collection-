@@ -408,7 +408,13 @@ async function createOrder(request: Request, env: CommerceEnv, a: Actor) {
   if (env.CHECKOUT_ENABLED !== "true") fail(503, "Ordering is not enabled");
   if (!a.owner) fail(400, "Refresh the checkout to start a session");
   const input = orderInput.parse(await body(request));
-  if (a.email && a.email !== input.customer.email.toLowerCase())
+  // A customer account orders under its own email. A staff account (shopping in the browser
+  // where it is signed into the dashboard) is placing a customer's order: use the customer's.
+  if (
+    a.email &&
+    a.email !== input.customer.email.toLowerCase() &&
+    !(await env.DB.prepare("SELECT 1 FROM staff WHERE user_id=?").bind(a.userId).first())
+  )
     fail(400, "Use your account email");
   const requestHash = await hash(
     JSON.stringify({
@@ -723,6 +729,13 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       userId: a.userId,
       email: a.email,
       role: a.role,
+      // Any staff account, whether or not this request carries its admin proof. Checkout uses it
+      // never to prefill a staff member's email into a customer's order.
+      staff: a.userId
+        ? Boolean(
+            await env.DB.prepare("SELECT 1 FROM staff WHERE user_id=?").bind(a.userId).first(),
+          )
+        : false,
       adminAuth: passwordAdmin(env) ? "password" : "webauthn",
     });
   if (path === "/api/cart" && method === "GET")

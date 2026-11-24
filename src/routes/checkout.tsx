@@ -47,9 +47,11 @@ function Checkout() {
       .then(([h, m]) => {
         setEnabled(h.checkoutEnabled);
         setPayment(h.paymentsEnabled);
-        // An account email (legacy) wins; otherwise never clear what the customer typed.
-        setEmail((current) => m.email ?? current);
-        setAccountEmail(Boolean(m.email));
+        // A staff member may shop while signed into the admin dashboard in this browser.
+        // Never prefill the admin's identity into a customer's checkout.
+        const customerEmail = m.staff || m.role ? null : m.email;
+        setEmail((current) => current || customerEmail || "");
+        setAccountEmail(Boolean(customerEmail));
       })
       .catch((e) => setError(e.message));
   }, []);

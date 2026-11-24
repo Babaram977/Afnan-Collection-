@@ -12,7 +12,7 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     # Allow required browser installation to finish; two earlier 20-minute jobs timed out.
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,7 +41,17 @@ jobs:
       # Fails on any other advisory, an expired or stale exception, a published patch, or excepted
       # package code in the built Worker/browser assets.
       - run: bun run security:audit
-      - run: bunx playwright install --with-deps chromium webkit
+      # The system-dependency download has stalled until the job timeout (runs 45310546427,
+      # 45315863649). Bound each attempt and retry rather than burn the whole job.
+      - name: Install Playwright browsers (bounded, retried)
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            timeout 420 bunx playwright install --with-deps chromium webkit && exit 0
+            echo "::warning::Playwright install attempt $attempt did not finish; retrying"
+            sleep 15
+          done
+          exit 1
       - run: bun run test:mobile-header
       - name: Mobile header in WebKit
         run: bun run test:mobile-header
@@ -87,6 +97,7 @@ jobs:
       - run: bun run test:admin-categories-banners
       - run: bun run test:cart-flow
       - run: bun run test:shopping
+      - run: bun run test:checkout-staff-email
       - uses: actions/upload-artifact@v4
         if: always()
         with:
