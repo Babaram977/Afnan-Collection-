@@ -21,7 +21,23 @@ interface StaffOrder {
     price_kobo: number;
     selections?: string | null;
   }[];
+  /** Recorded bank-transfer decision; the verifier is joined from the approving account. */
+  bankTransferApproval?: {
+    amount_kobo: number;
+    bank_reference: string;
+    outcome: "paid" | "late_review";
+    approved_by: string;
+    approved_at: number;
+    verifier_name: string | null;
+    verifier_email: string | null;
+  } | null;
 }
+const nigeriaTime = (seconds: number) =>
+  new Date(seconds * 1000).toLocaleString("en-NG", {
+    timeZone: "Africa/Lagos",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 export function OrderManager() {
   const [orders, setOrders] = useState<StaffOrder[]>([]);
   const [detail, setDetail] = useState<StaffOrder | null>(null);
@@ -130,6 +146,42 @@ export function OrderManager() {
                     ))}
                   </ul>
                   <p className="font-bold">Total: {formatNaira(detail.total_kobo)}</p>
+                  {detail.bankTransferApproval && (
+                    <section
+                      aria-label="Payment verification"
+                      data-payment-verification
+                      className="space-y-1 rounded-lg border p-3 text-sm"
+                    >
+                      <h4 className="font-semibold">
+                        {detail.bankTransferApproval.outcome === "paid"
+                          ? "Payment verification"
+                          : "Late payment recorded for review"}
+                      </h4>
+                      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                        <dt>Verified by</dt>
+                        <dd data-verified-by className="break-all">
+                          {detail.bankTransferApproval.verifier_name ||
+                            detail.bankTransferApproval.verifier_email ||
+                            detail.bankTransferApproval.approved_by}
+                        </dd>
+                        <dt>Staff account</dt>
+                        <dd data-staff-account className="break-all">
+                          {detail.bankTransferApproval.verifier_email ??
+                            detail.bankTransferApproval.approved_by}
+                        </dd>
+                        <dt>Amount verified</dt>
+                        <dd>{formatNaira(detail.bankTransferApproval.amount_kobo)}</dd>
+                        <dt>Bank transaction reference</dt>
+                        <dd data-bank-reference className="break-all">
+                          {detail.bankTransferApproval.bank_reference}
+                        </dd>
+                        <dt>Verified at</dt>
+                        <dd data-verified-at>
+                          {nigeriaTime(detail.bankTransferApproval.approved_at)} (Nigeria)
+                        </dd>
+                      </dl>
+                    </section>
+                  )}
                   {next[detail.status] && (
                     <Button
                       disabled={busy}

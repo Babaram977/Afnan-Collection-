@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { apiCall } from "@/lib/store";
+import { apiCall, type Me } from "@/lib/store";
 import { formatNaira } from "@/lib/catalog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +69,12 @@ export function PaymentReview() {
   const [orders, setOrders] = useState<ReviewOrder[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [me, setMe] = useState<Me | null>(null);
+  useEffect(() => {
+    apiCall<Me>("/me")
+      .then(setMe)
+      .catch(() => setMe(null));
+  }, []);
   const load = useCallback(async () => {
     try {
       setOrders(await apiCall<ReviewOrder[]>("/admin/payment-review"));
@@ -109,6 +115,7 @@ export function PaymentReview() {
                 <ReviewCard
                   key={o.id}
                   order={o}
+                  me={me}
                   badge={section.badge}
                   onDone={async (message) => {
                     setNotice(message);
@@ -128,11 +135,13 @@ export function PaymentReview() {
 
 function ReviewCard({
   order,
+  me,
   badge,
   onDone,
   onError,
 }: {
   order: ReviewOrder;
+  me: Me | null;
   badge: string;
   onDone: (message: string) => Promise<void>;
   onError: (message: string) => void;
@@ -145,6 +154,12 @@ function ReviewCard({
   const [confirmed, setConfirmed] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  // Approval problems are shown beside the form; the inputs are kept so staff can correct them.
+  const [approvalError, setApprovalError] = useState<{
+    field: "amount" | "reference" | "form";
+    message: string;
+  } | null>(null);
+  const verifier = me?.name || me?.email || "";
   // Server state decides; the clock check only covers a page left open past the deadline.
   const late =
     order.queue_state !== "active_receipt" && order.queue_state !== "active_awaiting"
@@ -217,9 +232,26 @@ function ReviewCard({
       {!order.decision && (
         <form
           className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            void run(async () => {
+            const kobo = Math.round(Number(amount) * 100);
+            if (!Number.isFinite(kobo) || kobo !== order.total_kobo) {
+              setApprovalError({
+                field: "amount",
+                message: `Enter the exact amount credited. This order's total is ${formatNaira(order.total_kobo)}.`,
+              });
+              return;
+            }
+            if (!bankReference.trim()) {
+              setApprovalError({
+                field: "reference",
+                message: "Enter the bank's transaction reference for this credit.",
+              });
+              return;
+            }
+            setApprovalError(null);
+            setBusy(true);
+            try {
               const result = await apiCall<{ outcome: string }>(
                 `/admin/orders/${order.id}/bank-transfer-approval`,
                 {
@@ -232,10 +264,24 @@ function ReviewCard({
                   }),
                 },
               );
-              return result.outcome === "paid"
-                ? `Order ${label} marked paid.`
-                : `Order ${label}: payment after the deadline recorded for manual review. The order was not reactivated and no stock was reserved.`;
-            });
+              await onDone(
+                result.outcome === "paid"
+                  ? `Order ${label} marked paid.`
+                  : `Order ${label}: payment after the deadline recorded for manual review. The order was not reactivated and no stock was reserved.`,
+              );
+            } catch (err) {
+              const message = (err as Error).message;
+              setApprovalError({
+                field: /amount/i.test(message)
+                  ? "amount"
+                  : /reference|staff name/i.test(message)
+                    ? "reference"
+                    : "form",
+                message,
+              });
+            } finally {
+              setBusy(false);
+            }
           }}
         >
           <h5 className="font-semibold sm:col-span-2">
@@ -249,7 +295,21 @@ function ReviewCard({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               required
+              aria-invalid={approvalError?.field === "amount"}
+              aria-describedby={
+                approvalError?.field === "amount" ? `approval-error-${order.id}` : undefined
+              }
             />
+            {approvalError?.field === "amount" && (
+              <p
+                id={`approval-error-${order.id}`}
+                role="alert"
+                className="mt-1 text-sm text-destructive"
+                data-approval-error
+              >
+                {approvalError.message}
+              </p>
+            )}
           </div>
           <div>
             <Label htmlFor={`bankref-${order.id}`}>Bank transaction reference</Label>
@@ -259,7 +319,34 @@ function ReviewCard({
               onChange={(e) => setBankReference(e.target.value)}
               required
               maxLength={120}
+              aria-invalid={approvalError?.field === "reference"}
+              aria-describedby={`bankref-hint-${order.id}${approvalError?.field === "reference" ? ` approval-error-${order.id}` : ""}`}
             />
+            <p id={`bankref-hint-${order.id}`} className="mt-1 text-xs text-muted-foreground">
+              The transaction reference shown for this credit in Moniepoint — not a name.
+            </p>
+            {approvalError?.field === "reference" && (
+              <p
+                id={`approval-error-${order.id}`}
+                role="alert"
+                className="mt-1 text-sm text-destructive"
+                data-approval-error
+              >
+                {approvalError.message}
+              </p>
+            )}
+          </div>
+          <div className="sm:col-span-2 text-sm">
+            <span className="text-muted-foreground">Verified by: </span>
+            <span data-verifier className="break-all">
+              {verifier
+                ? `${verifier}${me?.name && me.email ? ` (${me.email})` : ""}`
+                : "your signed-in staff account"}
+            </span>
+            <span className="text-muted-foreground">
+              {" "}
+              — recorded automatically from your sign-in.
+            </span>
           </div>
           {submitted.length > 1 && (
             <div className="sm:col-span-2">
@@ -287,6 +374,11 @@ function ReviewCard({
             />
             I have confirmed this exact amount was credited to the Moniepoint account.
           </label>
+          {approvalError?.field === "form" && (
+            <p role="alert" className="text-sm text-destructive sm:col-span-2" data-approval-error>
+              {approvalError.message}
+            </p>
+          )}
           <Button type="submit" disabled={busy || !confirmed} className="sm:col-span-2">
             {late ? "Record late payment for review" : "Approve payment"}
           </Button>

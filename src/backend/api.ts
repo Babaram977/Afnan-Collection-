@@ -736,6 +736,14 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
             await env.DB.prepare("SELECT 1 FROM staff WHERE user_id=?").bind(a.userId).first(),
           )
         : false,
+      // The signed-in staff account's stored display name, shown read-only as "Verified by".
+      name: a.role
+        ? ((
+            await env.DB.prepare("SELECT name FROM user WHERE id=?")
+              .bind(a.userId)
+              .first<{ name: string | null }>()
+          )?.name ?? null)
+        : null,
       adminAuth: passwordAdmin(env) ? "password" : "webauthn",
     });
   if (path === "/api/cart" && method === "GET")
@@ -973,7 +981,7 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
         items: (await env.DB.prepare("SELECT * FROM order_items WHERE order_id=?").bind(id).all())
           .results,
         bankTransferApproval: await env.DB.prepare(
-          "SELECT amount_kobo,bank_reference,outcome,approved_by,approved_at FROM bank_transfer_approvals WHERE order_id=?",
+          "SELECT a.amount_kobo,a.bank_reference,a.outcome,a.approved_by,a.approved_at,u.name AS verifier_name,u.email AS verifier_email FROM bank_transfer_approvals a LEFT JOIN user u ON u.id=a.approved_by WHERE a.order_id=?",
         )
           .bind(id)
           .first(),
@@ -1128,6 +1136,17 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
       if (order.payment_method !== "bank_transfer") fail(409, "Not a bank-transfer order");
       if (input.amountKobo !== order.total_kobo)
         fail(409, "Credited amount does not equal the order total; resolve manually");
+      // The reference identifies the bank credit; who approved is recorded separately from the
+      // session. A staff member's own name or email is never a bank transaction reference.
+      const approver = await env.DB.prepare("SELECT name,email FROM user WHERE id=?")
+        .bind(a.userId)
+        .first<{ name: string | null; email: string | null }>();
+      const ref = input.bankReference.trim().toLowerCase();
+      if ([approver?.name, approver?.email].some((v) => v && v.trim().toLowerCase() === ref))
+        fail(
+          400,
+          "Enter the bank's transaction reference for this credit, not a staff name. Who approved is recorded automatically.",
+        );
       if (input.receiptId) {
         const receipt = await env.DB.prepare(
           "SELECT status FROM payment_receipts WHERE id=? AND order_id=?",
