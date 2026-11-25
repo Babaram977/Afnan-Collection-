@@ -65,7 +65,7 @@ jobs:
           assert.equal(run.head_branch,'main');
           assert.equal(run.event,'workflow_dispatch','Acceptance must be an owner-dispatched release');
           assert.match(run.name,/^Acceptance deploy [0-9a-f]{40} \(manual\) by /,'Unexpected acceptance run name');
-          assert(run.path?.includes('/.github/workflows/deploy-acceptance.yml@'),'Wrong workflow: only acceptance deploy is trusted');
+          assert(run.path?.includes('.github/workflows/deploy-acceptance.yml@'),'Wrong workflow: only acceptance deploy is trusted');
           JS
           fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
