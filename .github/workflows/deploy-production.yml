@@ -58,6 +58,14 @@ on:
           - unverified
           - verified
         default: unverified
+      customer_accounts:
+        description: "Optional verified customer accounts, only after migration 0009 and secret preflight"
+        required: true
+        type: choice
+        options:
+          - disabled
+          - enabled
+        default: disabled
 
 run-name: "PRODUCTION deploy ${{ inputs.commit || github.event.workflow_run.display_title }} (${{ github.event_name == 'workflow_run' && 'automatic' || 'manual' }}) by ${{ github.actor }}"
 
@@ -81,6 +89,7 @@ env:
   COMMIT_SHA: ${{ inputs.commit }}
   CHECKOUT_MODE: ${{ inputs.checkout || vars.AFNAN_PRODUCTION_CHECKOUT || 'disabled' }}
   SENDER_MODE: ${{ inputs.email_sender || vars.AFNAN_PRODUCTION_EMAIL_SENDER || 'unverified' }}
+  CUSTOMER_ACCOUNTS_MODE: ${{ inputs.customer_accounts || vars.AFNAN_PRODUCTION_CUSTOMER_ACCOUNTS || 'disabled' }}
   DEPLOY_REASON: ${{ inputs.reason || format('automatic after {0}', github.event.workflow_run.display_title) }}
   WRANGLER_VERSION: "4.160.0"
   NODE_VERSION: "24"
@@ -118,9 +127,12 @@ jobs:
         env:
           CHECKOUT: ${{ env.CHECKOUT_MODE }}
           SENDER: ${{ env.SENDER_MODE }}
+          CUSTOMER_ACCOUNTS: ${{ env.CUSTOMER_ACCOUNTS_MODE }}
         run: |
           case "$CHECKOUT" in disabled|enabled) ;; *) echo "::error::checkout must be 'disabled' or 'enabled'."; exit 1 ;; esac
           case "$SENDER" in unverified|verified) ;; *) echo "::error::email_sender must be 'unverified' or 'verified'."; exit 1 ;; esac
+          case "$CUSTOMER_ACCOUNTS" in disabled|enabled) ;; *) echo "::error::customer_accounts must be enabled|disabled"; exit 1 ;; esac
+          if [ "$CUSTOMER_ACCOUNTS" = enabled ] && { [ "$CHECKOUT" != enabled ] || [ "$SENDER" != verified ]; }; then echo "::error::Customer accounts require enabled checkout and verified sender"; exit 1; fi
           echo "- Checkout: **$CHECKOUT**; sender: **$SENDER**; card payments: disabled" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate commit input
@@ -329,7 +341,8 @@ jobs:
               "PAYMENT_MODE": "disabled",
               "EMAIL_FROM": "noreply@afnancollectionkn.com",
               "ADMIN_AUTH_MODE": "password",
-              "EMAIL_SENDER_VERIFIED": "false"
+              "EMAIL_SENDER_VERIFIED": "false",
+              "CUSTOMER_ACCOUNT_ENABLED": "false"
             },
             "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-production", "database_id": "73ddfc46-34ba-4733-841d-e4819af0b957", "migrations_dir": "artifact/migrations" }],
             "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-production" }, { "binding": "RECEIPTS", "bucket_name": "afnan-payment-receipts-production" }]
@@ -339,7 +352,9 @@ jobs:
           # workers.dev stays off and routes must be exactly the approved custom domains.
           case "$CHECKOUT" in enabled) co=true ;; disabled) co=false ;; *) exit 1 ;; esac
           case "$SENDER" in verified) sv=true ;; unverified) sv=false ;; *) exit 1 ;; esac
-          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];const approved=JSON.stringify([{pattern:"afnancollectionkn.com",custom_domain:true},{pattern:"www.afnancollectionkn.com",custom_domain:true}]);if(c.vars.PAYMENT_MODE!=="disabled"||c.vars.ADMIN_AUTH_MODE!=="password"||c.workers_dev!==false||JSON.stringify(c.routes)!==approved)process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$co" "$sv"
+          case "$CUSTOMER_ACCOUNTS" in enabled) ca=true ;; disabled) ca=false ;; *) exit 1 ;; esac
+          if [ "$ca" = true ] && { [ "$co" != true ] || [ "$sv" != true ]; }; then exit 1; fi
+          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];c.vars.CUSTOMER_ACCOUNT_ENABLED=process.argv[3];const approved=JSON.stringify([{pattern:"afnancollectionkn.com",custom_domain:true},{pattern:"www.afnancollectionkn.com",custom_domain:true}]);if(c.vars.PAYMENT_MODE!=="disabled"||c.vars.ADMIN_AUTH_MODE!=="password"||c.workers_dev!==false||JSON.stringify(c.routes)!==approved)process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$co" "$sv" "$ca"
           ls -A
 
       - name: Refuse to deploy while database migrations are pending
