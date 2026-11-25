@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier -- Temporary: format new account implementation before final release review. */
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { createTestApp, Client } from "./harness.mjs";
