@@ -41,7 +41,9 @@ function Checkout() {
     const typedState = typed("co-state");
     if (typedEmail) setEmail((current) => current || typedEmail);
     if (typedState) setStateName((current) => current || typedState);
-    void apiCall<{enabled:boolean}>("/customer-account/config").then(x=>setOptionalAccounts(x.enabled)).catch(()=>undefined);
+    void apiCall<{ enabled: boolean }>("/customer-account/config")
+      .then((x) => setOptionalAccounts(x.enabled))
+      .catch(() => undefined);
     Promise.all([
       apiCall<{ checkoutEnabled: boolean; paymentsEnabled: boolean }>("/health"),
       apiCall<Me>("/me"),
