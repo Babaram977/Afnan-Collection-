@@ -127,7 +127,7 @@ export async function customerAccounts(request: Request, env: CommerceEnv, input
       "FROM customer_order_links l JOIN orders o ON o.id=l.order_id WHERE l.customer_id=? " +
       "ORDER BY o.created_at DESC LIMIT 100"
     ).bind(customer.id).all();
-    return json({orders:rows.results.map(row=>({ ...row, items: JSON.parse(String(row.items??"[]")) }))});
+    return json({orders:rows.results.map(row=>({ ...row, items: JSON.parse(String(row["items"]??"[]")) }))});
   }
   if (path === "/api/customer-account/orders/claim" && request.method === "POST") {
     const customer=await identity(request,env);
