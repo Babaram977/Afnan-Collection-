@@ -357,6 +357,18 @@ jobs:
           node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];c.vars.CUSTOMER_ACCOUNT_ENABLED=process.argv[3];const approved=JSON.stringify([{pattern:"afnancollectionkn.com",custom_domain:true},{pattern:"www.afnancollectionkn.com",custom_domain:true}]);if(c.vars.PAYMENT_MODE!=="disabled"||c.vars.ADMIN_AUTH_MODE!=="password"||c.workers_dev!==false||JSON.stringify(c.routes)!==approved)process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$co" "$sv" "$ca"
           ls -A
 
+      - name: Verify dedicated customer secret exists before enabling accounts
+        working-directory: ${{ runner.temp }}/work
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CUSTOMER_ACCOUNTS: ${{ env.CUSTOMER_ACCOUNTS_MODE }}
+        run: |
+          if [ "$CUSTOMER_ACCOUNTS" = enabled ]; then
+            curl -fsS --max-time 15 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/b4e142fe9da84ef204eecda2efe4a730/workers/scripts/afnan-collection-production/settings" \
+              | node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>{const r=JSON.parse(s);if(r.success!==true||!(r.result.bindings||[]).some(x=>x.name==="CUSTOMER_ACCOUNT_SECRET"&&x.type==="secret_text")){console.error("Customer account secret unavailable; refusing deployment");process.exit(1)}console.log("Customer account secret binding present; value not read")})'
+          fi
+
       - name: Refuse to deploy while database migrations are pending
         # Migrations are never applied by this workflow; they stay a separately approved step.
         working-directory: ${{ runner.temp }}/work
