@@ -608,7 +608,7 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
   }
   if (path.startsWith("/api/customer-account/")) {
     await limited(request, env, "customer-account", 20);
-    return customerAccounts(request, env);
+    return customerAccounts(request, env, method === "POST" ? await body(request) : undefined);
   }
   if (path.startsWith("/api/auth/")) {
     const allowed = [
