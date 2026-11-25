@@ -1508,7 +1508,11 @@ export async function api(request: Request, env: CommerceEnv) {
   try {
     response = await routes(request, env);
   } catch (error) {
-    if (error instanceof HttpError || error instanceof SecurityError || error instanceof CustomerAccountError)
+    if (
+      error instanceof HttpError ||
+      error instanceof SecurityError ||
+      error instanceof CustomerAccountError
+    )
       response = json({ error: error.message, requestId }, error.status);
     else if (error instanceof SyntaxError)
       response = json({ error: "Invalid JSON", requestId }, 400);
