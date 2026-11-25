@@ -10,7 +10,7 @@ export function validateSender(env: CommerceEnv) {
   )
     throw new Error("Email delivery is not configured");
 }
-export async function sendSignInCode(env: CommerceEnv, email: string, otp: string) {
+export async function sendSignInCode(env: CommerceEnv, email: string, otp: string, expiryMinutes = 5) {
   if (testMode(env)) {
     await env.DB.prepare(
       "INSERT INTO test_outbox(email,code) VALUES(?,?) ON CONFLICT(email) DO UPDATE SET code=excluded.code,created_at=unixepoch()",
@@ -29,7 +29,7 @@ export async function sendSignInCode(env: CommerceEnv, email: string, otp: strin
       from: env.EMAIL_FROM,
       to: email,
       subject: "Your Afnan sign-in code",
-      text: `Your sign-in code is ${otp}. It expires in 5 minutes. Never share it. If you did not request it, ignore this email.`,
+      text: `Your sign-in code is ${otp}. It expires in ${expiryMinutes} minutes. Never share it. If you did not request it, ignore this email.`,
     }),
   });
   await response.body?.cancel();
