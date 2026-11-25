@@ -31,6 +31,7 @@ jobs:
           bun run db:migrate:local
           bun run db:migrate:local
       - run: bun run test:integration
+      - run: bun run test:customer-accounts
       - run: bun run test:acceptance
       - run: bun run test:security
       - run: bun run test:domain
@@ -94,7 +95,6 @@ jobs:
       - run: bun run test:shopping
       - run: bun run test:checkout-staff-email
       - run: bun run test:payment-audit
-      - run: bun run test:customer-accounts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
