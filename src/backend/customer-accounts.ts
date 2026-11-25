@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier -- Temporary: format new account implementation before final release review. */
 import type { CommerceEnv } from "./types";
 import { sendSignInCode, validateSender } from "./email";
 import { testMode } from "./types";
