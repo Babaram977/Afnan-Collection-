@@ -24,7 +24,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: afnan-customer-account-migration-${{ inputs.target }}
+  group: ${{ inputs.target == 'production' && 'afnan-production-deploy' || 'afnan-acceptance-deploy' }}
   cancel-in-progress: false
 jobs:
   migrate:
