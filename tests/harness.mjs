@@ -14,6 +14,7 @@ export const MIGRATIONS = [
   "0006_session_authentication_method.sql",
   "0007_fulfilment_options.sql",
   "0008_order_tracking_notifications.sql",
+  "0009_customer_accounts.sql",
 ];
 export async function applyMigrations(db, files) {
   let sql = "";
