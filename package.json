@@ -51,7 +51,8 @@
     "test:shopping": "node tests/shopping-experience.mjs",
     "security:audit": "node scripts/security-audit.mjs",
     "test:checkout-staff-email": "node tests/checkout-staff-email.mjs",
-    "test:payment-audit": "node tests/payment-verification-audit.mjs"
+    "test:payment-audit": "node tests/payment-verification-audit.mjs",
+    "test:customer-accounts": "node tests/customer-accounts.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1",
