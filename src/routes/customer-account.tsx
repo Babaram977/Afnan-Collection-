@@ -14,6 +14,7 @@ export const Route = createFileRoute("/customer-account")({
 type Order = {
   id:string;reference:string|null;status:string;total_kobo:number;
   delivery_kobo:number;created_at:number;bank_outcome:string|null;
+  items:Array<{name:string;sku:string;qty:number;price_kobo:number}>;
 };
 function CustomerAccount() {
   const [available,setAvailable] = useState(false);
@@ -93,8 +94,9 @@ function CustomerAccount() {
               {orders.map(o=><li key={o.id} className="rounded-xl border p-3">
                 <p className="font-semibold">{o.reference??o.id}</p>
                 <p>{new Date(o.created_at*1000).toLocaleDateString("en-NG",{timeZone:"Africa/Lagos"})}</p>
-                <p>Status: {o.status} {o.bank_outcome==="approved"?"· Payment verified":""}</p>
+                <p>Status: {o.status} {o.bank_outcome==="paid"?"· Payment verified":""}</p>
                 <p>{formatNaira(o.total_kobo)}</p>
+                <ul className="text-sm text-muted-foreground">{o.items.map((item,i)=><li key={`${o.id}-${i}`}>{item.qty} × {item.name}</li>)}</ul>
               </li>)}
             </ul>
           </section>
