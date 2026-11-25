@@ -95,7 +95,7 @@ function Checkout() {
                 Continue shopping
               </Link>
               {optionalAccounts && (
-                <Link to="/account" className="underline">
+                <Link to="/customer-account" className="underline">
                   Optional: Create an account to save this order
                 </Link>
               )}
