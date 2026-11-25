@@ -22,7 +22,7 @@ const emailInput = (value: unknown) => {
   return email;
 };
 function enabled(env: CommerceEnv) {
-  if (env.CUSTOMER_ACCOUNT_ENABLED !== "true" || !env.CUSTOMER_ACCOUNT_SECRET ||
+  if (env.CHECKOUT_ENABLED !== "true" || env.CUSTOMER_ACCOUNT_ENABLED !== "true" || !env.CUSTOMER_ACCOUNT_SECRET ||
       env.CUSTOMER_ACCOUNT_SECRET.length < 64 || env.EMAIL_SENDER_VERIFIED !== "true")
     fail(503, "Customer accounts unavailable");
   if (!testMode(env)) {
@@ -73,7 +73,7 @@ export async function customerAccounts(request: Request, env: CommerceEnv, input
     const email = emailInput(raw);
     // Existing staff addresses must not create a second customer identity or bypass staff controls.
     const staff = await env.DB.prepare("SELECT 1 FROM user u JOIN staff s ON s.user_id=u.id WHERE lower(u.email)=?").bind(email).first();
-    if (staff) fail(403, "Staff should use Store Management");
+    if (staff) return json({ accepted: true, challenge: id }); // Do not enumerate staff emails.
     const id = crypto.randomUUID(), code = code8(), time = now();
     const accepted = await env.DB.prepare(
       "INSERT INTO customer_account_challenges(id,email,code_hash,expires_at,created_at) " +
