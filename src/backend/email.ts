@@ -10,7 +10,12 @@ export function validateSender(env: CommerceEnv) {
   )
     throw new Error("Email delivery is not configured");
 }
-export async function sendSignInCode(env: CommerceEnv, email: string, otp: string, expiryMinutes = 5) {
+export async function sendSignInCode(
+  env: CommerceEnv,
+  email: string,
+  otp: string,
+  expiryMinutes = 5,
+) {
   if (testMode(env)) {
     await env.DB.prepare(
       "INSERT INTO test_outbox(email,code) VALUES(?,?) ON CONFLICT(email) DO UPDATE SET code=excluded.code,created_at=unixepoch()",
