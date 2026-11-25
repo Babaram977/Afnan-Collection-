@@ -58,15 +58,16 @@ async function identity(request: Request, env: CommerceEnv) {
   if (!row) fail(401, "Customer sign-in required");
   return row;
 }
-export async function customerAccounts(request: Request, env: CommerceEnv): Promise<Response> {
+export async function customerAccounts(request: Request, env: CommerceEnv, input?:unknown): Promise<Response> {
   const path = new URL(request.url).pathname;
-  if (path === "/api/customer-account/config" && request.method === "GET")
-    return json({ enabled: env.CUSTOMER_ACCOUNT_ENABLED === "true" &&
-      !!env.CUSTOMER_ACCOUNT_SECRET && env.CUSTOMER_ACCOUNT_SECRET.length >= 64 &&
-      env.EMAIL_SENDER_VERIFIED === "true" });
+  if (path === "/api/customer-account/config" && request.method === "GET") {
+    let configured = false;
+    try { enabled(env); configured = true; } catch { /* Fail closed without leaking details. */ }
+    return json({ enabled: configured });
+  }
   enabled(env);
   if (path === "/api/customer-account/request" && request.method === "POST") {
-    const {email: raw} = await request.json() as {email?:unknown};
+    const {email: raw} = (input ?? {}) as {email?:unknown};
     const email = emailInput(raw);
     // Existing staff addresses must not create a second customer identity or bypass staff controls.
     const staff = await env.DB.prepare("SELECT 1 FROM user u JOIN staff s ON s.user_id=u.id WHERE lower(u.email)=?").bind(email).first();
@@ -77,11 +78,11 @@ export async function customerAccounts(request: Request, env: CommerceEnv): Prom
       "SELECT ?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM customer_account_challenges WHERE email=? AND created_at>?) RETURNING id"
     ).bind(id,email,await signature(env,id,email,code),time+600,time,email,time-60).first();
     // Keep same public response on cooldown; no email contents or account existence disclosed.
-    if (accepted) await sendSignInCode(env,email,code);
+    if (accepted) await sendSignInCode(env,email,code,10);
     return json({ accepted:true,challenge:id });
   }
   if (path === "/api/customer-account/verify" && request.method === "POST") {
-    const {email:raw, challenge, code} = await request.json() as {email?:unknown,challenge?:unknown,code?:unknown};
+    const {email:raw, challenge, code} = (input ?? {}) as {email?:unknown,challenge?:unknown,code?:unknown};
     const email=emailInput(raw);
     if(typeof challenge!=="string" || !/^[0-9a-f-]{36}$/.test(challenge) ||
        typeof code!=="string" || !/^\d{8}$/.test(code)) fail(401,"Invalid or expired verification code");
@@ -128,7 +129,7 @@ export async function customerAccounts(request: Request, env: CommerceEnv): Prom
   }
   if (path === "/api/customer-account/orders/claim" && request.method === "POST") {
     const customer=await identity(request,env);
-    const {id} = await request.json() as {id?:unknown};
+    const {id} = (input ?? {}) as {id?:unknown};
     if(typeof id!=="string" || !/^[0-9a-f-]{36}$/.test(id)) fail(400,"Invalid order");
     // The original browser-only HttpOnly guest cookie proves possession of the guest order.
     const guestToken=request.headers.get("Cookie")?.match(/(?:^|;\s*)afnan_guest=([a-f0-9]{64})(?:;|$)/)?.[1];
