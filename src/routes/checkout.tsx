@@ -30,6 +30,7 @@ function Checkout() {
   const [key, setKey] = useState("");
   const [email, setEmail] = useState("");
   const [accountEmail, setAccountEmail] = useState(false);
+  const [optionalAccounts, setOptionalAccounts] = useState(false);
   useEffect(() => {
     setKey(crypto.randomUUID());
     // On a slow connection a customer can type before the page becomes interactive. Keep what
@@ -40,6 +41,7 @@ function Checkout() {
     const typedState = typed("co-state");
     if (typedEmail) setEmail((current) => current || typedEmail);
     if (typedState) setStateName((current) => current || typedState);
+    void apiCall<{enabled:boolean}>("/customer-account/config").then(x=>setOptionalAccounts(x.enabled)).catch(()=>undefined);
     Promise.all([
       apiCall<{ checkoutEnabled: boolean; paymentsEnabled: boolean }>("/health"),
       apiCall<Me>("/me"),
@@ -92,6 +94,11 @@ function Checkout() {
               <Link to="/shop" className="underline">
                 Continue shopping
               </Link>
+              {optionalAccounts && (
+                <Link to="/account" className="underline">
+                  Optional: Create an account to save this order
+                </Link>
+              )}
             </p>
             {order.payment_method === "bank_transfer" ? null : payment ? (
               <Button
