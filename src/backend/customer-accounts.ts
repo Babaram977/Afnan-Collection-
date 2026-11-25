@@ -122,11 +122,12 @@ export async function customerAccounts(request: Request, env: CommerceEnv, input
     const customer=await identity(request,env);
     const rows=await env.DB.prepare(
       "SELECT o.id,o.reference,o.status,o.total_kobo,o.created_at,o.payment_method,o.delivery_kobo, " +
-      "(SELECT outcome FROM bank_transfer_approvals a WHERE a.order_id=o.id) AS bank_outcome " +
+      "(SELECT outcome FROM bank_transfer_approvals a WHERE a.order_id=o.id) AS bank_outcome, " +
+      "(SELECT json_group_array(json_object('name',i.name,'sku',i.sku,'qty',i.qty,'price_kobo',i.price_kobo)) FROM order_items i WHERE i.order_id=o.id) AS items " +
       "FROM customer_order_links l JOIN orders o ON o.id=l.order_id WHERE l.customer_id=? " +
       "ORDER BY o.created_at DESC LIMIT 100"
     ).bind(customer.id).all();
-    return json({orders:rows.results});
+    return json({orders:rows.results.map(row=>({ ...row, items: JSON.parse(String(row.items??"[]")) }))});
   }
   if (path === "/api/customer-account/orders/claim" && request.method === "POST") {
     const customer=await identity(request,env);
