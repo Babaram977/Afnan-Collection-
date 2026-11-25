@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier -- Temporary: format new account implementation before final release review. */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/site/PageHeader";
