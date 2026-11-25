@@ -51,6 +51,12 @@ on:
           - unverified
           - verified
         default: unverified
+      customer_accounts:
+        description: "Optional customer accounts (separate approved migration 0009 and secret required)"
+        required: true
+        type: choice
+        options: [disabled, enabled]
+        default: disabled
 
 run-name: "Acceptance deploy ${{ inputs.commit || github.event.workflow_run.head_sha }} (${{ github.event_name == 'workflow_run' && 'automatic' || 'manual' }}) by ${{ github.actor }}"
 
@@ -72,6 +78,7 @@ env:
   COMMIT_SHA: ${{ inputs.commit || github.event.workflow_run.head_sha }}
   CHECKOUT_MODE: ${{ inputs.acceptance_checkout || vars.AFNAN_ACCEPTANCE_CHECKOUT || 'disabled' }}
   SENDER_MODE: ${{ inputs.email_sender || vars.AFNAN_ACCEPTANCE_EMAIL_SENDER || 'verified' }}
+  CUSTOMER_ACCOUNTS_MODE: ${{ inputs.customer_accounts || vars.AFNAN_ACCEPTANCE_CUSTOMER_ACCOUNTS || 'disabled' }}
   DEPLOY_REASON: ${{ inputs.reason || format('automatic after Validate Afnan passed for {0}', github.event.workflow_run.head_sha) }}
   WRANGLER_VERSION: "4.160.0"
   NODE_VERSION: "24"
@@ -287,6 +294,7 @@ jobs:
         env:
           CHECKOUT: ${{ env.CHECKOUT_MODE }}
           SENDER: ${{ env.SENDER_MODE }}
+          CUSTOMER_ACCOUNTS: ${{ env.CUSTOMER_ACCOUNTS_MODE }}
         run: |
           cat > wrangler.jsonc <<'EOF'
           {
@@ -308,7 +316,8 @@ jobs:
               "PAYMENT_MODE": "disabled",
               "EMAIL_FROM": "noreply@afnancollectionkn.com",
               "ADMIN_AUTH_MODE": "password",
-              "EMAIL_SENDER_VERIFIED": "false"
+              "EMAIL_SENDER_VERIFIED": "false",
+              "CUSTOMER_ACCOUNT_ENABLED": "false"
             },
             "d1_databases": [{ "binding": "DB", "database_name": "afnan-collection-acceptance", "database_id": "11950c2f-14bb-4a31-9add-356f155dea4e", "migrations_dir": "artifact/migrations" }],
             "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "afnan-product-media-acceptance" }, { "binding": "RECEIPTS", "bucket_name": "afnan-payment-receipts-acceptance" }]
@@ -321,8 +330,21 @@ jobs:
             *) echo "::error::acceptance_checkout must be 'disabled' or 'enabled'."; exit 1 ;;
           esac
           case "$SENDER" in verified) sv=true ;; unverified) sv=false ;; *) exit 1 ;; esac
-          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];if(c.vars.PAYMENT_MODE!=="disabled")process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$value" "$sv"
+          case "$CUSTOMER_ACCOUNTS" in enabled) ca=true ;; disabled) ca=false ;; *) exit 1 ;; esac
+          if [ "$ca" = true ] && { [ "$value" != true ] || [ "$sv" != true ]; }; then echo "::error::Customer accounts require checkout enabled and sender verified"; exit 1; fi
+          node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("wrangler.jsonc","utf8"));c.vars.CHECKOUT_ENABLED=process.argv[1];c.vars.EMAIL_SENDER_VERIFIED=process.argv[2];c.vars.CUSTOMER_ACCOUNT_ENABLED=process.argv[3];if(c.vars.PAYMENT_MODE!=="disabled")process.exit(2);fs.writeFileSync("wrangler.jsonc",JSON.stringify(c,null,2));console.log("CHECKOUT_ENABLED="+c.vars.CHECKOUT_ENABLED,"EMAIL_SENDER_VERIFIED="+c.vars.EMAIL_SENDER_VERIFIED,"PAYMENT_MODE="+c.vars.PAYMENT_MODE)' "$value" "$sv" "$ca"
           ls -A
+
+      - name: Require customer-account secret when feature enabled
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CUSTOMER_ACCOUNTS: ${{ env.CUSTOMER_ACCOUNTS_MODE }}
+        run: |
+          if [ "$CUSTOMER_ACCOUNTS" = enabled ]; then
+            curl -fsS --max-time 15 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/b4e142fe9da84ef204eecda2efe4a730/workers/scripts/afnan-collection-storefront/settings" \
+              | node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>{const r=JSON.parse(s);if(r.success!==true||!(r.result.bindings||[]).some(x=>x.name==="CUSTOMER_ACCOUNT_SECRET"&&x.type==="secret_text"))process.exit(1)})'
+          fi
 
       - name: Refuse to deploy while database migrations are pending
         # Migrations are never applied by this workflow; they stay a separately approved step.

@@ -6,6 +6,8 @@ export interface CommerceEnv
   APP_ORIGIN: string;
   AUTH_SECRET: string;
   CHECKOUT_ENABLED: string;
+  CUSTOMER_ACCOUNT_ENABLED?: string;
+  CUSTOMER_ACCOUNT_SECRET?: string;
   /** "enabled" only in local test fixtures: allows the pre-#41 per-zone delivery path. */
   LEGACY_ZONE_ORDERS?: string;
   PAYMENT_MODE: string;

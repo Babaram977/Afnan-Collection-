@@ -1,4 +1,5 @@
 import { business } from "../lib/business";
+import { customerAccounts, CustomerAccountError } from "./customer-accounts";
 import { afnanDelivery, FULFILMENT_ZONE_IDS } from "../lib/delivery-policy";
 import { canonicalLines, groupOrderLines } from "../lib/order-lines";
 import { z } from "zod";
@@ -604,6 +605,10 @@ async function routes(request: Request, env: CommerceEnv): Promise<Response> {
     if (request.headers.get("Origin") !== env.APP_ORIGIN) fail(403, "Invalid request origin");
     if (request.headers.get("Sec-Fetch-Site") === "cross-site")
       fail(403, "Cross-site request rejected");
+  }
+  if (path.startsWith("/api/customer-account/")) {
+    await limited(request, env, "customer-account", 20);
+    return customerAccounts(request, env, method === "POST" ? await body(request) : undefined);
   }
   if (path.startsWith("/api/auth/")) {
     const allowed = [
@@ -1503,7 +1508,11 @@ export async function api(request: Request, env: CommerceEnv) {
   try {
     response = await routes(request, env);
   } catch (error) {
-    if (error instanceof HttpError || error instanceof SecurityError)
+    if (
+      error instanceof HttpError ||
+      error instanceof SecurityError ||
+      error instanceof CustomerAccountError
+    )
       response = json({ error: error.message, requestId }, error.status);
     else if (error instanceof SyntaxError)
       response = json({ error: "Invalid JSON", requestId }, 400);

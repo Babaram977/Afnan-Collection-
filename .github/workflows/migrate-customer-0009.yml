@@ -1,0 +1,147 @@
+name: Migrate Afnan customer accounts 0009
+# Owner-dispatched, isolated D1 migration. Never deploys code or changes live settings.
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Exact green main commit SHA (40 lowercase hexadecimal characters)"
+        required: true
+        type: string
+      target:
+        description: "Migrate acceptance FIRST, then production after accepted deploy"
+        required: true
+        type: choice
+        options: [acceptance, production]
+      approval_reference:
+        description: "Founder-approved migration reference"
+        required: true
+        type: string
+      acceptance_deploy_run:
+        description: "For production only: successful acceptance deployment run ID for this exact commit"
+        required: false
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ inputs.target == 'production' && 'afnan-production-deploy' || 'afnan-acceptance-deploy' }}
+  cancel-in-progress: false
+jobs:
+  migrate:
+    if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: ${{ inputs.target == 'production' && 'afnan-production' || 'afnan-acceptance' }}
+    env:
+      TARGET: ${{ inputs.target }}
+      COMMIT: ${{ inputs.commit }}
+      APPROVAL: ${{ inputs.approval_reference }}
+      ACCEPTANCE_RUN: ${{ inputs.acceptance_deploy_run }}
+      ACCOUNT: b4e142fe9da84ef204eecda2efe4a730
+      PRODUCTION_DB: 73ddfc46-34ba-4733-841d-e4819af0b957
+      ACCEPTANCE_DB: 11950c2f-14bb-4a31-9add-356f155dea4e
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - name: Require exact green main CI and proven acceptance before production
+        run: |
+          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          test -n "$APPROVAL"
+          test -n "$CLOUDFLARE_API_TOKEN"
+          gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/validate.yml/runs" -f head_sha="$COMMIT" -f event=push > "$RUNNER_TEMP/ci.json"
+          node - <<'JS'
+          const fs=require('fs'), assert=require('node:assert/strict');
+          const runs=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/ci.json','utf8')).workflow_runs||[];
+          assert(runs.some(r=>r.head_sha===process.env.COMMIT && r.head_branch==='main' && r.conclusion==='success' && r.event==='push'),'No exact green main push CI; cannot migrate');
+          JS
+          if [ "$TARGET" = production ]; then
+            [[ "$ACCEPTANCE_RUN" =~ ^[0-9]+$ ]] || { echo '::error::Acceptance release run required'; exit 1; }
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ACCEPTANCE_RUN" > "$RUNNER_TEMP/acceptance.json"
+            node - <<'JS'
+          const fs=require('fs'),assert=require('node:assert/strict');
+          const run=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/acceptance.json','utf8'));
+          assert.equal(run.conclusion,'success'); assert.equal(run.head_sha,process.env.COMMIT);
+          assert.equal(run.head_branch,'main'); assert.equal(run.name,'Deploy Afnan acceptance');
+          JS
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+          fetch-depth: 0
+          sparse-checkout: migrations
+      - name: Confirm audited migration source
+        run: |
+          test "$(git rev-parse HEAD)" = "$COMMIT"
+          git fetch origin main --no-tags
+          git merge-base --is-ancestor "$COMMIT" origin/main
+          test "$(find migrations -maxdepth 1 -name '*.sql' | wc -l)" = 9
+          test -f migrations/0009_customer_accounts.sql
+          # Migration 0009 may only add customer tables/indexes, never change existing records.
+          ! grep -Ei '^[[:space:]]*(ALTER|UPDATE|DELETE|DROP|INSERT|REPLACE|TRUNCATE)[[:space:]]' migrations/0009_customer_accounts.sql
+          test "$(grep -Ec '^CREATE TABLE customer_|^CREATE INDEX customer_' migrations/0009_customer_accounts.sql)" = 7
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Install pinned Wrangler outside application
+        run: |
+          mkdir -p "$RUNNER_TEMP/tool"
+          cd "$RUNNER_TEMP/tool"
+          npm install --no-save --ignore-scripts --no-audit --no-fund wrangler@4.160.0
+      - name: Verify D1 ledger, recovery bookmark and apply only migration 0009
+        run: |
+          if [ "$TARGET" = production ]; then
+            DB="$PRODUCTION_DB"; NAME=afnan-collection-production
+          else
+            DB="$ACCEPTANCE_DB"; NAME=afnan-collection-acceptance
+          fi
+          cat > wrangler-customer.jsonc <<EOF
+          {"name":"$NAME","account_id":"$ACCOUNT","d1_databases":[{"binding":"DB","database_id":"$DB","database_name":"$NAME","migrations_dir":"migrations"}]}
+          EOF
+          W="$RUNNER_TEMP/tool/node_modules/.bin/wrangler"
+          if [ "$TARGET" = production ]; then
+            # Acceptance must already contain 0009, verified directly from the separate database.
+            curl -fsS --max-time 15 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/d1/database/$ACCEPTANCE_DB/query" \
+              -H 'Content-Type: application/json' --data '{"sql":"SELECT name FROM d1_migrations ORDER BY id"}' > "$RUNNER_TEMP/acc.json"
+            node - <<'JS'
+          const fs=require('fs'),assert=require('node:assert/strict');
+          const r=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/acc.json','utf8'));
+          assert.equal(r.success,true);
+          assert(r.result[0].results.some(x=>x.name==='0009_customer_accounts.sql'),'Acceptance migration 0009 must succeed first');
+          JS
+          fi
+          "$W" d1 time-travel info DB --config wrangler-customer.jsonc --json > "$RUNNER_TEMP/recovery.json"
+          "$W" d1 migrations list DB --remote --config wrangler-customer.jsonc > "$RUNNER_TEMP/pending.txt"
+          SQL="SELECT name FROM d1_migrations ORDER BY id; SELECT (SELECT count(*) FROM user) users,(SELECT count(*) FROM staff) staff,(SELECT count(*) FROM orders) orders,(SELECT count(*) FROM order_items) items,(SELECT count(*) FROM bank_transfer_approvals) approvals,(SELECT count(*) FROM payment_receipts) receipts,(SELECT coalesce(sum(stock),0) FROM variants) stock; PRAGMA quick_check; SELECT count(*) as violations FROM pragma_foreign_key_check;"
+          "$W" d1 execute DB --config wrangler-customer.jsonc --remote --json --command "$SQL" > "$RUNNER_TEMP/before.json"
+          node - <<'JS'
+          const fs=require('fs'),assert=require('node:assert/strict');
+          const read=x=>JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/'+x+'.json','utf8'));
+          const r=read('before');assert(r.every(x=>x.success===true)); 
+          const expected=['0001_commerce.sql','0002_admin_management.sql','0003_administrator_mfa.sql','0004_bank_transfer_reservation.sql','0005_payment_receipts.sql','0006_session_authentication_method.sql','0007_fulfilment_options.sql','0008_order_tracking_notifications.sql'];
+          const names=r[0].results.map(x=>x.name); 
+          assert(JSON.stringify(names)===JSON.stringify(expected)||JSON.stringify(names)===JSON.stringify([...expected,'0009_customer_accounts.sql']),'Unexpected D1 migration ledger');
+          assert.equal(r[2].results[0].quick_check,'ok');assert.equal(r[3].results[0].violations,0);
+          const recovery=read('recovery');assert(recovery.bookmark,'Missing Time Travel bookmark');
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/baseline.json',JSON.stringify({ledger:names,counts:r[1].results[0]}));
+          JS
+          if ! grep -q 'No migrations to apply' "$RUNNER_TEMP/pending.txt"; then
+            grep -q '0009_customer_accounts.sql' "$RUNNER_TEMP/pending.txt"
+            "$W" d1 migrations apply DB --remote --config wrangler-customer.jsonc
+          fi
+          "$W" d1 execute DB --config wrangler-customer.jsonc --remote --json \
+            --command "$SQL SELECT (SELECT count(*) FROM customer_account_profiles) profiles,(SELECT count(*) FROM customer_order_links) linked;" > "$RUNNER_TEMP/after.json"
+          node - <<'JS'
+          const fs=require('fs'),assert=require('node:assert/strict'),root=process.env.RUNNER_TEMP+'/';
+          const baseline=JSON.parse(fs.readFileSync(root+'baseline.json','utf8'));
+          const after=JSON.parse(fs.readFileSync(root+'after.json','utf8'));
+          assert(after.every(x=>x.success===true));
+          assert.deepEqual(after[0].results.map(x=>x.name),[...baseline.ledger.filter(x=>x!=='0009_customer_accounts.sql'),'0009_customer_accounts.sql']);
+          assert.deepEqual(after[1].results[0],baseline.counts,'Old commerce data changed');
+          assert.equal(after[2].results[0].quick_check,'ok');assert.equal(after[3].results[0].violations,0);
+          assert.deepEqual(after[4].results[0],{profiles:0,linked:0});
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'Migration 0009 verified, existing commerce counts intact; no Worker or checkout settings changed.\n');
+          JS
+          rm -f wrangler-customer.jsonc "$RUNNER_TEMP"/before.json "$RUNNER_TEMP"/after.json "$RUNNER_TEMP"/acc.json
