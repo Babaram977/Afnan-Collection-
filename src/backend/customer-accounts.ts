@@ -14,7 +14,8 @@ const sha = async (value: string) =>
 const hexToken = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), x => x.toString(16).padStart(2, "0")).join("");
 const emailInput = (value: unknown) => {
-  if (typeof value !== "string" || value.length > 254) fail(400, "Invalid email");
+  if (typeof value !== "string") return fail(400, "Invalid email");
+  if (value.length > 254) return fail(400, "Invalid email");
   const email = value.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail(400, "Invalid email");
   return email;
@@ -55,7 +56,7 @@ async function identity(request: Request, env: CommerceEnv) {
     "SELECT p.id,p.email FROM customer_account_sessions s JOIN customer_account_profiles p ON p.id=s.customer_id " +
     "WHERE s.token_hash=? AND s.expires_at>?"
   ).bind(await sha(token), now()).first<{id:string,email:string}>();
-  if (!row) fail(401, "Customer sign-in required");
+  if (!row) return fail(401, "Customer sign-in required");
   return row;
 }
 export async function customerAccounts(request: Request, env: CommerceEnv, input?:unknown): Promise<Response> {
@@ -84,8 +85,8 @@ export async function customerAccounts(request: Request, env: CommerceEnv, input
   if (path === "/api/customer-account/verify" && request.method === "POST") {
     const {email:raw, challenge, code} = (input ?? {}) as {email?:unknown,challenge?:unknown,code?:unknown};
     const email=emailInput(raw);
-    if(typeof challenge!=="string" || !/^[0-9a-f-]{36}$/.test(challenge) ||
-       typeof code!=="string" || !/^\d{8}$/.test(code)) fail(401,"Invalid or expired verification code");
+    if(typeof challenge!=="string" || !/^[0-9a-f-]{36}$/.test(challenge)) return fail(401,"Invalid or expired verification code");
+    if(typeof code!=="string" || !/^\d{8}$/.test(code)) return fail(401,"Invalid or expired verification code");
     const time=now();
     const digest=await signature(env,challenge,email,code);
     const token=hexToken(),tokenHash=await sha(token),customerId=crypto.randomUUID();
@@ -133,7 +134,7 @@ export async function customerAccounts(request: Request, env: CommerceEnv, input
     if(typeof id!=="string" || !/^[0-9a-f-]{36}$/.test(id)) fail(400,"Invalid order");
     // The original browser-only HttpOnly guest cookie proves possession of the guest order.
     const guestToken=request.headers.get("Cookie")?.match(/(?:^|;\s*)afnan_guest=([a-f0-9]{64})(?:;|$)/)?.[1];
-    if(!guestToken) fail(404,"Order not available on this device");
+    if(!guestToken) return fail(404,"Order not available on this device");
     const originalOwner="guest:"+await sha(guestToken);
     const linked=await env.DB.prepare("SELECT customer_id FROM customer_order_links WHERE order_id=?").bind(id).first<{customer_id:string}>();
     if(linked) {
@@ -151,5 +152,5 @@ export async function customerAccounts(request: Request, env: CommerceEnv, input
       .bind(customer.id,id).run();
     return json({linked:true});
   }
-  fail(404,"Not found");
+  return fail(404,"Not found");
 }
