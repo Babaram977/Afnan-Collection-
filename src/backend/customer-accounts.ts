@@ -73,7 +73,7 @@ export async function customerAccounts(request: Request, env: CommerceEnv, input
     const email = emailInput(raw);
     // Existing staff addresses must not create a second customer identity or bypass staff controls.
     const staff = await env.DB.prepare("SELECT 1 FROM user u JOIN staff s ON s.user_id=u.id WHERE lower(u.email)=?").bind(email).first();
-    if (staff) return json({ accepted: true, challenge: id }); // Do not enumerate staff emails.
+    if (staff) return json({ accepted: true, challenge: crypto.randomUUID() }); // Do not enumerate staff emails.
     const id = crypto.randomUUID(), code = code8(), time = now();
     const accepted = await env.DB.prepare(
       "INSERT INTO customer_account_challenges(id,email,code_hash,expires_at,created_at) " +
