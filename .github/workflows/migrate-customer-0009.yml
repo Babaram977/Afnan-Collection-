@@ -58,6 +58,7 @@ jobs:
           if [ "$TARGET" = production ]; then
             [[ "$ACCEPTANCE_RUN" =~ ^[0-9]+$ ]] || { echo '::error::Acceptance release run required'; exit 1; }
             gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ACCEPTANCE_RUN" > "$RUNNER_TEMP/acceptance.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/deploy-acceptance.yml" > "$RUNNER_TEMP/workflow.json"
             node - <<'JS'
           const fs=require('fs'),assert=require('node:assert/strict');
           const run=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/acceptance.json','utf8'));
@@ -65,7 +66,9 @@ jobs:
           assert.equal(run.head_branch,'main');
           assert.equal(run.event,'workflow_dispatch','Acceptance must be an owner-dispatched release');
           assert.match(run.name,/^Acceptance deploy [0-9a-f]{40} \(manual\) by /,'Unexpected acceptance run name');
-          assert(run.path?.includes('.github/workflows/deploy-acceptance.yml@'),'Wrong workflow: only acceptance deploy is trusted');
+          const workflow=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/workflow.json','utf8'));
+          assert(Number.isSafeInteger(workflow.id) && workflow.id>0,'Cannot verify registered acceptance workflow');
+          assert.equal(run.workflow_id,workflow.id,'Wrong workflow: only the registered acceptance deployment is trusted');
           JS
           fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
