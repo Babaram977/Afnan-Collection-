@@ -320,6 +320,7 @@ jobs:
         env:
           CHECKOUT: ${{ env.CHECKOUT_MODE }}
           SENDER: ${{ env.SENDER_MODE }}
+          CUSTOMER_ACCOUNTS: ${{ env.CUSTOMER_ACCOUNTS_MODE }}
         run: |
           cat > wrangler.jsonc <<'EOF'
           {
