@@ -31,10 +31,11 @@ export async function sendSignInCode(
     signal: AbortSignal.timeout(10000),
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: env.EMAIL_FROM,
+      // Recognizable verified brand identity; retains the approved authenticated sender address.
+      from: `Afnan Collection <${env.EMAIL_FROM}>`,
       to: email,
-      subject: "Your Afnan sign-in code",
-      text: `Your sign-in code is ${otp}. It expires in ${expiryMinutes} minutes. Never share it. If you did not request it, ignore this email.`,
+      subject: "Afnan Collection — your sign-in verification code",
+      text: `Afnan Collection\n\nYour one-time verification code is ${otp}.\n\nThis code expires in ${expiryMinutes} minutes. Enter it only on afnancollectionkn.com. Never share it with anyone.\n\nIf you did not request this code, you can safely ignore this message.\n\nAfnan Collection Customer Accounts`,
     }),
   });
   await response.body?.cancel();
