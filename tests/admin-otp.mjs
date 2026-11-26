@@ -87,7 +87,7 @@ let checks = 0;
     await settle();
     assert.equal(calls.length, 1, "Provisioned administrator: exactly one provider request");
     assert.equal(calls[0].url, "https://api.resend.com/emails");
-    assert.equal(calls[0].body.from, "noreply@afnancollectionkn.com");
+    assert.equal(calls[0].body.from, "Afnan Collection <noreply@afnancollectionkn.com>");
     assert.deepEqual([calls[0].body.to].flat(), [OWNER]);
     assert.equal(await db.prepare("SELECT COUNT(*) AS n FROM verification").first("n"), 1);
     assert.ok(logged("auth.email.accepted"), "Operators can see provider acceptance");
