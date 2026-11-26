@@ -35,6 +35,8 @@ describe("transactional email configuration (mocked; never sends email)", () => 
     const [url, init] = fetch.mock.calls[0]!;
     expect(url).toBe("https://api.resend.com/emails");
     expect(init.headers.Authorization).toBe("Bearer re_fixture_only");
+    expect(JSON.parse(init.body).from).toContain("Afnan Collection");
+    expect(JSON.parse(init.body).subject).toContain("Afnan Collection");
     expect(JSON.parse(init.body).text).toContain("expires in 5 minutes");
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
